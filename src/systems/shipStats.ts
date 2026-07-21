@@ -6,7 +6,7 @@ import type { ShipDefinition, ShipProgress, ShipRarity, ShipStatBlock } from "@/
 
 export const SHIP_MAX_LEVEL = 20;
 
-const RARITY_COST_MULTIPLIER: Record<ShipRarity, number> = {
+export const RARITY_COST_MULTIPLIER: Record<ShipRarity, number> = {
   common: 1,
   rare: 1.2,
   epic: 1.5,

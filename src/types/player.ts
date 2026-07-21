@@ -11,7 +11,12 @@ export type CurrencyBalances = Record<CurrencyId, number>;
 // (data/player.ts) is temporary prototype economy data until missions,
 // rewards, Salvage Run, Inventory, and Shop supply real materials — see
 // docs/handoffs/ship-upgrade/SHIP_LEVEL_UP_COMPLETION_REPORT.md.
-export type MaterialId = "shipAlloy" | "companionData" | "moduleParts" | "weaponParts";
+// "universalShards" is the canonical universal-fragment material from the
+// economy catalog (docs/economy/STARFIRE_ARMADA_COMPLETE_ECONOMY_DOCUMENT.md,
+// id `universalShards`) — it fills ship-fragment shortages during Star Rank
+// up, never more than the exact shortage. There is deliberately only this
+// one universal-fragment id.
+export type MaterialId = "shipAlloy" | "companionData" | "moduleParts" | "weaponParts" | "universalShards";
 
 export type MaterialBalances = Record<MaterialId, number>;
 
@@ -19,13 +24,15 @@ export type MaterialBalances = Record<MaterialId, number>;
 // added `materials`, then to 4 when Loadout Manager added `activeLoadout`
 // and companion/module ownership+progression below, then to 5 when
 // Companion Upgrade added Companion Data and normalized companion levels,
-// and to 6 when Module Upgrade added Module Parts.
+// and to 6 when Module Upgrade added Module Parts, and to 8 when Ship Star
+// Rank added Universal Shards (materials.universalShards) and per-ship
+// fragment balances (shipFragments).
 // Each version's saves
 // are migrated forward in store/playerStore.tsx's loadPlayerState — not
 // discarded — by merging in defaults for whatever fields that version
 // introduced; only saves that are missing/unparseable/from an unrecognized
 // future version fall back to DEFAULT_PLAYER_STATE.
-export const SAVE_SCHEMA_VERSION = 7;
+export const SAVE_SCHEMA_VERSION = 8;
 
 export interface PlayerState {
   playerId: string;
@@ -40,8 +47,14 @@ export interface PlayerState {
   /** Ships the player owns and can select/upgrade. Only Rapid-Fire by default. */
   ownedShipIds: string[];
   selectedShipId: string;
-  /** Per-ship level/xp/stars/weapon-level, keyed by ship id. Only present for owned ships. */
+  /** Per-ship level/xp/stars/weapon-level, keyed by ship id. Only present for owned ships.
+   *  `stars` here is the ONE authoritative Star Rank value — never duplicated
+   *  in another state system. */
   shipProgress: Record<string, import("./ship").ShipProgress>;
+  /** Ship-specific fragment balances, keyed by ship id (the project's
+   *  per-<shipId> record convention — one fragment pool per ship, used by
+   *  Star Rank). Missing key = 0 owned. Schema v8+. */
+  shipFragments: Record<string, number>;
 
   /** Companion + module loadout (Loadout Manager, schema v4+). The equipped
    *  ship itself is NOT duplicated here — it stays authoritative through

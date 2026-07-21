@@ -21,6 +21,7 @@ import {
   createDefaultShipProgress,
   isMaxLevel,
 } from "@/systems/shipStats";
+import { calculateShipRankUpQuote, type RankUpBlockReason } from "@/systems/shipStarRank";
 
 const SAVE_KEY = "starfire-armada-v2:save";
 
@@ -224,6 +225,74 @@ export function applyCompanionLevelUpgradeState(
   };
 }
 
+export type RankUpShipResult =
+  | {
+      success: true;
+      shipId: string;
+      previousRank: number;
+      newRank: number;
+      creditsSpent: number;
+      shipFragmentsSpent: number;
+      universalShardsSpent: number;
+      previousPower: number;
+      newPower: number;
+    }
+  | { success: false; reason: RankUpBlockReason | "busy" | "not-found" };
+
+/**
+ * Pure atomic Star Rank transaction. Validates everything through
+ * calculateShipRankUpQuote (the single source of truth the screen also
+ * uses) before touching any balance: ship exists + owned, below max rank,
+ * fragments (ship-specific first, universal shards covering only the exact
+ * shortage), and Credits. On any failure the original state object is
+ * returned unchanged — partial deductions are impossible. On success it
+ * deducts all three costs and raises `shipProgress[shipId].stars` by
+ * exactly one in the same state transition.
+ */
+export function applyShipRankUpState(
+  state: PlayerState,
+  shipId: string,
+): { state: PlayerState; result: RankUpShipResult } {
+  const ship = getShipById(shipId);
+  if (!ship) return { state, result: { success: false, reason: "not-found" } };
+  const quote = calculateShipRankUpQuote(ship, state);
+  if (!quote.canRankUp || quote.cost === null || quote.nextRank === null) {
+    return { state, result: { success: false, reason: quote.blockReason ?? "max-rank" } };
+  }
+
+  const progress = state.shipProgress[shipId] ?? createDefaultShipProgress(shipId);
+  const nextState: PlayerState = {
+    ...state,
+    currencies: { ...state.currencies, coins: state.currencies.coins - quote.cost.credits },
+    materials: {
+      ...state.materials,
+      universalShards: state.materials.universalShards - quote.universalToSpend,
+    },
+    shipFragments: {
+      ...state.shipFragments,
+      [shipId]: quote.fragmentsOwned - quote.fragmentsToSpend,
+    },
+    shipProgress: {
+      ...state.shipProgress,
+      [shipId]: { ...progress, stars: quote.nextRank },
+    },
+  };
+  return {
+    state: nextState,
+    result: {
+      success: true,
+      shipId,
+      previousRank: quote.currentRank,
+      newRank: quote.nextRank,
+      creditsSpent: quote.cost.credits,
+      shipFragmentsSpent: quote.fragmentsToSpend,
+      universalShardsSpent: quote.universalToSpend,
+      previousPower: quote.currentPower,
+      newPower: quote.nextPower ?? quote.currentPower,
+    },
+  };
+}
+
 export interface LockedShipInfo {
   shipId: string;
   unlockType: string;
@@ -256,6 +325,9 @@ interface PlayerStoreValue {
   /** Atomic one-level Module upgrade using Credits + Module Parts. */
   upgradeModuleLevel: (moduleId: string) => UpgradeModuleResult;
   upgradeWeaponLevel:(weaponId:string)=>UpgradeWeaponResult;
+  /** Atomic one-rank Star Rank up using ship fragments + universal-shard
+   *  shortage fill + Credits. See applyShipRankUpState. */
+  rankUpShip: (shipId: string) => RankUpShipResult;
   equipWeapon:(weaponId:string)=>boolean;
   resetSave: () => void;
 }
@@ -276,6 +348,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
   const companionUpgradeInFlight = useRef<Set<string>>(new Set());
   const moduleUpgradeInFlight = useRef<Set<string>>(new Set());
   const weaponUpgradeInFlight = useRef<Set<string>>(new Set());
+  const rankUpInFlight = useRef<Set<string>>(new Set());
 
   const update = useCallback((updater: (prev: PlayerState) => PlayerState) => {
     setPlayer((prev) => {
@@ -537,6 +610,26 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
   const upgradeWeaponLevel=useCallback((weaponId:string):UpgradeWeaponResult=>{if(weaponUpgradeInFlight.current.has(weaponId))return{success:false,reason:"busy"};const preflight=applyWeaponLevelUpgradeState(player,weaponId);if(!preflight.result.success)return preflight.result;weaponUpgradeInFlight.current.add(weaponId);let result:UpgradeWeaponResult=preflight.result;update(prev=>{const applied=applyWeaponLevelUpgradeState(prev,weaponId);result=applied.result;return applied.state});globalThis.setTimeout(()=>weaponUpgradeInFlight.current.delete(weaponId),300);return result},[player,update]);
   const equipWeapon=useCallback((weaponId:string)=>{if(!player.ownedWeaponIds.includes(weaponId)||!getWeaponById(weaponId))return false;update(prev=>({...prev,equippedWeaponId:weaponId}));return true},[player.ownedWeaponIds,update]);
 
+  const rankUpShip = useCallback(
+    (shipId: string): RankUpShipResult => {
+      if (rankUpInFlight.current.has(shipId)) return { success: false, reason: "busy" };
+      const preflight = applyShipRankUpState(player, shipId);
+      if (!preflight.result.success) return preflight.result;
+
+      rankUpInFlight.current.add(shipId);
+      let result: RankUpShipResult = preflight.result;
+      update((prev) => {
+        const applied = applyShipRankUpState(prev, shipId);
+        result = applied.result;
+        return applied.state;
+      });
+      // Same double-tap guard window as the other upgrade transactions.
+      globalThis.setTimeout(() => rankUpInFlight.current.delete(shipId), 300);
+      return result;
+    },
+    [player, update],
+  );
+
   const saveActiveLoadout = useCallback(
     (loadout: PlayerLoadout): SaveLoadoutResult => {
       if (loadoutSaveInFlight.current) {
@@ -574,6 +667,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
 
   const resetSave = useCallback(() => {
     upgradeInFlight.current.clear();
+    rankUpInFlight.current.clear();
     companionUpgradeInFlight.current.clear();
     moduleUpgradeInFlight.current.clear();
     weaponUpgradeInFlight.current.clear();
@@ -595,6 +689,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       upgradeCompanionLevel,
       upgradeModuleLevel,
       upgradeWeaponLevel,
+      rankUpShip,
       equipWeapon,
       saveActiveLoadout,
       resetSave,
@@ -613,6 +708,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       upgradeCompanionLevel,
       upgradeModuleLevel,
       upgradeWeaponLevel,
+      rankUpShip,
       equipWeapon,
       saveActiveLoadout,
       resetSave,

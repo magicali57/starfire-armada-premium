@@ -1,0 +1,424 @@
+/* Ship Star Rank — mobile-first, no page-level horizontal overflow: every
+   section is width:100% border-box inside the shell's scroll column; the
+   only horizontal scrolling lives INSIDE the milestones row. */
+
+.ship-star-rank__title-bar {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-3);
+}
+
+.ship-star-rank__back {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(139, 61, 255, 0.4);
+  background: rgba(23, 23, 54, 0.75);
+  color: var(--color-primary-100);
+}
+
+.ship-star-rank__title-spacer {
+  width: 36px;
+}
+
+.ship-star-rank__title-text {
+  min-width: 0;
+  text-align: center;
+}
+
+.ship-star-rank__title-text h1 {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ship-star-rank__title-text p {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--color-primary-200);
+}
+
+.ship-star-rank__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-3) var(--space-4);
+}
+
+.ship-star-rank__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-3);
+  text-align: center;
+}
+
+/* ---- Hero ---- */
+
+.ship-star-rank__hero {
+  display: grid;
+  grid-template-columns: minmax(0, 104px) minmax(0, 1fr);
+  gap: var(--space-3);
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+}
+
+.ship-star-rank__hero-art {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  background: rgba(10, 10, 26, 0.6);
+  overflow: hidden;
+}
+
+.ship-star-rank__hero-art img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.ship-star-rank__hero-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ship-star-rank__rarity-pill {
+  align-self: flex-start;
+  padding: 1px 8px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ship-star-rank__ship-name {
+  margin: 0;
+  overflow: hidden;
+  font-size: 17px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ship-star-rank__role {
+  font-size: 11px;
+  color: var(--color-primary-200);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ship-star-rank__hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: 12px;
+  color: var(--color-primary-200);
+}
+
+.ship-star-rank__hero-stats b {
+  color: var(--color-primary-100);
+}
+
+.ship-star-rank__stars {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.ship-star-rank__star {
+  color: rgba(139, 61, 255, 0.35);
+}
+
+.ship-star-rank__star--filled {
+  color: #ffcf4d;
+  filter: drop-shadow(0 0 4px rgba(255, 207, 77, 0.6));
+}
+
+.ship-star-rank__stars-count {
+  margin-left: 6px;
+  font-size: 13px;
+}
+
+.ship-star-rank__stars-count small {
+  color: var(--color-primary-200);
+  font-weight: var(--font-weight-regular);
+}
+
+/* ---- Sections ---- */
+
+.ship-star-rank__section-title {
+  margin: 0 0 var(--space-2);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary-200);
+}
+
+/* ---- Milestones: contained horizontal scroller ---- */
+
+.ship-star-rank__milestones-section {
+  min-width: 0;
+  width: 100%;
+}
+
+.ship-star-rank__milestones {
+  display: flex;
+  gap: var(--space-2);
+  width: 100%;
+  box-sizing: border-box;
+  padding-bottom: 4px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ship-star-rank__milestone {
+  flex: 0 0 148px;
+  box-sizing: border-box;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(139, 61, 255, 0.35);
+  background: rgba(23, 23, 54, 0.7);
+}
+
+.ship-star-rank__milestone--completed {
+  border-color: rgba(80, 220, 130, 0.55);
+}
+
+.ship-star-rank__milestone--current {
+  border-color: rgba(255, 207, 77, 0.8);
+  box-shadow: 0 0 10px rgba(255, 207, 77, 0.25);
+}
+
+.ship-star-rank__milestone--upcoming {
+  opacity: 0.6;
+}
+
+.ship-star-rank__milestone-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.ship-star-rank__milestone-head b {
+  font-size: 13px;
+}
+
+.ship-star-rank__milestone-state {
+  margin-left: auto;
+  font-size: 9.5px;
+  color: var(--color-primary-200);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ship-star-rank__milestone--completed .ship-star-rank__milestone-state {
+  color: rgb(80, 220, 130);
+}
+
+.ship-star-rank__milestone--current .ship-star-rank__milestone-state {
+  color: #ffcf4d;
+}
+
+.ship-star-rank__milestone-ability {
+  margin: 6px 0 4px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.ship-star-rank__milestone-bonus {
+  margin: 0;
+  font-size: 10.5px;
+  color: var(--color-primary-200);
+}
+
+/* ---- Current → next preview ---- */
+
+.ship-star-rank__preview {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+}
+
+.ship-star-rank__stat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.ship-star-rank__stat-table th {
+  padding: 5px 0;
+  text-align: left;
+  font-weight: var(--font-weight-regular);
+  color: var(--color-primary-200);
+}
+
+.ship-star-rank__stat-table td {
+  padding: 5px 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.ship-star-rank__stat-table tr + tr th,
+.ship-star-rank__stat-table tr + tr td {
+  border-top: 1px solid rgba(139, 61, 255, 0.18);
+}
+
+.ship-star-rank__stat-next {
+  color: rgb(80, 220, 130);
+  white-space: nowrap;
+}
+
+.ship-star-rank__preview-ability {
+  margin: var(--space-2) 0 0;
+  font-size: 11px;
+  color: #ffcf4d;
+}
+
+/* ---- Requirements ---- */
+
+.ship-star-rank__requirements {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+}
+
+.ship-star-rank__requirements--max {
+  text-align: center;
+}
+
+.ship-star-rank__requirements--max b {
+  display: block;
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  color: #ffcf4d;
+}
+
+.ship-star-rank__requirements--max p {
+  margin: var(--space-2) 0 0;
+  font-size: 12px;
+  color: var(--color-primary-200);
+}
+
+.ship-star-rank__req-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.ship-star-rank__req-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(139, 61, 255, 0.35);
+  background: rgba(23, 23, 54, 0.7);
+  text-align: center;
+}
+
+.ship-star-rank__req-card--short {
+  border-color: rgba(255, 70, 70, 0.65);
+}
+
+.ship-star-rank__req-card img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.ship-star-rank__req-credits {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 207, 77, 0.18);
+  color: #ffcf4d;
+  font-size: 16px;
+  font-weight: var(--font-weight-bold);
+}
+
+.ship-star-rank__req-label {
+  font-size: 9.5px;
+  color: var(--color-primary-200);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.ship-star-rank__req-card b {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.ship-star-rank__req-card small {
+  font-size: 9.5px;
+  color: var(--color-primary-200);
+}
+
+.ship-star-rank__req-card--short b {
+  color: rgb(255, 120, 120);
+}
+
+.ship-star-rank__shortfall {
+  margin: var(--space-2) 0 0;
+  font-size: 11px;
+  color: rgb(255, 120, 120);
+}
+
+/* ---- Actions ---- */
+
+.ship-star-rank__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+/* ---- Narrow phones (≤360px) ---- */
+
+@media (max-width: 360px) {
+  .ship-star-rank__hero {
+    grid-template-columns: minmax(0, 88px) minmax(0, 1fr);
+  }
+
+  .ship-star-rank__req-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ship-star-rank__req-card {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--space-2);
+    text-align: left;
+  }
+
+  .ship-star-rank__req-card b {
+    margin-left: auto;
+  }
+}

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { usePlayerStore } from "@/store/playerStore";
-import { navigate, pathFor } from "@/app/routes";
+import { navigate, pathFor, pathForShipStarRank } from "@/app/routes";
 import { SHIPS, getShipById } from "@/data";
 import { getFleetRosterOrder } from "@/data/fleetRoster";
 import { getShipDetailContent } from "@/data/shipDetail";
@@ -14,6 +14,7 @@ import { ShipDetailFragmentsSkinRow } from "@/components/ship-detail/ShipDetailF
 import { ShipProgressionTabs, type ShipProgressionTab } from "@/components/navigation/ShipProgressionTabs";
 import { getResourceState } from "@/data/shipUpgrade";
 import { calculateShipLevelUpgradeQuote, createDefaultShipProgress, isMaxLevel } from "@/systems/shipStats";
+import { canRankUpShip } from "@/systems/shipStarRank";
 import "./ShipDetailScreen.css";
 
 interface ModalState {
@@ -117,7 +118,7 @@ export function ShipDetailScreen() {
         handleLevelUp();
         break;
       case "star-rank":
-        openModal("Star Rank", "The Star Rank screen isn't built yet — coming soon.");
+        if (ship) window.location.hash = pathForShipStarRank(ship.id);
         break;
       case "abilities":
         openModal("Abilities", "The Abilities screen isn't built yet — coming soon.");
@@ -207,7 +208,7 @@ export function ShipDetailScreen() {
       <ShipProgressionTabs
         shipId={ship.id}
         activeTab={null}
-        badges={{ "level-up": levelUpActionable }}
+        badges={{ "level-up": levelUpActionable, "star-rank": canRankUpShip(ship, player) }}
         onSelect={handleProgressionTab}
       />
 

@@ -32,7 +32,7 @@ import {
   createDefaultShipProgress,
   isMaxLevel,
 } from "@/systems/shipStats";
-import { navigate, pathFor } from "@/app/routes";
+import { navigate, pathFor, pathForShipStarRank } from "@/app/routes";
 import "./ShipUpgradeScreen.css";
 
 interface ComingSoonState {
@@ -179,7 +179,7 @@ export function ShipUpgradeScreen() {
       case "level-up":
         break;
       case "star-rank":
-        openComingSoon("Star Rank", "The Star Rank screen isn't built yet — coming soon.");
+        if (ship) window.location.hash = pathForShipStarRank(ship.id);
         break;
       case "abilities":
         openComingSoon("Abilities", "The Abilities screen isn't built yet — coming soon.");

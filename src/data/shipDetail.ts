@@ -2,10 +2,14 @@ import type { PlayerState } from "@/types";
 import { getShipById } from "./ships";
 import {
   calculatePowerScore,
-  calculateShipStats,
   createDefaultShipProgress,
   SHIP_MAX_LEVEL,
 } from "@/systems/shipStats";
+import {
+  SHIP_MAX_STAR_RANK,
+  calculateShipStatsWithRank,
+  getShipFragmentsOwned,
+} from "@/systems/shipStarRank";
 
 // Reference-matched data for 09_Ship_Detail_Overview.png, plus a real-data
 // fallback for the other 19 ships. Same disclosed prototype-vs-real
@@ -177,7 +181,10 @@ function getRealShipDetailContent(shipId: string, player: PlayerState): ShipDeta
   if (!ship) return null;
 
   const progress = player.shipProgress[shipId] ?? createDefaultShipProgress(shipId);
-  const stats = calculateShipStats(ship, progress.level);
+  // Star Rank-aware stats (systems/shipStarRank.ts) so Power and core stats
+  // stay in sync with the Star Rank screen immediately after a rank up.
+  // Identical to the old calculateShipStats output at rank 0.
+  const stats = calculateShipStatsWithRank(ship, progress.level, progress.stars);
   const power = calculatePowerScore(stats);
 
   // Signature Attack presentation: the ship's real hand-authored
@@ -199,7 +206,6 @@ function getRealShipDetailContent(shipId: string, player: PlayerState): ShipDeta
       };
 
   const fragmentMax = GENERIC_FRAGMENT_MAX[ship.rarity] ?? 15;
-  const owned = player.ownedShipIds.includes(shipId);
 
   return {
     shipId,
@@ -207,7 +213,7 @@ function getRealShipDetailContent(shipId: string, player: PlayerState): ShipDeta
     levelCurrent: progress.level,
     levelMax: SHIP_MAX_LEVEL,
     starRankCurrent: progress.stars,
-    starRankMax: GENERIC_STAR_RANK_MAX,
+    starRankMax: SHIP_MAX_STAR_RANK,
     coreStats: stats,
     signatureAttack,
     passive: {
@@ -224,8 +230,10 @@ function getRealShipDetailContent(shipId: string, player: PlayerState): ShipDeta
       levelMax: GENERIC_STAR_RANK_MAX,
       isRealCopy: !ship.provisionalBalance,
     },
+    // Real persistent fragment balance (Star Rank system, schema v8) —
+    // replaces the old owned?max:0 placeholder display.
     fragments: {
-      current: owned ? fragmentMax : 0,
+      current: getShipFragmentsOwned(player, shipId),
       max: fragmentMax,
     },
     skin: { equipped: false },

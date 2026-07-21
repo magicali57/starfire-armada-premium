@@ -7,6 +7,7 @@ import { FleetRosterScreen } from "@/screens/fleet/FleetRosterScreen";
 import { ShipDetailPlaceholderScreen } from "@/screens/fleet/ShipDetailPlaceholderScreen";
 import { ShipDetailScreen } from "@/screens/ship-detail/ShipDetailScreen";
 import { ShipUpgradeScreen } from "@/screens/ship-upgrade/ShipUpgradeScreen";
+import { ShipStarRankScreen } from "@/screens/ship-star-rank/ShipStarRankScreen";
 import { CampaignScreen } from "@/screens/campaign/CampaignScreen";
 import { CampaignOverviewScreen } from "@/screens/campaign/CampaignOverviewScreen";
 import { CampaignChapterMapScreen } from "@/screens/campaign/CampaignChapterMapScreen";
@@ -48,6 +49,10 @@ function ActiveScreen() {
       return <ShipDetailPlaceholderScreen />;
     case "ship-upgrade":
       return <ShipUpgradeScreen />;
+    case "ship-star-rank":
+      // Dynamic route — shipId is parsed from window.location.hash inside
+      // the screen itself (see getShipStarRankIdFromHash in app/routes.tsx).
+      return <ShipStarRankScreen />;
     case "campaign":
       return <CampaignOverviewScreen />;
     case "campaign-chapter-map":

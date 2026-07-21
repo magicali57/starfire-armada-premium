@@ -48,11 +48,21 @@ export const DEFAULT_PLAYER_STATE: PlayerState = {
     // reference. Real earning sources remain outside this focused phase.
     moduleParts: 145,
     weaponParts: 71,
+    // Prototype Star Rank testing balance for the canonical Universal Shards
+    // material (economy catalog id `universalShards`). Real earning sources
+    // (chests, events, Shop) are not built yet.
+    universalShards: 40,
   },
   ownedShipIds: [DEFAULT_SHIP_ID],
   selectedShipId: DEFAULT_SHIP_ID,
   shipProgress: {
     [DEFAULT_SHIP_ID]: createDefaultShipProgress(DEFAULT_SHIP_ID),
+  },
+  // Prototype per-ship fragment balance (Star Rank). Real fragment sources
+  // (Campaign rewards, chests, events, Shop) are intentionally not built yet
+  // — the Star Rank screen's Find Fragments dialog discloses this.
+  shipFragments: {
+    [DEFAULT_SHIP_ID]: 36,
   },
   // PROTOTYPE OWNERSHIP NOTICE: every current companion/module definition is
   // owned by default because no Companion Roster, Module Inventory, or
@@ -86,7 +96,7 @@ export const DEFAULT_PLAYER_STATE: PlayerState = {
   saveSchemaVersion: SAVE_SCHEMA_VERSION,
 };
 
-const MIGRATABLE_SCHEMA_VERSIONS = [2, 3, 4, 5, 6, 7] as const;
+const MIGRATABLE_SCHEMA_VERSIONS = [2, 3, 4, 5, 6, 7, 8] as const;
 
 export interface PlayerSaveLoadResult {
   state: PlayerState;
@@ -105,6 +115,7 @@ function mergePlayerWithDefaults(parsed: Partial<PlayerState>): PlayerState {
     companionProgress: { ...DEFAULT_PLAYER_STATE.companionProgress, ...parsed.companionProgress },
     moduleProgress: { ...DEFAULT_PLAYER_STATE.moduleProgress, ...parsed.moduleProgress },
     weaponProgress: { ...DEFAULT_PLAYER_STATE.weaponProgress, ...parsed.weaponProgress },
+    shipFragments: { ...DEFAULT_PLAYER_STATE.shipFragments, ...parsed.shipFragments },
   };
 }
 
@@ -148,10 +159,21 @@ export function migratePlayerState(parsedValue: unknown): PlayerSaveLoadResult {
     !parsed.materials || typeof (parsed.materials as Partial<PlayerState["materials"]>).moduleParts !== "number";
   const missingWeaponParts = !parsed.materials || typeof (parsed.materials as Partial<PlayerState["materials"]>).weaponParts !== "number";
   const missingWeaponState = !Array.isArray(parsed.ownedWeaponIds) || typeof parsed.equippedWeaponId !== "string" || !parsed.weaponProgress;
+  // v7→v8: Star Rank added Universal Shards + per-ship fragments. Backfilled
+  // with defaults only when absent; every existing field (ship levels/stars,
+  // Credits, Crystals, Energy, companions, modules, weapons, loadout,
+  // equipped ship/weapon) passes through mergePlayerWithDefaults untouched.
+  const missingUniversalShards =
+    !parsed.materials || typeof (parsed.materials as Partial<PlayerState["materials"]>).universalShards !== "number";
+  const missingShipFragments = !parsed.shipFragments || typeof parsed.shipFragments !== "object";
   const state: PlayerState = {
     ...merged,
     materials: {
       ...merged.materials,
+      universalShards:
+        typeof merged.materials.universalShards === "number"
+          ? merged.materials.universalShards
+          : DEFAULT_PLAYER_STATE.materials.universalShards,
       companionData:
         typeof merged.materials.companionData === "number"
           ? merged.materials.companionData
@@ -167,7 +189,7 @@ export function migratePlayerState(parsedValue: unknown): PlayerSaveLoadResult {
   };
 
   const shouldPersist =
-    sourceVersion !== SAVE_SCHEMA_VERSION || missingCompanionData || missingModuleParts || missingWeaponParts || missingWeaponState || normalizedProgress;
+    sourceVersion !== SAVE_SCHEMA_VERSION || missingCompanionData || missingModuleParts || missingWeaponParts || missingWeaponState || missingUniversalShards || missingShipFragments || normalizedProgress;
   return {
     state,
     shouldPersist,

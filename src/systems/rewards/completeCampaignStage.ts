@@ -5,7 +5,8 @@ import type {
   RewardDifficulty,
 } from "@/types";
 import { CAMPAIGN_STAGES, getStageById } from "@/data/campaign";
-import { getStageRewardDefinition } from "@/data/stageRewards";
+import { getStageRewardDefinition, getStageShipFragmentReward } from "@/data/stageRewards";
+import { getShipById } from "@/data/ships";
 import { resolveStageRewards } from "./resolveRewards";
 import { applyRewardBundle } from "./applyRewards";
 import { productionRandomSource } from "./randomSource";
@@ -88,6 +89,19 @@ export function applyCompleteCampaignStage(
     random: args.randomSource ?? productionRandomSource,
     performance: args.performance,
   });
+
+  // Deterministic piloted-ship fragment award (see getStageShipFragmentReward
+  // in data/stageRewards.ts — launch-economy audit correction giving
+  // ship-specific fragments a reliable source). Appended here because only
+  // this transaction knows which ship the player actually flew.
+  const fragmentAmount = getStageShipFragmentReward(definition.bossStage, firstClear);
+  if (fragmentAmount > 0 && getShipById(state.selectedShipId)) {
+    bundle.rewards.push({
+      entry: { kind: "shipFragment", shipId: state.selectedShipId, amount: fragmentAmount },
+      source: firstClear ? "campaign-first-clear" : "campaign-repeat",
+      rarity: "rare",
+    });
+  }
 
   const applied = applyRewardBundle(state, bundle.rewards);
   if (!applied.result.success) {

@@ -46,7 +46,11 @@ function buildStandardDropTable(bossStage: boolean): DropTableGroup[] {
         { weight: 30, rarity: "common", entry: { kind: "material", materialId: "shipAlloy", minAmount: 4, maxAmount: 10 } },
         { weight: 20, rarity: "common", entry: { kind: "material", materialId: "weaponParts", minAmount: 2, maxAmount: 6 } },
         { weight: 20, rarity: "common", entry: { kind: "material", materialId: "moduleParts", minAmount: 2, maxAmount: 6 } },
-        { weight: 30, rarity: "common", entry: { kind: "nothing" } },
+        // Launch-economy audit correction: Companion Data previously had no
+        // repeatable source (first-clear + unopenable chests only), leaving
+        // Companion Upgrade droughts. Small repeat trickle added here.
+        { weight: 10, rarity: "common", entry: { kind: "material", materialId: "companionData", minAmount: 2, maxAmount: 5 } },
+        { weight: 20, rarity: "common", entry: { kind: "nothing" } },
       ],
     },
     {
@@ -131,4 +135,20 @@ const STAGE_REWARD_DEFINITIONS = new Map<string, StageRewardDefinition>(
 
 export function getStageRewardDefinition(stageId: string): StageRewardDefinition | null {
   return STAGE_REWARD_DEFINITIONS.get(stageId) ?? null;
+}
+
+/**
+ * Launch-economy audit correction: ship-SPECIFIC fragments previously had
+ * no repeatable source at all (starter balance + duplicate-ship conversion
+ * only), making Star Rank an eventual dead end that Universal Shards would
+ * fully replace. Every victory now grants a small deterministic fragment
+ * award for the PILOTED ship (the selected ship completeCampaignStage sees)
+ * — boss stages pay more, first clears pay a bonus, and repeats on normal
+ * stages pay nothing (so bosses stay the fragment farm and Star Rank never
+ * becomes a routine one-battle upgrade). Deterministic by design: not part
+ * of the random drop table.
+ */
+export function getStageShipFragmentReward(bossStage: boolean, firstClear: boolean): number {
+  if (firstClear) return bossStage ? 10 : 5;
+  return bossStage ? 2 : 0;
 }

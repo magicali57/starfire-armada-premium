@@ -100,6 +100,11 @@ export function getPlayerLevelRewards(level: number): RewardEntry[] {
       { kind: "material", materialId: "weaponParts", amount: 10 + level },
       { kind: "material", materialId: "moduleParts", amount: 10 + level },
       { kind: "material", materialId: "abilityCores", amount: 3 + Math.floor(level / 5) },
+      // Launch-economy audit correction: Energy previously had a sink (10
+      // per battle) but zero sources anywhere — regeneration remains a
+      // deferred future system, so milestone levels grant an explicit
+      // Energy award (economy rule: Energy only when explicitly awarded).
+      { kind: "currency", currencyId: "energy", amount: 20 },
     );
   }
   if (level % 10 === 0) {

@@ -1,0 +1,37 @@
+.top-resource-bar {
+  height: var(--top-bar-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 var(--space-4);
+  background: rgba(10, 10, 24, 0.6);
+  border-bottom: var(--border-hairline);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-nav);
+  backdrop-filter: blur(6px);
+}
+
+.top-resource-bar__currencies {
+  display: flex;
+  gap: var(--space-3);
+  overflow-x: auto;
+}
+
+.top-resource-bar__currency {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 4px var(--space-2);
+  background: var(--color-bg-panel);
+  border: var(--border-hairline);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.top-resource-bar__icon {
+  color: var(--color-secondary-300);
+}

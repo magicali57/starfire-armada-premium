@@ -1,0 +1,251 @@
+/* Reproduces HomeScreen.css's `.home-final__topbar` block exactly (same
+   values, renamed classes) so this header matches Home's pixel-for-pixel.
+   Kept as its own file/class namespace rather than a shared import so
+   Home's CSS is never touched. */
+
+/* This region is grid row 1 of the parent <HubScreenShell> — the exact
+   same 8.1%-of-100dvh row Home's own topbar occupies, since the shell
+   reproduces Home's grid recipe verbatim (see HubScreenShell.css). It does
+   not declare its own height; the row's size is already correct by
+   construction. `align-self: start` matches Home's
+   `.home-final__topbar { align-self: start }` exactly, so `.hub-header`
+   sits at the top of the row using its own intrinsic height instead of
+   stretching to fill it — the leftover space below is the same gap Home
+   leaves before its hero section begins. */
+.hub-header-region {
+  position: relative;
+  z-index: 10;
+  align-self: start;
+}
+
+.hub-header {
+  display: flex;
+  align-items: stretch;
+  gap: clamp(3px, 1.1vw, 5px);
+  height: clamp(46px, 12.78vw, 58px);
+  min-width: 0;
+  margin-top: clamp(3px, 1.57vw, 7px);
+  padding: 0 clamp(5px, 1.67vw, 8px);
+  background: transparent;
+}
+
+.hub-header button {
+  min-width: 0;
+  padding: 0;
+}
+
+.hub-header__profile {
+  position: relative;
+  flex: 0 0 31.5%;
+  display: block;
+  min-width: 0;
+  overflow: visible;
+  text-align: left;
+}
+
+.hub-header__profile-panel-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.hub-header__avatar-wrap {
+  position: absolute;
+  z-index: 1;
+  left: 1.8%;
+  top: 8%;
+  width: 29.5%;
+  height: 84%;
+  overflow: hidden;
+  clip-path: polygon(13% 0, 87% 0, 100% 13%, 100% 87%, 87% 100%, 13% 100%, 0 87%, 0 13%);
+}
+
+.hub-header__avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 28%;
+}
+
+.hub-header__profile-copy {
+  position: absolute;
+  z-index: 2;
+  left: 31.5%;
+  right: 5%;
+  top: 13%;
+  bottom: 13%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 1px 3px;
+  min-width: 0;
+  padding: 0;
+  line-height: 1;
+}
+
+.hub-header__profile-copy strong {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  color: #fff;
+  font-size: clamp(7px, 2vw, 9px);
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.hub-header__level {
+  color: #fff200;
+  font-size: clamp(7px, 2vw, 10px);
+  font-weight: 800;
+}
+
+.hub-header__profile-copy small {
+  grid-column: 1 / -1;
+  color: #eef1ff;
+  font-size: clamp(5.5px, 1.55vw, 8px);
+  white-space: nowrap;
+}
+
+.hub-header__xp {
+  display: block;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border: 1px solid #243b7f;
+  border-radius: 999px;
+  background: #0c1637;
+}
+
+.hub-header__xp i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #f129ff, #8b25ff);
+  box-shadow: 0 0 6px #b729ff;
+}
+
+.hub-header__resource-list {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 180fr 180fr 177fr 66fr 66fr;
+  gap: clamp(2px, 0.85vw, 4px);
+}
+
+.hub-header__resource {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  overflow: visible;
+  /* !important is required here to win over `.hub-header button { padding:
+     0 }` above, which has higher selector specificity (class+element vs.
+     this single class) and would otherwise silently zero this out —
+     exactly matching why Home's own `.home-final__resource` rule marks
+     this `!important` too. Without it, the value text and plus button lay
+     out centered across the pill's full width instead of Home's intended
+     27%/18% inset, which is what was throwing off the numeric text's
+     horizontal position relative to the (unaffected, absolutely
+     positioned) icon and plus button. */
+  padding: 0 18% 0 27% !important;
+}
+
+.hub-header__resource-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  z-index: -1;
+}
+
+.hub-header__resource-icon {
+  position: absolute;
+  left: 4%;
+  width: 24%;
+  max-height: 58%;
+  object-fit: contain;
+}
+
+.hub-header__resource span {
+  overflow: hidden;
+  color: #fff;
+  font-size: clamp(6.5px, 1.75vw, 9px);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hub-header__resource-plus {
+  position: absolute;
+  right: 8%;
+  top: 50%;
+  transform: translateY(-52%);
+  color: #d9f4ff;
+  font-family: Arial, sans-serif;
+  font-size: clamp(11px, 3vw, 15px);
+  font-weight: 400;
+  line-height: 1;
+  text-shadow: 0 0 5px #39bfff;
+}
+
+.hub-header__top-action {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.hub-header__top-action > img:first-child {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.hub-header__top-action > img:nth-child(2) {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 58%;
+  height: 58%;
+  transform: translate(-50%, -50%);
+  object-fit: contain;
+}
+
+.hub-header__top-action b {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: clamp(12px, 3.7vw, 18px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  color: white;
+  background: #dc1717;
+  box-shadow: 0 0 5px rgba(255, 46, 46, 0.8);
+  font-size: clamp(7px, 2vw, 10px);
+  line-height: 1;
+}
+
+@media (max-width: 374px) {
+  .hub-header {
+    padding-inline: 3px;
+    gap: 2px;
+  }
+  .hub-header__resource-list {
+    gap: 2px;
+  }
+  .hub-header__resource {
+    padding-left: 12px !important;
+    padding-right: 9px !important;
+  }
+}

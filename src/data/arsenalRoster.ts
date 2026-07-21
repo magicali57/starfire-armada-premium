@@ -1,0 +1,12 @@
+import { getWeaponMasterArt } from "./assetRegistry";
+import { WEAPONS } from "./weapons";
+import { buildWeaponView } from "@/systems/weaponProgression";
+import type { PlayerState, WeaponClass, WeaponRarity } from "@/types";
+export type ArsenalFilter="all"|WeaponClass; export type ArsenalSort="default"|"power"|"rarity"|"level"|"name";
+export type ArsenalRosterItem=ReturnType<typeof buildWeaponView>&{artwork:string};
+const rarityOrder:Record<WeaponRarity,number>={uncommon:0,rare:1,epic:2,legendary:3};
+export const buildArsenalRosterItems=(player:PlayerState):ArsenalRosterItem[]=>WEAPONS.map(w=>({...buildWeaponView(w,player),artwork:getWeaponMasterArt(w.id)}));
+export const filterArsenalRosterItems=(items:ArsenalRosterItem[],filter:ArsenalFilter)=>filter==="all"?[...items]:items.filter(i=>i.weaponClass===filter);
+export const sortArsenalRosterItems=(items:ArsenalRosterItem[],sort:ArsenalSort)=>[...items].sort((a,b)=>sort==="power"?b.power-a.power:sort==="rarity"?rarityOrder[b.rarity]-rarityOrder[a.rarity]:sort==="level"?b.level-a.level:sort==="name"?a.name.localeCompare(b.name):0);
+export const getArsenalCounts=(items:ArsenalRosterItem[])=>({owned:items.filter(i=>i.owned).length,total:items.length});
+export const getFeaturedWeapon=(items:ArsenalRosterItem[],id?:string|null)=>items.find(i=>i.id===id)??items.find(i=>i.equipped)??items.find(i=>i.owned)??items[0]??null;

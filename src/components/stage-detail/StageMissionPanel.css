@@ -1,0 +1,233 @@
+.stage-mission-panel {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  min-height: 300px;
+  border: 1px solid rgba(217, 68, 255, 0.6);
+  clip-path: polygon(3% 0, 97% 0, 100% 4%, 100% 96%, 97% 100%, 3% 100%, 0 96%, 0 4%);
+  background: linear-gradient(150deg, #1a0630, #06020f 70%);
+  box-shadow: inset 0 0 20px rgba(217, 68, 255, 0.16), 0 0 18px rgba(217, 68, 255, 0.25);
+}
+
+.stage-mission-panel__art {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 75% 40%;
+}
+
+.stage-mission-panel__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    90deg,
+    rgba(8, 3, 18, 0.95) 0%,
+    rgba(8, 3, 18, 0.85) 45%,
+    rgba(8, 3, 18, 0.35) 70%,
+    rgba(8, 3, 18, 0.08) 100%
+  );
+}
+
+.stage-mission-panel__body {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 66%;
+  min-width: 0;
+  padding: var(--space-4) var(--space-4) var(--space-5);
+  box-sizing: border-box;
+}
+
+.stage-mission-panel__chapter-label {
+  color: #e9a3ff;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.stage-mission-panel__name {
+  margin: 0;
+  color: #fff;
+  font-family: var(--font-family-display-heavy, var(--font-family-display));
+  font-size: clamp(20px, 6.4vw, 27px);
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+}
+
+.stage-mission-panel__description {
+  margin: var(--space-1) 0 0;
+  max-width: 95%;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.stage-mission-panel__energy-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: rgba(3, 2, 10, 0.55);
+  width: fit-content;
+  max-width: 100%;
+}
+
+.stage-mission-panel__energy-label {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stage-mission-panel__energy-value {
+  color: var(--color-gold-300);
+  font-family: var(--font-family-display);
+  font-weight: var(--font-weight-bold);
+  font-size: 14px;
+}
+
+/* Two equal columns, two equal-height rows, at every width — the previous
+   single-column override below 374px is what let each cell's content
+   determine its own row height independently (the actual root cause of the
+   reported mobile misalignment, not just a narrow-screen edge case: the
+   4 cells never shared row/column geometry to begin with, at any width,
+   because they were plain <StatRow> instances with no shared grid-cell
+   contract). `align-items: stretch` + `min-width: 0` on every cell is what
+   makes the two rows/columns actually equal instead of hugging content. */
+.stage-mission-panel__stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: rgba(3, 2, 10, 0.55);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* One shared structure for all 4 cells: a fixed-size icon column + a
+   label-over-value text column. The icon wrapper is a fixed 22x22 grid
+   that centers its child regardless of that icon's own intrinsic SVG
+   viewBox or font metrics — this is what stops the sword/shield/calendar
+   icons (all rendered at size=13, but with different glyph proportions)
+   and the "A" grade text from each claiming a different amount of vertical
+   space and dragging their row's baseline around. */
+.stat-cell {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  /* Tall enough for a 2-line label + value in every cell (not just the
+     ones that need to wrap) — this is what keeps all 4 cells' rows equal
+     height regardless of which labels actually wrap at a given width. */
+  min-height: 48px;
+}
+
+.stat-cell__icon {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  color: var(--color-secondary-300);
+}
+
+.stat-cell--highlight .stat-cell__icon {
+  color: var(--color-secondary-300);
+}
+
+.stat-cell:nth-child(3) .stat-cell__icon {
+  color: #e9a3ff;
+}
+
+.stat-cell__content {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+/* Was the source of the truncation: `white-space: nowrap` +
+   `overflow: hidden` + `text-overflow: ellipsis` forced every label onto
+   one line and clipped whatever didn't fit ("RECOMMENDED POWER" -> "RECOM…"
+   at mobile column widths around 70-100px). Labels now wrap onto up to two
+   lines instead — every word stays visible, just on its own line where
+   needed ("RECOMMENDED" / "POWER"). `word-break: normal` +
+   `overflow-wrap: normal` keep wrapping to whole words only, never
+   mid-word. */
+.stat-cell__label {
+  margin: 0;
+  width: 100%;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-base);
+  font-size: 9.5px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.25;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.stat-cell__value {
+  margin: 0;
+  display: block;
+  min-height: 14px;
+  color: var(--color-text-primary);
+  font-family: var(--font-family-display);
+  font-weight: var(--font-weight-bold);
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stat-cell--highlight .stat-cell__value {
+  color: var(--color-secondary-300);
+}
+
+.stat-cell__value--grade {
+  color: #e9a3ff;
+  font-size: 13px;
+}
+
+@media (max-width: 374px) {
+  .stage-mission-panel__body {
+    max-width: 74%;
+  }
+  /* Font-size-only adjustment — the 2x2 grid itself is preserved at every
+     width per instruction, rather than collapsing to a single column. */
+  .stat-cell__label {
+    font-size: 9px;
+  }
+  .stat-cell__value {
+    font-size: 11px;
+  }
+  .stat-cell__value--grade {
+    font-size: 12px;
+  }
+}

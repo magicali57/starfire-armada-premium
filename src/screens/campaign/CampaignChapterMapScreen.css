@@ -1,0 +1,13 @@
+.chapter-map__content {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4) var(--space-6);
+  background: radial-gradient(120% 60% at 50% 0%, rgba(30, 60, 160, 0.2), transparent 55%), #030309;
+}

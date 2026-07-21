@@ -1,0 +1,114 @@
+.ship-upgrade-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.ship-upgrade-actions__primary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: var(--border-neon-gold);
+  background: linear-gradient(180deg, rgba(248, 180, 0, 0.22), rgba(248, 180, 0, 0.08));
+  box-shadow: 0 0 18px rgba(248, 180, 0, 0.25);
+  color: var(--color-gold-100);
+}
+
+.ship-upgrade-actions__primary:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+  filter: grayscale(0.4);
+}
+
+.ship-upgrade-actions__primary-label {
+  font-family: var(--font-family-display-heavy);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ship-upgrade-actions__primary-costs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.ship-upgrade-actions__primary-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.ship-upgrade-actions__primary-cost img {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+}
+
+.ship-upgrade-actions__secondary-row {
+  display: flex;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.ship-upgrade-actions__secondary {
+  flex: 1 1 0;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-3) var(--space-2);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ship-upgrade-actions__secondary--x5 {
+  border: var(--border-neon-secondary);
+  background: rgba(34, 201, 238, 0.08);
+  color: var(--color-secondary-300);
+}
+
+.ship-upgrade-actions__secondary--preview {
+  border: var(--border-neon-primary);
+  background: rgba(139, 61, 255, 0.1);
+  color: var(--color-rarity-epic);
+}
+
+.ship-upgrade-actions__secondary:disabled {
+  opacity: 0.45;
+}
+
+@media (max-width: 340px) {
+  .ship-upgrade-actions__primary-costs {
+    gap: var(--space-3);
+  }
+  .ship-upgrade-actions__secondary {
+    font-size: 12px;
+    padding: var(--space-2) var(--space-1);
+  }
+}

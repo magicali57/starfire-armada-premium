@@ -1,0 +1,132 @@
+.loadout-alt-items {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  border: var(--border-hairline);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.loadout-alt-items__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.loadout-alt-items__heading {
+  margin: 0;
+  min-width: 0;
+  color: var(--color-text-primary);
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.loadout-alt-items__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.loadout-alt-items__category-select {
+  min-width: 0;
+  max-width: 140px;
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  border: var(--border-hairline);
+  background: rgba(6, 10, 24, 0.7);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xs);
+}
+
+.loadout-alt-items__filter-btn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  border: var(--border-hairline);
+  background: rgba(6, 10, 24, 0.7);
+}
+
+.loadout-alt-items__filter-btn img {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+}
+
+.loadout-alt-items__filter-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: rgba(6, 10, 24, 0.5);
+  border: var(--border-hairline);
+}
+
+.loadout-alt-items__filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.loadout-alt-items__filter-row select {
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: var(--border-hairline);
+  background: rgba(6, 10, 24, 0.7);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xs);
+}
+
+.loadout-alt-items__clear-slot {
+  align-self: flex-start;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 143, 143, 0.4);
+  background: rgba(255, 77, 77, 0.1);
+  color: var(--color-danger-300);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.loadout-alt-items__empty {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* The one and only horizontal scroller on this screen — scoped here so the
+   page document itself never scrolls horizontally (see the mobile-layout
+   verification notes in the completion report). */
+.loadout-alt-items__scroller {
+  display: flex;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}

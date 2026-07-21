@@ -1,0 +1,51 @@
+.pre-battle-placeholder__content {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: radial-gradient(120% 60% at 50% 0%, rgba(30, 60, 160, 0.2), transparent 55%), #030309;
+}
+
+.pre-battle-placeholder__card {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4);
+  border: var(--border-hairline);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(150deg, #06142c, #020613 68%);
+  text-align: center;
+}
+
+.pre-battle-placeholder__eyebrow {
+  color: var(--color-secondary-300);
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pre-battle-placeholder__title {
+  margin: 0;
+  color: #fff;
+  font-family: var(--font-family-display);
+  font-size: clamp(18px, 5.5vw, 22px);
+}
+
+.pre-battle-placeholder__message {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}

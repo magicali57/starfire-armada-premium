@@ -1,0 +1,73 @@
+.ship-progression-tabs {
+  position: relative;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-3) calc(env(safe-area-inset-bottom) + var(--space-2));
+  background: linear-gradient(180deg, transparent, rgba(5, 5, 13, 0.9) 30%);
+}
+
+.ship-progression-tabs__tab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 2px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(139, 61, 255, 0.4);
+  background: rgba(23, 23, 54, 0.75);
+  color: var(--color-primary-100);
+  box-shadow: 0 0 10px rgba(139, 61, 255, 0.18);
+}
+
+.ship-progression-tabs__tab span {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.ship-progression-tabs__tab--active {
+  border-color: rgba(139, 61, 255, 0.95);
+  background: rgba(63, 37, 116, 0.9);
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(139, 61, 255, 0.45);
+}
+
+.ship-progression-tabs__badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  place-items: center;
+  width: 15px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  color: white;
+  background: #dc1717;
+  box-shadow: 0 0 5px rgba(255, 46, 46, 0.8);
+  font-size: 9px;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+@media (max-width: 360px) {
+  .ship-progression-tabs {
+    gap: 4px;
+  }
+  .ship-progression-tabs__tab span {
+    font-size: 9px;
+  }
+}

@@ -1,0 +1,27 @@
+.neon-text-primary {
+  color: var(--color-primary-300);
+  text-shadow: 0 0 12px var(--color-primary-glow);
+}
+
+.neon-text-secondary {
+  color: var(--color-secondary-300);
+  text-shadow: 0 0 12px var(--color-secondary-glow);
+}
+
+.neon-text-gold {
+  color: var(--color-gold-300);
+  text-shadow: 0 0 12px var(--color-gold-glow);
+}
+
+.glass-panel {
+  background: linear-gradient(180deg, rgba(23, 23, 54, 0.9), rgba(13, 13, 34, 0.9));
+  backdrop-filter: blur(8px);
+}
+
+.press-scale {
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.press-scale:active {
+  transform: scale(0.96);
+}

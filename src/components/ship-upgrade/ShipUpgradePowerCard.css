@@ -1,0 +1,101 @@
+.ship-upgrade-power-card {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  border: var(--border-neon-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ship-upgrade-power-card__heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  min-width: 0;
+  color: var(--color-secondary-300);
+  font-family: var(--font-family-display);
+  font-size: 12px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ship-upgrade-power-card__heading i {
+  flex: 1;
+  height: 1px;
+  min-width: 8px;
+  background: linear-gradient(90deg, rgba(34, 201, 238, 0.5), transparent);
+}
+
+.ship-upgrade-power-card__body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.ship-upgrade-power-card__icon {
+  flex-shrink: 0;
+  color: var(--color-rarity-epic);
+  filter: drop-shadow(0 0 8px rgba(139, 61, 255, 0.5));
+}
+
+.ship-upgrade-power-card__value-col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ship-upgrade-power-card__delta {
+  min-width: 0;
+  color: var(--color-rarity-epic);
+  font-family: var(--font-family-display-heavy);
+  font-size: clamp(18px, 6vw, 22px);
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: break-word;
+  text-shadow: 0 0 10px rgba(139, 61, 255, 0.5);
+}
+
+.ship-upgrade-power-card__label {
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ship-upgrade-power-card__max {
+  color: var(--color-gold-300);
+  font-family: var(--font-family-display-heavy);
+  font-size: 16px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+}
+
+.ship-upgrade-power-card__from-to {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.ship-upgrade-power-card__from-to strong {
+  color: var(--color-text-primary);
+  font-family: var(--font-family-display);
+  font-weight: var(--font-weight-bold);
+}
+
+.ship-upgrade-power-card__from-to-next {
+  color: var(--color-secondary-300);
+}

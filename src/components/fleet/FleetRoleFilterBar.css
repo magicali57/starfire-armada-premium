@@ -1,0 +1,54 @@
+.fleet-role-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.fleet-role-filter-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.fleet-role-filter-bar__pill,
+.fleet-role-filter-bar__sort {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(124, 122, 160, 0.3);
+  background: var(--color-bg-panel);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.fleet-role-filter-bar__pill img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+.fleet-role-filter-bar__pill--active {
+  border-color: var(--color-rarity-epic);
+  color: var(--color-text-primary);
+  background: rgba(181, 107, 255, 0.16);
+  box-shadow: 0 0 0 1px var(--color-rarity-epic);
+}
+
+.fleet-role-filter-bar__sort {
+  margin-left: auto;
+}
+
+.fleet-role-filter-bar__sort img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}

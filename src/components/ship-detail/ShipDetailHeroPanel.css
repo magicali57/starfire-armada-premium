@@ -1,0 +1,253 @@
+.ship-detail-hero {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-rarity-epic);
+  box-shadow: 0 0 24px rgba(139, 61, 255, 0.22);
+  background-image: radial-gradient(120% 90% at 78% 20%, rgba(139, 61, 255, 0.28), transparent 60%),
+    radial-gradient(90% 70% at 15% 85%, rgba(34, 201, 238, 0.16), transparent 65%);
+  overflow: hidden;
+}
+
+.ship-detail-hero__grid {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.ship-detail-hero__info {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ship-detail-hero__rarity-pill {
+  align-self: flex-start;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid currentColor;
+  background: rgba(5, 5, 13, 0.5);
+  font-family: var(--font-family-display);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.05em;
+}
+
+.ship-detail-hero__name {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-family: var(--font-family-display-heavy);
+  font-size: clamp(18px, 5.5vw, 22px);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  overflow-wrap: break-word;
+}
+
+.ship-detail-hero__role-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-rarity-epic);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.03em;
+}
+
+.ship-detail-hero__role-row img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+.ship-detail-hero__power-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+  padding: 6px var(--space-2);
+  width: fit-content;
+  max-width: 100%;
+  border-radius: var(--radius-md);
+  border: var(--border-neon-secondary);
+  background: rgba(6, 10, 24, 0.6);
+}
+
+.ship-detail-hero__power-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ship-detail-hero__power-value {
+  color: var(--color-secondary-300);
+  font-family: var(--font-family-display);
+  font-size: 18px;
+  font-weight: var(--font-weight-bold);
+}
+
+.ship-detail-hero__stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.ship-detail-hero__stat-label {
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.ship-detail-hero__stat-value {
+  color: #fff;
+  font-family: var(--font-family-display);
+  font-size: 14px;
+  font-weight: var(--font-weight-bold);
+}
+
+.ship-detail-hero__stat-value small {
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: var(--font-weight-regular);
+}
+
+.ship-detail-hero__level-track {
+  width: 100%;
+  max-width: 100%;
+  height: 4px;
+  margin-top: -2px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(124, 122, 160, 0.25);
+}
+
+.ship-detail-hero__level-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-secondary-500), var(--color-primary-500));
+  box-shadow: 0 0 6px rgba(139, 61, 255, 0.6);
+}
+
+.ship-detail-hero__stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ship-detail-hero__star {
+  color: rgba(124, 122, 160, 0.4);
+}
+
+.ship-detail-hero__star--filled {
+  color: var(--color-rarity-legendary);
+}
+
+.ship-detail-hero__info-glyph {
+  margin-left: 3px;
+  color: var(--color-text-muted);
+}
+
+/* Column layout: art frame on top, chevron in its own row underneath —
+   replaces the previous position:absolute chevron, which sat vertically
+   centered over the art's right edge and visibly overlapped the ship
+   artwork on real devices. Static flow means the button can never cover
+   the art no matter how the art's transparent padding/silhouette varies
+   per ship. */
+.ship-detail-hero__art-col {
+  flex: 0 0 42%;
+  max-width: 42%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.ship-detail-hero__art {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.ship-detail-hero__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.ship-detail-hero__cycle {
+  position: static;
+  flex: 0 0 auto;
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(182, 179, 214, 0.4);
+  background: rgba(6, 10, 24, 0.75);
+  color: var(--color-secondary-300);
+  box-shadow: 0 0 8px rgba(34, 201, 238, 0.3);
+}
+
+.ship-detail-hero__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.ship-detail-hero__unlock-req {
+  flex: 1;
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.ship-detail-hero__equipped {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+@media (max-width: 360px) {
+  .ship-detail-hero__grid {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ship-detail-hero__art-col {
+    flex: 1 1 auto;
+    max-width: 100%;
+    margin-top: var(--space-2);
+  }
+  .ship-detail-hero__art {
+    max-width: 220px;
+    margin: 0 auto;
+  }
+}

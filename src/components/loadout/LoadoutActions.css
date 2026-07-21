@@ -1,0 +1,18 @@
+.loadout-actions {
+  display: flex;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.loadout-actions > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+@media (max-width: 340px) {
+  .loadout-actions {
+    flex-direction: column;
+  }
+}

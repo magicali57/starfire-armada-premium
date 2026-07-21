@@ -1,0 +1,83 @@
+.fleet-collection-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Fixed-height text region so the category selector below it always begins
+   at the same vertical coordinate on both screens, regardless of whether
+   this screen has 2 lines of text (Fleet: title + count) or 3 (Companions:
+   title + subtitle + count). Sized for the taller 3-line case; shorter
+   content is vertically centered within it rather than leaving the
+   selector lower on the taller screen.
+
+   Explicit line-heights are set below (rather than left to inherit) so
+   this region's real content height is deterministic and calculable, not
+   dependent on browser/font default metrics:
+     Companions (3 lines): title 28px*1.2 + subtitle 13px*1.3 + count
+       11px*1.3 + 2*3px gap ≈ 70.8px
+     Fleet (2 lines):      title 28px*1.2 + count 11px*1.3 + 1*3px gap
+       ≈ 50.9px
+   min-height is set above the taller (Companions) figure with a small
+   safety margin, so both screens' box height is pinned to this same
+   min-height floor rather than growing to fit content on one screen only
+   — this is what keeps the selector's top edge byte-identical between the
+   two screens, not merely close. Re-derived per breakpoint below. Static
+   calculation only — see FLEET_COMPANIONS_ALIGNMENT_FIX_REPORT.md's
+   mobile verification section for the disclosed no-headless-browser
+   limitation. */
+.fleet-collection-header__text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 76px;
+  text-align: center;
+}
+
+.fleet-collection-header__title {
+  margin: 0;
+  font-family: var(--font-family-display-heavy);
+  font-size: var(--font-size-2xl);
+  line-height: 1.2;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  overflow-wrap: break-word;
+}
+
+.fleet-collection-header__subtitle {
+  margin: 0;
+  color: var(--color-secondary-300);
+  font-size: var(--font-size-sm);
+  line-height: 1.3;
+  overflow-wrap: break-word;
+}
+
+.fleet-collection-header__count {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: 1.3;
+  overflow-wrap: break-word;
+}
+
+@media (max-width: 360px) {
+  .fleet-collection-header__text {
+    min-height: 68px;
+  }
+
+  .fleet-collection-header__title {
+    font-size: var(--font-size-xl);
+  }
+}

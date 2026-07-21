@@ -1,0 +1,130 @@
+/* Self-contained tone system (cyan / purple / blue / success-green) rather
+   than NeonPanel's tones — the reference's cut-corner card treatment
+   (matching Home's own mission-card / nav-item clip-path convention in
+   HomeScreen.css) isn't something NeonPanel supports, and Training needs a
+   4th hue (blue) that isn't one of NeonPanel's four existing tones. Colors
+   below reuse the project's existing palette values (tokens.css's
+   secondary/primary/success plus Home's own --home-blue value) rather than
+   inventing new ones. */
+
+.mode-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  width: 100%;
+  height: 100%;
+  min-height: 120px;
+  overflow: hidden;
+  padding: var(--space-3) var(--space-3) var(--space-2);
+  border: 1px solid var(--mode-card-border, rgba(255, 255, 255, 0.2));
+  clip-path: polygon(6% 0, 94% 0, 100% 10%, 100% 100%, 0 100%, 0 10%);
+  background: linear-gradient(150deg, #06142c, #020613 68%);
+  box-shadow: inset 0 0 12px var(--mode-card-glow-inset, transparent);
+  text-align: left;
+}
+
+.mode-card--cyan {
+  --mode-card-border: rgba(34, 201, 238, 0.55);
+  --mode-card-glow-inset: rgba(34, 201, 238, 0.2);
+  --mode-card-accent: #4fe0ff;
+}
+
+.mode-card--purple {
+  --mode-card-border: rgba(163, 52, 255, 0.6);
+  --mode-card-glow-inset: rgba(163, 52, 255, 0.22);
+  --mode-card-accent: #c98bff;
+}
+
+.mode-card--blue {
+  --mode-card-border: rgba(23, 140, 255, 0.55);
+  --mode-card-glow-inset: rgba(23, 140, 255, 0.2);
+  --mode-card-accent: #5fb1ff;
+}
+
+.mode-card--success {
+  --mode-card-border: rgba(51, 209, 122, 0.55);
+  --mode-card-glow-inset: rgba(51, 209, 122, 0.2);
+  --mode-card-accent: #6be89b;
+}
+
+.mode-card__art {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.82;
+}
+
+.mode-card__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    180deg,
+    rgba(3, 4, 12, 0.32) 0%,
+    rgba(3, 4, 12, 0.58) 55%,
+    rgba(2, 3, 10, 0.94) 100%
+  );
+}
+
+.mode-card__icon {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  margin-bottom: 2px;
+  color: var(--mode-card-accent);
+  filter: drop-shadow(0 0 4px var(--mode-card-glow-inset));
+}
+
+.mode-card__eyebrow {
+  position: relative;
+  z-index: 2;
+  color: var(--mode-card-accent);
+  font-size: 9px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mode-card__title {
+  position: relative;
+  z-index: 2;
+  color: #fff;
+  font-family: var(--font-family-display);
+  font-weight: var(--font-weight-bold);
+  font-size: clamp(11px, 3.2vw, 14px);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.mode-card__footer {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+
+.mode-card__status {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: clamp(9px, 2.6vw, 11px);
+  font-weight: var(--font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mode-card__status--accent {
+  color: var(--mode-card-accent);
+}
+
+.mode-card__footer svg {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}

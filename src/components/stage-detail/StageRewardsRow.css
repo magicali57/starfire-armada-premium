@@ -1,0 +1,61 @@
+.stage-rewards-row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-3);
+  border: var(--border-hairline);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(150deg, #06142c, #020613 68%);
+}
+
+.stage-rewards-row__group {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.stage-rewards-row__heading {
+  margin: 0;
+  color: var(--color-secondary-300);
+  font-family: var(--font-family-display);
+  font-weight: var(--font-weight-bold);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.stage-rewards-row__items {
+  display: flex;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.stage-rewards-row__divider {
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 1px;
+  background: var(--border-hairline-color, rgba(182, 179, 214, 0.25));
+}
+
+@media (max-width: 420px) {
+  .stage-rewards-row {
+    flex-direction: column;
+  }
+  .stage-rewards-row__divider {
+    width: 100%;
+    height: 1px;
+    align-self: stretch;
+  }
+  .stage-rewards-row__items {
+    flex-wrap: wrap;
+  }
+  .stage-rewards-row__items > * {
+    flex: 1 1 64px;
+  }
+}

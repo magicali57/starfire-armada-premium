@@ -1,0 +1,44 @@
+.fleet-stat-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.fleet-stat-block__label {
+  font-family: var(--font-family-display);
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.fleet-stat-block__value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.fleet-stat-block__value small {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+}
+
+.fleet-stat-block__track {
+  width: 100%;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: rgba(124, 122, 160, 0.22);
+  overflow: hidden;
+}
+
+.fleet-stat-block__fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--color-rarity-epic);
+}

@@ -1,0 +1,85 @@
+/* Reproduces HomeScreen.css's `.home-final__bottom-nav` block exactly (same
+   colors/clip-path/icon sizing/active-tab treatment, renamed classes). This
+   is grid row 5 of the parent <HubScreenShell> — the same 7.3%-of-100dvh
+   row Home's own bottom nav occupies (the shell reproduces Home's grid
+   recipe verbatim, see HubScreenShell.css) — so it does not declare its own
+   height, position, or width here; those all come from being a normal
+   child of that grid, exactly like `.home-final__bottom-nav` is a normal
+   child of `.home-final`'s grid. No `position: fixed` is needed: because
+   the shell's outer box is a non-scrolling `height: 100dvh` grid and only
+   the middle scroll row moves, this row visually stays "pinned" at the
+   bottom for free, the same way Home's never needed to be pinned. */
+
+.hub-bottom-nav {
+  position: relative;
+  z-index: var(--z-nav);
+  /* Matches `.home-final__bottom-nav`'s own `min-height: 0` exactly — this
+     is itself a grid item (row 5 of the shell), and without this it could
+     be forced taller than its real 7.3dvh track by its own content's
+     automatic minimum size. */
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 2px;
+  padding: 2px 5px env(safe-area-inset-bottom);
+  background: #01030a;
+}
+
+.hub-bottom-nav__item {
+  position: relative;
+  min-width: 0;
+  /* Both required, matching `.home-final__nav-item` exactly: `min-height: 0`
+     stops the grid item's automatic content-based minimum size from
+     forcing this row taller than its real 7.3dvh track (a `<button>`'s
+     default browser padding/min-content size is otherwise enough to do
+     that); `padding: 0` removes that same native button padding, since the
+     shared `reset.css` button reset zeroes border/background/font but not
+     padding. Home resets this globally via `.home-final button { padding:
+     0 }` — this is the equivalent for this component. Missing either of
+     these was the real cause of the bottom nav rendering visibly larger
+     than Home's. */
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  border: 1px solid #13578f;
+  clip-path: polygon(12% 0, 88% 0, 100% 15%, 100% 100%, 0 100%, 0 15%);
+  background: linear-gradient(180deg, #06142b, #020611);
+}
+
+.hub-bottom-nav__item--active {
+  border-color: #d044ff;
+  background: radial-gradient(circle at 50% 45%, #5e1995, #14042a 67%);
+  box-shadow: inset 0 0 11px #8b26ff, 0 0 7px rgba(198, 45, 255, 0.65);
+}
+
+.hub-bottom-nav__item img {
+  display: block;
+  width: min(64%, 46px);
+  height: 64%;
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+.hub-bottom-nav__item--active img {
+  width: min(70%, 50px);
+  height: 67%;
+}
+
+.hub-bottom-nav__item strong {
+  overflow: hidden;
+  max-width: 94%;
+  color: #eef5ff;
+  margin-top: -1px;
+  font-size: clamp(6.5px, 1.9vw, 9px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}

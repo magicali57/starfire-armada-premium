@@ -1,0 +1,60 @@
+/* Ship Detail's own full-screen shell — not <HubScreenShell>. Same pattern
+   as PreBattleScreen.css: a fixed top bar, a scrollable content region,
+   and (here) the reference's own bottom action row instead of a shared
+   HubBottomNav or no footer at all. */
+.ship-detail-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  isolation: isolate;
+  color: #f6f7ff;
+  font-family: var(--font-family-base);
+  background: #030309;
+}
+
+.ship-detail-screen,
+.ship-detail-screen * {
+  box-sizing: border-box;
+}
+
+.ship-detail-screen__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.ship-detail-screen__scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.ship-detail-screen__content {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4) var(--space-6);
+  background: radial-gradient(120% 60% at 50% 0%, rgba(30, 60, 160, 0.16), transparent 55%);
+}
+
+.ship-detail-screen__not-found {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--color-text-secondary);
+}

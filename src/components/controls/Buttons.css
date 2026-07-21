@@ -1,0 +1,53 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-family-display);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-md);
+  letter-spacing: 0.02em;
+  transition: transform var(--duration-fast) var(--ease-standard),
+    filter var(--duration-fast) var(--ease-standard);
+}
+
+.btn--primary {
+  color: var(--color-text-on-gold);
+  background: linear-gradient(160deg, var(--color-gold-300), var(--color-gold-500) 60%, var(--color-gold-600));
+  box-shadow: var(--glow-gold);
+}
+
+.btn--primary:hover {
+  filter: brightness(1.06);
+}
+
+.btn--secondary {
+  color: var(--color-secondary-100);
+  background: rgba(34, 201, 238, 0.12);
+  border: var(--border-neon-secondary);
+}
+
+.btn--secondary:hover {
+  background: rgba(34, 201, 238, 0.2);
+}
+
+.btn--full {
+  width: 100%;
+}
+
+.btn--icon {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-panel);
+  border: var(--border-hairline);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: none;
+}

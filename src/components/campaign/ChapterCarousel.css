@@ -1,0 +1,56 @@
+.chapter-carousel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* `flex: 1` alone is not enough here: flex items default to `min-width:
+   auto`, which resolves to this item's *content* min-width — the summed
+   width of all 5 fixed-width ChapterCards plus gaps, comfortably wider
+   than any mobile viewport. That floor overrides `overflow-x: auto`
+   entirely: the track can never shrink to fit its allotted space, so it
+   (and everything above it, up to the page) renders at content width
+   instead of scrolling internally. `min-width: 0` removes that floor and
+   is what actually lets `overflow-x: auto` do its job. This was the root
+   cause of the mobile horizontal-overflow bug. */
+.chapter-carousel__track {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4) 2px var(--space-1);
+  overflow-x: auto;
+  overflow-y: visible;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.chapter-carousel__track::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.chapter-carousel__edge {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 32px;
+  color: var(--color-text-muted);
+  opacity: 0.7;
+}
+
+.chapter-carousel__edge:active {
+  opacity: 1;
+}

@@ -1,0 +1,36 @@
+.stage-reward-item {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-2);
+  border: var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: rgba(3, 2, 10, 0.55);
+}
+
+.stage-reward-item img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+}
+
+.stage-reward-item span {
+  color: var(--color-text-primary);
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+@media (max-width: 359px) {
+  .stage-reward-item img {
+    width: 28px;
+    height: 28px;
+  }
+  .stage-reward-item span {
+    font-size: 10px;
+  }
+}

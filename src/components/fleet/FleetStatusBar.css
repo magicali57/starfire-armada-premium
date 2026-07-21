@@ -1,0 +1,51 @@
+.fleet-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  height: 30px;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fleet-status-bar--upgrade-ready {
+  background: linear-gradient(180deg, #2fd66b, #1fa851);
+  color: #06210f;
+}
+
+.fleet-status-bar--weapon-upgrade-ready {
+  background: linear-gradient(180deg, #f8b400, #c98600);
+  color: #241300;
+}
+
+.fleet-status-bar--fragment-ready {
+  background: rgba(79, 180, 255, 0.22);
+  color: #9fdcff;
+  border-top: 1px solid rgba(79, 180, 255, 0.4);
+}
+
+.fleet-status-bar--fragments {
+  background: rgba(124, 122, 160, 0.14);
+  color: var(--color-text-secondary);
+  border-top: 1px solid rgba(124, 122, 160, 0.24);
+}
+
+.fleet-status-bar--locked {
+  background: transparent;
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-semibold);
+}
+
+.fleet-status-bar__fragment-icon {
+  width: 13px;
+  height: 13px;
+  object-fit: contain;
+}
+
+.fleet-status-bar__arrow {
+  flex-shrink: 0;
+}

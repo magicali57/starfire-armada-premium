@@ -1,0 +1,175 @@
+.star-rewards-track {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-3);
+  border: var(--border-hairline);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(150deg, #06142c, #020613 68%);
+}
+
+.star-rewards-track__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: var(--border-hairline);
+}
+
+.star-rewards-track__header h3 {
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.star-rewards-track__info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border: 1px solid var(--color-text-muted);
+  border-radius: 50%;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-style: italic;
+}
+
+.star-rewards-track__row {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+}
+
+.star-rewards-track__item {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Connecting line, drawn once behind every dot rather than per-segment. */
+.star-rewards-track__row::before {
+  content: "";
+  position: absolute;
+  left: calc(10% / 2);
+  right: calc(10% / 2);
+  top: 68px;
+  height: 1px;
+  background: rgba(120, 130, 170, 0.3);
+  z-index: 0;
+}
+
+.star-rewards-track__chest {
+  position: relative;
+  z-index: 1;
+  width: 52px;
+  height: 52px;
+}
+
+.star-rewards-track__chest img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+}
+
+.star-rewards-track__chest--upcoming img,
+.star-rewards-track__chest--locked img {
+  opacity: 0.7;
+}
+
+.star-rewards-track__chest--highlighted {
+  /* Scaled up visually (matching the reference's larger/gold "current
+     target" chest) via transform rather than width/height, so this item's
+     box stays the same size as its siblings — otherwise the taller box
+     would push this item's dot out of line with the shared connector line
+     below (see .star-rewards-track__row::before, which assumes one
+     uniform row height). */
+  transform: scale(1.18);
+  filter: drop-shadow(0 0 10px rgba(248, 180, 0, 0.55));
+}
+
+.star-rewards-track__badge {
+  position: absolute;
+  left: 50%;
+  bottom: -2px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid rgba(182, 179, 214, 0.35);
+  background: rgba(6, 8, 20, 0.85);
+}
+
+.star-rewards-track__badge--claimed {
+  color: var(--color-secondary-300);
+  border-color: var(--color-secondary-500);
+  box-shadow: 0 0 6px rgba(34, 201, 238, 0.5);
+}
+
+.star-rewards-track__badge--highlighted {
+  color: var(--color-gold-300);
+  border-color: var(--color-gold-500);
+  box-shadow: 0 0 6px rgba(248, 180, 0, 0.5);
+}
+
+.star-rewards-track__badge--upcoming {
+  color: var(--color-primary-300);
+  border-color: rgba(163, 52, 255, 0.5);
+}
+
+.star-rewards-track__badge--locked {
+  color: var(--color-text-muted);
+}
+
+.star-rewards-track__dot {
+  position: relative;
+  z-index: 1;
+  width: 9px;
+  height: 9px;
+  margin-top: 4px;
+  border-radius: 50%;
+  border: 1px solid rgba(120, 130, 170, 0.5);
+  background: #0c1024;
+}
+
+.star-rewards-track__dot--claimed {
+  width: 11px;
+  height: 11px;
+  border-color: var(--color-secondary-500);
+  background: var(--color-secondary-500);
+  box-shadow: 0 0 6px rgba(34, 201, 238, 0.6);
+}
+
+.star-rewards-track__dot--highlighted {
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--color-primary-500);
+  background: rgba(163, 52, 255, 0.35);
+  box-shadow: 0 0 6px rgba(163, 52, 255, 0.6);
+}
+
+.star-rewards-track__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.star-rewards-track__label svg {
+  color: var(--color-gold-300);
+}

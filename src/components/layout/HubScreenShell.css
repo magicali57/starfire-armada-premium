@@ -1,0 +1,53 @@
+/* This is Home's `.home-final` grid recipe, reproduced verbatim (same
+   height:100dvh, same min-height floor, same grid-template-rows string —
+   both pulled from the shared --hub-shell-rows / --hub-shell-min-height
+   tokens in tokens.css) rather than a separately-derived approximation of
+   it. Two elements running the identical CSS Grid track-sizing algorithm
+   against the same viewport produce identical row heights — this is what
+   guarantees the header (row 1) and footer (row 5) land exactly where
+   Home's topbar/bottom-nav do, not approximately where they do. */
+
+.hub-screen-shell {
+  position: relative;
+  height: 100dvh;
+  min-height: var(--hub-shell-min-height);
+  overflow: hidden;
+  isolation: isolate;
+  display: grid;
+  grid-template-rows: var(--hub-shell-rows);
+  padding-top: env(safe-area-inset-top);
+  color: #f6f7ff;
+  /* Home sets this at its own root (`.home-final`) and every topbar/
+     bottom-nav label inherits it — without the same override here, that
+     text would fall back to the app's base font (Inter) instead of the
+     display face, a real (if subtle) typography mismatch. */
+  font-family: var(--font-family-display, "Arial Narrow", sans-serif);
+}
+
+.hub-screen-shell,
+.hub-screen-shell * {
+  box-sizing: border-box;
+}
+
+/* Home's middle three rows (hero/actions/missions — 49.1% + 13.4% + 22.1%
+   = 84.6% combined) collapse into one scrollable row here, since hub
+   screens don't share Home's fixed three-section body. `min-height: 0`
+   is required so this grid item can actually shrink to its row's real
+   size instead of growing to fit its (much taller) content — the same
+   pattern Home itself relies on for `.home-final__hero` and
+   `.home-final__missions`. Scrolling stays fully functional; only the
+   scrollbar affordance is hidden. */
+.hub-screen-shell__scroll {
+  grid-row: 2 / 5;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge/IE */
+}
+
+.hub-screen-shell__scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none; /* Chrome/Safari/Edge (Chromium) */
+}

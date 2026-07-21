@@ -1,0 +1,32 @@
+.rarity-frame {
+  position: relative;
+  border-radius: var(--radius-md);
+  padding: var(--space-1);
+  border: 2px solid var(--color-rarity-common);
+}
+
+.rarity-frame--common { border-color: var(--color-rarity-common); }
+.rarity-frame--rare { border-color: var(--color-rarity-rare); box-shadow: 0 0 10px rgba(79, 180, 255, 0.4); }
+.rarity-frame--epic { border-color: var(--color-rarity-epic); box-shadow: 0 0 12px rgba(181, 107, 255, 0.45); }
+.rarity-frame--legendary { border-color: var(--color-rarity-legendary); box-shadow: 0 0 14px rgba(248, 180, 0, 0.5); }
+.rarity-frame--mythic { border-color: var(--color-rarity-mythic); box-shadow: 0 0 14px rgba(255, 95, 214, 0.5); }
+
+.rarity-frame__content {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--color-bg-inset);
+}
+
+.rarity-frame__label {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-panel);
+  border: var(--border-hairline);
+  white-space: nowrap;
+}

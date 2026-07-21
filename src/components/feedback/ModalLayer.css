@@ -1,0 +1,53 @@
+.modal-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.modal-layer__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 5, 13, 0.7);
+}
+
+.modal-layer__panel {
+  position: relative;
+  width: 100%;
+  max-width: var(--shell-max-width);
+  max-height: 80dvh;
+  overflow-y: auto;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  border: var(--border-hairline);
+  padding: var(--space-5);
+}
+
+@media (min-width: 900px) {
+  .modal-layer {
+    align-items: center;
+  }
+  .modal-layer__panel {
+    border-radius: var(--radius-xl);
+  }
+}
+
+.modal-layer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.modal-layer__title {
+  font-size: var(--font-size-lg);
+}
+
+.modal-layer__close {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-panel);
+  border: var(--border-hairline);
+}

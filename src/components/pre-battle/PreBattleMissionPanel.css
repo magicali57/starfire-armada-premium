@@ -1,0 +1,177 @@
+.pre-battle-mission-panel {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  min-height: 260px;
+  border: 1px solid rgba(217, 68, 255, 0.6);
+  clip-path: polygon(3% 0, 97% 0, 100% 4%, 100% 96%, 97% 100%, 3% 100%, 0 96%, 0 4%);
+  background: linear-gradient(150deg, #1a0630, #06020f 70%);
+  box-shadow: inset 0 0 20px rgba(217, 68, 255, 0.16), 0 0 18px rgba(217, 68, 255, 0.25);
+}
+
+.pre-battle-mission-panel__art {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 75% 40%;
+}
+
+.pre-battle-mission-panel__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    90deg,
+    rgba(8, 3, 18, 0.95) 0%,
+    rgba(8, 3, 18, 0.85) 45%,
+    rgba(8, 3, 18, 0.35) 70%,
+    rgba(8, 3, 18, 0.08) 100%
+  );
+}
+
+.pre-battle-mission-panel__body {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 78%;
+  min-width: 0;
+  padding: var(--space-4) var(--space-4) var(--space-5);
+  box-sizing: border-box;
+}
+
+.pre-battle-mission-panel__eyebrow {
+  color: #e9a3ff;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pre-battle-mission-panel__chapter-label {
+  color: var(--color-secondary-300);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pre-battle-mission-panel__name {
+  margin: 0;
+  color: #fff;
+  font-family: var(--font-family-display-heavy, var(--font-family-display));
+  font-size: clamp(20px, 6.4vw, 27px);
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+}
+
+.pre-battle-mission-panel__description {
+  margin: var(--space-1) 0 0;
+  max-width: 100%;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Same shared-structure fix already proven on Stage Detail's stat grid:
+   fixed icon column + label-over-value text column, identical for all 3
+   cells regardless of content, so no cell can drag its row's alignment
+   around. Labels wrap onto up to 2 lines instead of truncating — no
+   `nowrap`/`ellipsis` on essential text, per instruction. */
+.pre-battle-mission-panel__stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: rgba(3, 2, 10, 0.55);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.pb-stat-cell {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 46px;
+}
+
+.pb-stat-cell__icon {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  color: var(--color-secondary-300);
+}
+
+.pb-stat-cell__content {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.pb-stat-cell__label {
+  margin: 0;
+  width: 100%;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-base);
+  font-size: 9px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.pb-stat-cell__value {
+  margin: 0;
+  display: block;
+  min-height: 14px;
+  color: var(--color-text-primary);
+  font-family: var(--font-family-display);
+  font-weight: var(--font-weight-bold);
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pb-stat-cell__value--purple {
+  color: #e9a3ff;
+}
+
+.pb-stat-cell__value--cyan {
+  color: var(--color-secondary-300);
+}
+
+@media (max-width: 374px) {
+  .pre-battle-mission-panel__body {
+    max-width: 84%;
+  }
+  .pb-stat-cell__label {
+    font-size: 8.5px;
+  }
+  .pb-stat-cell__value {
+    font-size: 11px;
+  }
+}

@@ -1,0 +1,15 @@
+SOURCE (uncleaned, untouched) — asset-archive/2026-07-18_recovery_deferred6/source_uncleaned/
+43e133e62c24d6285ae4da6b8bcf6f201b8a80c29e0c8d38f505c9b7ff06fd62  04_electric_shock_master.png  (1669407 bytes)
+f08d86ceff2f526d63d7500834a2f3d4479e7f56053245702ae2b39b5be9162a  06_shield_generator_master.png  (1600569 bytes)
+32808dbfeee5cae90f46551d92e68709915facfd594ba8be535bd8861a7a5755  11_gravity_pulse_master.png  (2299435 bytes)
+77160255d1e8a1204e3d1cf34aa1fe83ad03a4371afc9e3c2b25f13d3c9aa88b  14_healing_support_master.png  (1783926 bytes)
+85d610fd12a1b98aa68996b5f84d9c2f842f2f616b40c14e96bf5a9fc976164a  15_emp_burst_master.png  (1864233 bytes)
+ef1df830a1128322cb6b1cefa446608d35639980a56ac3aae48d1e1eaf398978  18_orbital_cannons_master.png  (1815412 bytes)
+
+CLEANED (review) — asset-archive/2026-07-18_recovery_deferred6/cleaned_pending_review/
+c102ce2cc94c332ab3770901ef349d6aab3a5a25c3953e45aeb490ec29b09f65  04_electric_shock_master.png  (1260657 bytes)
+fe5d92c17e4be8306fc94232cd2b086c71645e2b2dfc61fdfc3e3941d6cfd9a8  06_shield_generator_master.png  (1364466 bytes)
+cacc049308253d2c2a5202baffaf0cbf7ab3facfcdf7091a422c9da1930025c4  11_gravity_pulse_master.png  (2315375 bytes)
+c660ceac5f25e69a0147c491ec89475455e2d1e21753f922a008a04a10b7d8cf  14_healing_support_master.png  (1606043 bytes)
+698716b5b959856eb74249e68fb4da6ce8fb2cd0e54d4c847c583ec04e536fd0  15_emp_burst_master.png  (1745450 bytes)
+e8f393834f68b5dea5b6621b80d1c1b25ffed8a1fb453285e8c234d756ae5671  18_orbital_cannons_master.png  (1682965 bytes)

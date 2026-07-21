@@ -1,0 +1,203 @@
+/* Pre-Battle's own full-screen shell — not <HubScreenShell>. B-15's
+   "Shell: Full-screen" (SCREEN_NAVIGATION_MAP.md §3.2/§11) hides the
+   persistent bottom navigation entirely, and the reference has no
+   HubHeader-style top bar either (see PreBattleTopBar.tsx) — so this is a
+   simple flex column: a fixed top bar, a scrollable content region, no
+   footer row at all. */
+.pre-battle {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  isolation: isolate;
+  color: #f6f7ff;
+  font-family: var(--font-family-display, "Arial Narrow", sans-serif);
+  background: #030309;
+}
+
+.pre-battle,
+.pre-battle * {
+  box-sizing: border-box;
+}
+
+.pre-battle__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.pre-battle__scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.pre-battle__content {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-4) calc(env(safe-area-inset-bottom) + var(--space-6));
+  background: radial-gradient(120% 60% at 50% 0%, rgba(30, 60, 160, 0.2), transparent 55%);
+}
+
+.pre-battle__title {
+  margin: 0;
+  color: #fff;
+  text-align: center;
+  font-family: var(--font-family-display-heavy, var(--font-family-display));
+  font-size: clamp(22px, 7vw, 30px);
+  font-style: italic;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.pre-battle__subtitle {
+  margin: 0 0 var(--space-1);
+  color: var(--color-secondary-300);
+  text-align: center;
+  font-size: 12px;
+}
+
+.pre-battle__prototype-note {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed rgba(182, 179, 214, 0.4);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.pre-battle__not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.pre-battle__loadout {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-3);
+  border: 1px solid rgba(80, 200, 255, 0.4);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(150deg, #071226, #06020f 70%);
+}
+
+.pre-battle__loadout-heading {
+  margin: 0 0 var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: var(--border-hairline);
+  color: var(--color-secondary-300);
+  font-family: var(--font-family-display);
+  font-weight: var(--font-weight-bold);
+  font-size: 14px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.pre-battle__loadout-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+/* Two loadout cards fit two columns down to ~320px comfortably (unlike the
+   3-column rows elsewhere on this screen), so no stacking breakpoint is
+   needed here. */
+
+.pre-battle__modules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.pre-battle__modules-heading {
+  margin-bottom: 2px;
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pre-battle__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin-top: var(--space-2);
+}
+
+.pre-battle__start {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-3);
+  clip-path: polygon(4% 0, 96% 0, 100% 50%, 96% 100%, 4% 100%, 0 50%);
+  background: linear-gradient(160deg, #ffb02e, #a85a00 85%);
+  box-shadow: 0 0 18px rgba(255, 176, 46, 0.5);
+  color: #1a0e00;
+}
+
+.pre-battle__start--insufficient {
+  background: linear-gradient(160deg, #6b6b76, #35353d 85%);
+  box-shadow: none;
+  color: rgba(255, 255, 255, 0.55);
+  opacity: 0.75;
+}
+
+.pre-battle__start-label {
+  font-family: var(--font-family-display-heavy, var(--font-family-display));
+  font-weight: var(--font-weight-bold);
+  font-size: 20px;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.pre-battle__start-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 13px;
+  font-weight: var(--font-weight-bold);
+}
+
+.pre-battle__change-loadout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-2) var(--space-5);
+  border: 1px solid rgba(182, 179, 214, 0.35);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}

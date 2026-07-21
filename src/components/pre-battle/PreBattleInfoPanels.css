@@ -1,0 +1,168 @@
+.pre-battle-info-panels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Three native-width columns are too narrow for readable text at real
+   phone widths (360-412px) — stack to one column instead, same fix class
+   already proven on StageRewardsRow's two-group layout. */
+@media (max-width: 480px) {
+  .pre-battle-info-panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pre-battle-info-panel {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-3);
+  border: 1px solid rgba(217, 68, 255, 0.4);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(150deg, #14042a, #06020f 70%);
+}
+
+.pre-battle-info-panel__heading {
+  margin: 0 0 var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: var(--border-hairline);
+  color: #e9a3ff;
+  font-family: var(--font-family-display);
+  font-weight: var(--font-weight-bold);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.pre-battle-info-panel__objectives {
+  display: flex;
+  flex-direction: column;
+}
+
+.pre-battle-info-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pre-battle-modifier-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+}
+
+.pre-battle-modifier-row__icon {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  color: var(--color-secondary-300);
+}
+
+.pre-battle-modifier-row__content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.pre-battle-modifier-row__label {
+  min-width: 0;
+  color: var(--color-text-primary);
+  font-size: 10.5px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.pre-battle-modifier-row__value {
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: 9.5px;
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.pre-battle-info-panel__rewards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.pre-battle-reward-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.pre-battle-reward-tile img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
+
+.pre-battle-reward-tile__xp-badge {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  background: linear-gradient(160deg, #ffd873, #d99400);
+  color: #1a0e00;
+  font-size: 8px;
+  font-weight: var(--font-weight-bold);
+}
+
+.pre-battle-reward-tile span:last-child {
+  color: var(--color-text-primary);
+  font-size: 9.5px;
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.pre-battle-bonus-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: var(--border-hairline);
+  text-align: left;
+}
+
+.pre-battle-bonus-row img {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.pre-battle-bonus-row span {
+  min-width: 0;
+  color: var(--color-gold-300);
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+}

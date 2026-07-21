@@ -1,0 +1,15 @@
+.companion-detail-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.companion-detail-actions__rank-up {
+  background: linear-gradient(180deg, var(--color-gold-300), var(--color-gold-500));
+  border-color: var(--color-gold-500);
+  color: #241900;
+}

@@ -1,0 +1,147 @@
+.ship-upgrade-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.ship-upgrade-dialog__intro {
+  margin: 0 0 var(--space-1);
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  overflow-wrap: break-word;
+}
+
+.ship-upgrade-dialog__intro strong {
+  color: var(--color-text-primary);
+}
+
+.ship-upgrade-dialog__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 7px var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(182, 179, 214, 0.2);
+  background: rgba(6, 10, 24, 0.5);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.ship-upgrade-dialog__row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ship-upgrade-dialog__row span img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+.ship-upgrade-dialog__row strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  color: var(--color-text-primary);
+  font-family: var(--font-family-display);
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+}
+
+.ship-upgrade-dialog__row--insufficient {
+  border-color: rgba(255, 77, 77, 0.6);
+  background: rgba(255, 77, 77, 0.08);
+}
+
+.ship-upgrade-dialog__row--insufficient strong {
+  color: var(--color-danger-300);
+}
+
+.ship-upgrade-dialog__highlight {
+  color: var(--color-success-300) !important;
+}
+
+.ship-upgrade-dialog__warning {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: rgba(255, 77, 77, 0.14);
+  border: 1px solid rgba(255, 77, 77, 0.4);
+  color: var(--color-danger-300);
+  font-size: var(--font-size-sm);
+}
+
+.ship-upgrade-dialog__stat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.ship-upgrade-dialog__stat-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) minmax(0, 0.8fr) 12px minmax(0, 0.8fr);
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 5px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: rgba(6, 10, 24, 0.4);
+}
+
+.ship-upgrade-dialog__stat-row img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+.ship-upgrade-dialog__stat-label {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ship-upgrade-dialog__stat-current {
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ship-upgrade-dialog__stat-next {
+  min-width: 0;
+  color: var(--color-gold-300);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ship-upgrade-dialog__actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.ship-upgrade-dialog__actions > * {
+  flex: 1 1 0;
+  min-width: 0;
+}

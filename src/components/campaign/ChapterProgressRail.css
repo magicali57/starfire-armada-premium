@@ -1,0 +1,56 @@
+.chapter-progress-rail {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+}
+
+.chapter-progress-rail__segment {
+  display: flex;
+  align-items: center;
+  flex: 1 1 0;
+}
+
+.chapter-progress-rail__segment:first-child {
+  flex: 0 0 auto;
+}
+
+.chapter-progress-rail__line {
+  flex: 1;
+  height: 1px;
+  background: rgba(120, 130, 170, 0.3);
+}
+
+.chapter-progress-rail__line--lit {
+  background: linear-gradient(90deg, var(--color-success-500), rgba(120, 130, 170, 0.3));
+}
+
+.chapter-progress-rail__node {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.chapter-progress-rail__node--cleared {
+  color: var(--color-success-300);
+  border: 1px solid var(--color-success-500);
+  background: rgba(51, 209, 122, 0.15);
+  box-shadow: 0 0 6px rgba(51, 209, 122, 0.5);
+}
+
+.chapter-progress-rail__node--current {
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(217, 68, 255, 0.8);
+  background: radial-gradient(circle, #e9a3ff, #a334ff 70%);
+  box-shadow: 0 0 8px rgba(217, 68, 255, 0.7);
+}
+
+.chapter-progress-rail__node--locked {
+  color: var(--color-text-muted);
+  border: 1px solid rgba(182, 179, 214, 0.35);
+  background: rgba(10, 10, 22, 0.6);
+}

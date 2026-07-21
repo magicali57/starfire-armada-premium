@@ -1,0 +1,148 @@
+/* Starfire Armada V2 — design tokens
+   Palette derived from docs/references dashboard mockups:
+   deep navy/black base, violet/purple primary neon, cyan secondary neon,
+   gold primary CTA + legendary accent, red warning, green success. */
+:root {
+  /* Base surfaces */
+  --color-bg-void: #05050d;
+  --color-bg-base: #0a0a18;
+  --color-bg-raised: #12122a;
+  --color-bg-panel: #171736;
+  --color-bg-panel-alt: #1d1d42;
+  --color-bg-inset: #0d0d22;
+
+  /* Neon primary — violet/purple */
+  --color-primary-100: #e6d9ff;
+  --color-primary-300: #b98bff;
+  --color-primary-500: #8b3dff;
+  --color-primary-600: #7226e6;
+  --color-primary-700: #5a19bf;
+  --color-primary-glow: rgba(139, 61, 255, 0.55);
+
+  /* Neon secondary — cyan */
+  --color-secondary-100: #d6fbff;
+  --color-secondary-300: #6be8ff;
+  --color-secondary-500: #22c9ee;
+  --color-secondary-600: #12a2c4;
+  --color-secondary-glow: rgba(34, 201, 238, 0.5);
+
+  /* Gold — primary CTA + legendary rarity */
+  --color-gold-100: #fff3d0;
+  --color-gold-300: #ffd873;
+  --color-gold-500: #f8b400;
+  --color-gold-600: #d99400;
+  --color-gold-glow: rgba(248, 180, 0, 0.55);
+
+  /* Semantic states */
+  --color-danger-300: #ff8f8f;
+  --color-danger-500: #ff4d4d;
+  --color-danger-600: #d92c2c;
+  --color-danger-glow: rgba(255, 77, 77, 0.5);
+
+  --color-success-300: #8ff2b0;
+  --color-success-500: #33d17a;
+  --color-success-600: #22a85f;
+  --color-success-glow: rgba(51, 209, 122, 0.45);
+
+  /* Text */
+  --color-text-primary: #f4f2ff;
+  --color-text-secondary: #b6b3d6;
+  --color-text-muted: #7c7aa0;
+  --color-text-on-gold: #241300;
+
+  /* Rarity accents */
+  --color-rarity-common: #9aa3b2;
+  --color-rarity-rare: #4fb4ff;
+  --color-rarity-epic: #b56bff;
+  --color-rarity-legendary: #f8b400;
+  --color-rarity-mythic: #ff5fd6;
+
+  /* Spacing scale (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+
+  /* Borders */
+  --border-hairline: 1px solid rgba(182, 179, 214, 0.14);
+  --border-neon-primary: 1px solid rgba(139, 61, 255, 0.55);
+  --border-neon-secondary: 1px solid rgba(34, 201, 238, 0.5);
+  --border-neon-gold: 1px solid rgba(248, 180, 0, 0.6);
+
+  /* Shadows / glows */
+  --shadow-panel: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-elevated: 0 16px 40px rgba(0, 0, 0, 0.55);
+  --glow-primary: 0 0 18px var(--color-primary-glow);
+  --glow-secondary: 0 0 18px var(--color-secondary-glow);
+  --glow-gold: 0 0 22px var(--color-gold-glow);
+  --glow-danger: 0 0 18px var(--color-danger-glow);
+  --glow-success: 0 0 18px var(--color-success-glow);
+
+  /* Typography */
+  --font-family-base: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-family-display: "Rajdhani", "Inter", system-ui, sans-serif;
+  /* Extra-bold condensed display face for high-impact moments (PLAY button,
+     Home Dashboard headline labels) — loaded in index.html. */
+  --font-family-display-heavy: "Orbitron", "Rajdhani", "Inter", system-ui, sans-serif;
+
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-md: 15px;
+  --font-size-lg: 18px;
+  --font-size-xl: 22px;
+  --font-size-2xl: 28px;
+  --font-size-3xl: 36px;
+
+  --line-height-tight: 1.15;
+  --line-height-normal: 1.4;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Layout */
+  --shell-max-width: 520px;
+  --bottom-nav-height: 72px;
+  --top-bar-height: 56px;
+
+  /* Hub shell (HubScreenShell / HubHeader / HubBottomNav) — the standard
+     outer layout for every non-Home hub screen (Battle, and later
+     Fleet/Inventory/Shop). Deriving the header/footer heights as separate
+     dvh-percentage values (an earlier approach) left room for rounding/
+     stretch-algorithm drift versus Home's real rendered numbers. Instead,
+     these two values are Home's own `.home-final` grid recipe verbatim —
+     the exact `grid-template-rows` string and the exact `min-height` floor
+     — so any hub screen that builds its root on `height:100dvh` + these
+     two tokens runs the identical CSS Grid track-sizing algorithm Home
+     does, on the same viewport, guaranteeing byte-identical header/footer
+     boxes rather than an approximation of them. Do not redefine these
+     per-screen — see HubScreenShell.tsx. */
+  --hub-shell-rows: 8.1% 49.1% 13.4% 22.1% 7.3%;
+  --hub-shell-min-height: 720px;
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration-normal: 220ms;
+  --duration-slow: 360ms;
+
+  /* Z-index scale */
+  --z-base: 0;
+  --z-nav: 10;
+  --z-modal: 100;
+  --z-toast: 200;
+}

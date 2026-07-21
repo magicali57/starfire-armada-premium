@@ -1,0 +1,57 @@
+.card-corner-badge {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  border-radius: var(--radius-md);
+  background: rgba(8, 6, 20, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+.card-corner-badge--icon-only {
+  padding: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.card-corner-badge__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+
+.card-corner-badge--gold .card-corner-badge__icon {
+  color: var(--color-gold-300);
+  border: 1px solid var(--color-gold-500);
+  box-shadow: var(--glow-gold);
+}
+
+.card-corner-badge--success .card-corner-badge__icon {
+  color: var(--color-success-300);
+  border: 1px solid var(--color-success-500);
+  box-shadow: var(--glow-success);
+}
+
+.card-corner-badge--purple .card-corner-badge__icon {
+  color: #c98bff;
+  border: 1px solid rgba(163, 52, 255, 0.7);
+  box-shadow: 0 0 10px rgba(163, 52, 255, 0.45);
+}
+
+.card-corner-badge__label {
+  color: var(--color-text-primary);
+  font-size: 8px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+}

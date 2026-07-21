@@ -1,0 +1,40 @@
+.player-profile-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.player-profile-chip__avatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-family-display);
+  font-weight: var(--font-weight-bold);
+  background: linear-gradient(145deg, var(--color-primary-600), var(--color-primary-500));
+  box-shadow: var(--glow-primary);
+}
+
+.player-profile-chip__meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.1;
+}
+
+.player-profile-chip__name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-profile-chip__level {
+  font-size: var(--font-size-xs);
+  color: var(--color-secondary-300);
+}

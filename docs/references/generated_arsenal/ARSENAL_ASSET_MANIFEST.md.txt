@@ -1,0 +1,77 @@
+# Arsenal Asset Manifest
+
+## References
+
+- 01_Arsenal_Main.png
+- 02_Weapon_Detail.png
+- 03_Weapon_Upgrade.png
+
+These are newly generated project references, not original UI-handoff references.
+
+## Weapon assets
+
+1. Pulse Blaster
+   - ID: weapon-pulse-blaster
+   - Asset: /assets/arsenal/weapons/01_pulse_blaster.png
+   - Class: Laser
+
+2. Homing Missiles
+   - ID: weapon-homing-missiles
+   - Asset: /assets/arsenal/weapons/02_homing_missiles.png
+   - Class: Missile
+
+3. Prism Beam
+   - ID: weapon-prism-beam
+   - Asset: /assets/arsenal/weapons/03_prism_beam.png
+   - Class: Beam
+
+4. Rail Cannon
+   - ID: weapon-rail-cannon
+   - Asset: /assets/arsenal/weapons/04_rail_cannon.png
+   - Class: Kinetic
+
+5. Scatter Cannons
+   - ID: weapon-scatter-cannons
+   - Asset: /assets/arsenal/weapons/05_scatter_cannons.png
+   - Class: Kinetic
+
+6. Plasma Lance
+   - ID: weapon-plasma-lance
+   - Asset: /assets/arsenal/weapons/06_plasma_lance.png
+   - Class: Energy
+
+7. Arc Emitter
+   - ID: weapon-arc-emitter
+   - Asset: /assets/arsenal/weapons/07_arc_emitter.png
+   - Class: Energy
+
+8. Nova Launcher
+   - ID: weapon-nova-launcher
+   - Asset: /assets/arsenal/weapons/08_nova_launcher.png
+   - Class: Energy
+
+9. Tempest Gauss Rifle
+   - ID: weapon-tempest-gauss-rifle
+   - Asset: /assets/arsenal/weapons/09_tempest_gauss_rifle.png
+   - Class: Kinetic
+
+10. Gravity Well Launcher
+    - ID: weapon-gravity-well-launcher
+    - Asset: /assets/arsenal/weapons/10_gravity_well_launcher.png
+    - Class: Energy
+
+11. Quantum Disruptor
+    - ID: weapon-quantum-disruptor
+    - Asset: /assets/arsenal/weapons/11_quantum_disruptor.png
+    - Class: Energy
+
+12. Inferno Twin Blasters
+    - ID: weapon-inferno-twin-blasters
+    - Asset: /assets/arsenal/weapons/12_inferno_twin_blasters.png
+    - Class: Laser
+
+## Material
+
+- Weapon Parts
+- Material ID: weaponParts
+- Asset: /assets/materials/weapon_parts.png

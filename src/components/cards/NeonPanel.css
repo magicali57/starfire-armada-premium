@@ -1,0 +1,10 @@
+.neon-panel {
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-panel);
+}
+
+.neon-panel--neutral { border: var(--border-hairline); }
+.neon-panel--primary { border: var(--border-neon-primary); box-shadow: var(--shadow-panel), var(--glow-primary); }
+.neon-panel--secondary { border: var(--border-neon-secondary); box-shadow: var(--shadow-panel), var(--glow-secondary); }
+.neon-panel--gold { border: var(--border-neon-gold); box-shadow: var(--shadow-panel), var(--glow-gold); }

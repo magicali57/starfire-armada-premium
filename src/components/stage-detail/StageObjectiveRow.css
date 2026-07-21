@@ -1,0 +1,38 @@
+.stage-objective-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-2) 0;
+}
+
+.stage-objective-row__star {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+}
+
+.stage-objective-row__check {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--color-success-500);
+  color: #04140a;
+}
+
+.stage-objective-row__description {
+  min-width: 0;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.stage-objective-row--completed .stage-objective-row__description {
+  color: var(--color-text-secondary);
+}

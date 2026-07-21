@@ -1,0 +1,139 @@
+.loadout-ship-panel {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: var(--space-3);
+  align-items: start;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding-bottom: var(--space-3);
+  border-bottom: var(--border-hairline);
+}
+
+@media (max-width: 360px) {
+  .loadout-ship-panel {
+    grid-template-columns: 80px 1fr;
+  }
+}
+
+.loadout-ship-panel__art-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  min-width: 0;
+  border-radius: var(--radius-md);
+  border: var(--border-neon-primary);
+  background: rgba(6, 10, 24, 0.6);
+  overflow: hidden;
+}
+
+.loadout-ship-panel__art {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+.loadout-ship-panel__info {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(6, 10, 24, 0.75);
+  color: var(--color-secondary-300);
+  border: 1px solid rgba(34, 201, 238, 0.4);
+}
+
+.loadout-ship-panel__body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.loadout-ship-panel__rarity {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em;
+}
+
+.loadout-ship-panel__name {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  color: var(--color-text-primary);
+  font-family: var(--font-family-display-heavy);
+  font-size: clamp(15px, 4.4vw, 18px);
+  font-weight: var(--font-weight-bold);
+}
+
+.loadout-ship-panel__level {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.loadout-ship-panel__weapon {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  color: var(--color-secondary-300);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.loadout-ship-panel__weapon i {
+  margin-left: 6px;
+  color: var(--color-text-muted);
+  font-style: normal;
+  font-size: var(--font-size-xs);
+}
+
+.loadout-ship-panel__power {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.loadout-ship-panel__power img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  align-self: center;
+}
+
+.loadout-ship-panel__power b {
+  color: var(--color-gold-300);
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.loadout-ship-panel__power small {
+  color: var(--color-text-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.loadout-ship-panel__change {
+  margin-top: 2px;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  border: var(--border-neon-secondary);
+  background: rgba(34, 201, 238, 0.12);
+  color: var(--color-secondary-300);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}

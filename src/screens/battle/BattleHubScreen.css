@@ -1,0 +1,69 @@
+/* The outer header/scroll/footer grid itself now lives in
+   <HubScreenShell> (shared across every hub screen) — everything below is
+   specific to Battle Hub's own content within that shell's scrollable row. */
+
+.battle-hub__content {
+  min-height: 100%;
+  padding: var(--space-2) var(--space-4) var(--space-6);
+  background: radial-gradient(120% 60% at 50% 0%, rgba(90, 20, 160, 0.22), transparent 55%), #030309;
+}
+
+/* Decorative cyan flourish lines either side of the BATTLE title, matching
+   the reference — added here (scoped to this screen) rather than editing
+   the shared ScreenHeader component. */
+.battle-hub__content .screen-header {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: var(--space-4);
+}
+
+.battle-hub__content .screen-header__title {
+  position: relative;
+  display: inline-block;
+  padding: 0 var(--space-8);
+}
+
+.battle-hub__content .screen-header__title::before,
+.battle-hub__content .screen-header__title::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 34px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-secondary-500));
+}
+
+.battle-hub__content .screen-header__title::before {
+  left: -12px;
+  transform: translateX(-100%);
+}
+
+.battle-hub__content .screen-header__title::after {
+  right: -12px;
+  transform: translateX(100%) scaleX(-1);
+}
+
+.battle-hub__content .screen-header__subtitle {
+  color: var(--color-secondary-300);
+  text-align: center;
+}
+
+.battle-hub__cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.battle-hub__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+@media (max-width: 359px) {
+  .battle-hub__grid {
+    gap: var(--space-2);
+  }
+}

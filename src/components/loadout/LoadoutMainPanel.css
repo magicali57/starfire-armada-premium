@@ -1,0 +1,37 @@
+.loadout-main-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  border: var(--border-neon-primary);
+}
+
+.loadout-main-panel__no-ship {
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* Four equal slot tiles side by side down to 390px; at 360px they wrap to a
+   2+2 grid instead of squeezing four columns into an unreadable width —
+   see the mobile-layout verification notes in the completion report. */
+.loadout-main-panel__slots {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 360px) {
+  .loadout-main-panel__slots {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

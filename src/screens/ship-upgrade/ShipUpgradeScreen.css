@@ -1,0 +1,43 @@
+.ship-upgrade-screen__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0 var(--space-4) var(--space-8);
+}
+
+.ship-upgrade-screen__cards-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.ship-upgrade-screen__cards-row > * {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.ship-upgrade-screen__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 400px) {
+  .ship-upgrade-screen__cards-row {
+    flex-direction: column;
+  }
+  .ship-upgrade-screen__cards-row > * {
+    flex-basis: auto;
+  }
+}

@@ -1,0 +1,160 @@
+.chapter-card {
+  position: relative;
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  width: 132px;
+  min-height: 220px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-2) var(--space-2);
+  border: 1px solid rgba(60, 150, 220, 0.45);
+  clip-path: polygon(8% 0, 92% 0, 100% 6%, 100% 100%, 0 100%, 0 6%);
+  background: linear-gradient(150deg, #06142c, #020613 68%);
+  text-align: left;
+}
+
+/* Chapter 2 (current/selected) is deliberately larger and more visually
+   dominant than its neighbors, matching the reference — achieved with a
+   taller min-height plus a small negative margin rather than a transform
+   scale, so it doesn't blur its own border/glow. */
+.chapter-card--current {
+  z-index: 2;
+  width: 148px;
+  min-height: 250px;
+  margin: -14px -2px;
+  padding-bottom: var(--space-3);
+  border: 2px solid rgba(217, 68, 255, 0.7);
+  box-shadow: inset 0 0 20px rgba(217, 68, 255, 0.18), 0 0 20px rgba(217, 68, 255, 0.35);
+}
+
+.chapter-card__art {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chapter-card__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    180deg,
+    rgba(3, 4, 12, 0.55) 0%,
+    rgba(3, 4, 12, 0.12) 30%,
+    rgba(3, 4, 12, 0.2) 55%,
+    rgba(2, 3, 10, 0.88) 100%
+  );
+}
+
+.chapter-card__header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.chapter-card__eyebrow {
+  color: var(--color-text-secondary);
+  font-size: 9px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.chapter-card__name {
+  color: #fff;
+  font-family: var(--font-family-display);
+  font-weight: var(--font-weight-bold);
+  font-size: clamp(11px, 3vw, 13px);
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.chapter-card--current .chapter-card__name {
+  font-size: clamp(13px, 3.6vw, 16px);
+}
+
+.chapter-card__cleared-label {
+  margin-top: 2px;
+  color: var(--color-success-300);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.chapter-card__footer {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.chapter-card__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+}
+
+.chapter-card__badge--cleared {
+  color: var(--color-success-300);
+  border: 1px solid var(--color-success-500);
+  background: rgba(51, 209, 122, 0.12);
+  box-shadow: 0 0 8px rgba(51, 209, 122, 0.4);
+}
+
+.chapter-card__badge--locked {
+  color: var(--color-text-muted);
+  border: 1px solid rgba(182, 179, 214, 0.4);
+  background: rgba(10, 10, 22, 0.6);
+}
+
+.chapter-card__stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.chapter-card__stars svg {
+  color: var(--color-gold-300);
+  flex-shrink: 0;
+}
+
+.chapter-card__stars b {
+  color: var(--color-gold-300);
+  font-weight: var(--font-weight-bold);
+}
+
+.chapter-card__stars--current {
+  font-size: 14px;
+}
+
+.chapter-card__stage-label {
+  color: #e9a3ff;
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+}
+
+@media (max-width: 359px) {
+  .chapter-card {
+    width: 118px;
+  }
+  .chapter-card--current {
+    width: 132px;
+  }
+}

@@ -1,0 +1,108 @@
+.campaign-overview__content {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  padding: var(--space-2) var(--space-4) var(--space-6);
+  background: radial-gradient(120% 60% at 50% 0%, rgba(30, 60, 160, 0.2), transparent 55%), #030309;
+}
+
+/* Title/subtitle stay centered with the same cyan flourish treatment used
+   on Battle Hub's ScreenHeader (scoped here, ScreenHeader itself untouched)
+   — the CHAPTER MAP button is pinned to the right edge, vertically
+   centered in the header block, matching the reference exactly. */
+.campaign-overview__content .screen-header {
+  position: relative;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: var(--space-4);
+  padding-right: var(--space-10);
+}
+
+.campaign-overview__content .screen-header__title {
+  position: relative;
+  display: inline-block;
+  padding: 0 var(--space-8);
+}
+
+.campaign-overview__content .screen-header__title::before,
+.campaign-overview__content .screen-header__title::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 30px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-secondary-500));
+}
+
+.campaign-overview__content .screen-header__title::before {
+  left: -10px;
+  transform: translateX(-100%);
+}
+
+.campaign-overview__content .screen-header__title::after {
+  right: -10px;
+  transform: translateX(100%) scaleX(-1);
+}
+
+.campaign-overview__content .screen-header__subtitle {
+  color: var(--color-secondary-300);
+  text-align: center;
+}
+
+.campaign-overview__content .screen-header__trailing {
+  position: absolute;
+  right: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.campaign-overview__chapter-map-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.campaign-overview__content > .chapter-carousel {
+  margin-top: var(--space-2);
+}
+
+.campaign-overview__content > .chapter-progress-rail {
+  margin-top: var(--space-1);
+}
+
+/* Stacked by default: a real 1fr + 118px side-by-side row never fits
+   next to a 5-chest reward strip (5 chest icons alone need ~260px+) at
+   any of the actual target phone widths (360-412px), so a two-column
+   layout here was always going to force this row wider than the screen.
+   Single-column is the correct layout at every mobile width this game
+   targets, not just a narrow "phone" media-query exception. */
+.campaign-overview__rewards-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  align-items: stretch;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.campaign-overview__rewards-row > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.campaign-overview__content > .chapter-detail-panel {
+  margin-top: var(--space-4);
+}
+
+.campaign-overview__content > .coming-soon-strip {
+  margin-top: var(--space-4);
+}

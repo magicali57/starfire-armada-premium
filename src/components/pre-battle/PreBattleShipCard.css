@@ -1,0 +1,79 @@
+.pre-battle-loadout-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-2) var(--space-3);
+  border: 1px solid rgba(80, 200, 255, 0.4);
+  border-radius: var(--radius-md);
+  background: rgba(6, 10, 24, 0.55);
+  text-align: center;
+}
+
+.pre-battle-loadout-card__label {
+  align-self: flex-start;
+  color: var(--color-secondary-300);
+  font-size: 9px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pre-battle-loadout-card__art {
+  width: 100%;
+  max-width: 84px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.pre-battle-loadout-card__art--companion {
+  max-width: 72px;
+  height: 58px;
+}
+
+.pre-battle-loadout-card__name {
+  width: 100%;
+  min-width: 0;
+  color: #fff;
+  font-family: var(--font-family-display);
+  font-weight: var(--font-weight-bold);
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.pre-battle-loadout-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+}
+
+.pre-battle-loadout-card__level {
+  color: var(--color-text-secondary);
+  font-size: 10px;
+}
+
+.pre-battle-loadout-card__rarity {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--color-gold-300);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+}
+
+.pre-battle-loadout-card__rarity img {
+  width: 12px;
+  height: 12px;
+  object-fit: contain;
+}

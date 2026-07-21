@@ -1,0 +1,59 @@
+/* Bespoke footerless shell — deliberately NOT <HubScreenShell/>, which
+   always renders a 5-row grid (header/hero/actions/missions/footer) and
+   cannot be used without a footer row without modifying that frozen shared
+   component (explicitly forbidden for this task). Row 1 here uses "8.1%",
+   the exact same header-row percentage baked into the shared
+   `--hub-shell-rows` token (`8.1% 49.1% 13.4% 22.1% 7.3%` in tokens.css) —
+   reusing that literal number (not the token string, since the token
+   bundles 4 more rows this screen doesn't have) is what makes <HubHeader/>
+   land in the identical box height every other hub screen gives it,
+   without needing HubScreenShell itself. Row 2 (the scroll region) simply
+   takes the remaining space instead of the other three collapsing rows
+   HubScreenShell's own recipe reserves for a footer. */
+
+.loadout-screen {
+  position: relative;
+  height: 100dvh;
+  min-height: 640px;
+  overflow: hidden;
+  isolation: isolate;
+  display: grid;
+  grid-template-rows: 8.1% 91.9%;
+  padding-top: env(safe-area-inset-top);
+  color: #f6f7ff;
+  font-family: var(--font-family-display, "Arial Narrow", sans-serif);
+}
+
+.loadout-screen,
+.loadout-screen * {
+  box-sizing: border-box;
+}
+
+.loadout-screen__scroll {
+  grid-row: 2 / 3;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.loadout-screen__scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.loadout-screen__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0 var(--space-4) calc(var(--space-6) + env(safe-area-inset-bottom));
+}

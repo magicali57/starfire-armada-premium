@@ -1,0 +1,44 @@
+.companion-sort-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 var(--space-2) 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(124, 122, 160, 0.3);
+  background: var(--color-bg-panel);
+  color: var(--color-text-secondary);
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.companion-sort-control img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.companion-sort-control__label {
+  flex-shrink: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.companion-sort-control__select {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-sm);
+}
+
+.companion-sort-control__select:focus-visible {
+  outline: 2px solid var(--color-secondary-300);
+  outline-offset: 2px;
+}

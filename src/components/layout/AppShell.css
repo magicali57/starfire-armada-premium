@@ -1,0 +1,52 @@
+.app-shell {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.app-shell__frame {
+  width: 100%;
+  max-width: var(--shell-max-width);
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: linear-gradient(180deg, rgba(18, 18, 42, 0.4), transparent 240px);
+  box-shadow: var(--shadow-elevated);
+}
+
+@media (min-width: 900px) {
+  .app-shell__frame {
+    margin-top: var(--space-8);
+    margin-bottom: var(--space-8);
+    border-radius: var(--radius-xl);
+    border: var(--border-hairline);
+    min-height: calc(100dvh - var(--space-16));
+    overflow: hidden;
+  }
+}
+
+.app-shell__content {
+  flex: 1 1 auto;
+  padding-bottom: calc(var(--bottom-nav-height) + var(--space-4));
+  overflow-y: auto;
+}
+
+.app-shell__content--no-nav {
+  padding-bottom: 0;
+}
+
+/* ---------- Home Dashboard: fluid mobile canvas ----------
+   Home is the only screen that drops the shared 520px shell cap. This is a
+   mobile-only game (Play Store target) — Home always fills 100% of the
+   viewport width/height on any phone size, with no desktop breakpoint or
+   fixed-pixel board. */
+
+.app-shell__frame--home {
+  max-width: none;
+}
+
+.app-shell__content--home {
+  display: flex;
+  flex-direction: column;
+}

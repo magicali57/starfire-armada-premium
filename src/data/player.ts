@@ -1,9 +1,21 @@
 import type { PlayerState } from "@/types";
 import { SAVE_SCHEMA_VERSION } from "@/types";
-import { createDefaultShipProgress } from "@/systems/shipStats";
-import { COMPANIONS } from "./companions";
-import { MODULES } from "./modules";
-import { DEFAULT_EQUIPPED_WEAPON_ID, DEFAULT_OWNED_WEAPON_IDS, DEFAULT_WEAPON_LEVELS } from "./weapons";
+import { SHIP_MAX_LEVEL, createDefaultShipProgress } from "@/systems/shipStats";
+import { SHIP_MAX_STAR_RANK } from "@/systems/shipStarRank";
+import {
+  SHIP_ABILITY_MAX_LEVEL,
+  SHIP_ABILITY_MIN_LEVEL,
+} from "@/systems/shipAbilities";
+import { MODULE_MAX_LEVEL, MODULE_MIN_LEVEL } from "@/systems/moduleProgression";
+import { getShipById } from "./ships";
+import { COMPANIONS, getCompanionById } from "./companions";
+import { MODULES, getModuleById } from "./modules";
+import {
+  DEFAULT_EQUIPPED_WEAPON_ID,
+  DEFAULT_OWNED_WEAPON_IDS,
+  DEFAULT_WEAPON_LEVELS,
+  getWeaponById,
+} from "./weapons";
 import {
   COMPANION_MAX_LEVEL,
   COMPANION_MIN_LEVEL,
@@ -124,10 +136,264 @@ export const DEFAULT_PLAYER_STATE: PlayerState = {
 
 const MIGRATABLE_SCHEMA_VERSIONS = [2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
+export type SaveRecoveryReason = "unreadable-json" | "invalid-shape" | "unsupported-version";
+
 export interface PlayerSaveLoadResult {
   state: PlayerState;
   shouldPersist: boolean;
   source: "fresh" | "current" | "migrated" | "fallback";
+  /** Typed reason when source === "fallback" (whole save unrecoverable). */
+  recoveryReason?: SaveRecoveryReason;
+  /** Human-readable list of field repairs normalization performed (empty on
+   *  a clean load). Diagnostic only — never affects behavior. */
+  repairs: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Canonical save normalization — validates/repairs individual fields so one
+// malformed value never resets the whole save. Clearly invalid values are
+// clamped or replaced with safe defaults (never invented into other IDs);
+// every repair is reported. Runs inside migratePlayerState on EVERY load,
+// so normalization is deterministic and idempotent by construction (a
+// normalized save re-normalizes to itself).
+// ---------------------------------------------------------------------------
+
+function sanitizeBalance(value: unknown, fallback: number, repairs: string[], label: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    repairs.push(`${label}: invalid → ${fallback}`);
+    return fallback;
+  }
+  const truncated = Math.trunc(value);
+  if (truncated < 0) {
+    repairs.push(`${label}: negative → 0`);
+    return 0;
+  }
+  return truncated;
+}
+
+function clampLevel(
+  value: unknown,
+  min: number,
+  max: number,
+  repairs: string[],
+  label: string,
+): number {
+  const raw = typeof value === "number" && Number.isFinite(value) ? Math.trunc(value) : min;
+  const clamped = Math.min(max, Math.max(min, raw));
+  if (clamped !== value) repairs.push(`${label}: ${String(value)} → ${clamped}`);
+  return clamped;
+}
+
+function dedupeKnown(
+  ids: unknown,
+  exists: (id: string) => boolean,
+  fallback: string[],
+  repairs: string[],
+  label: string,
+): string[] {
+  if (!Array.isArray(ids)) {
+    repairs.push(`${label}: invalid → defaults`);
+    return [...fallback];
+  }
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const id of ids) {
+    if (typeof id !== "string" || !exists(id)) {
+      repairs.push(`${label}: dropped unknown entry ${String(id)}`);
+      continue;
+    }
+    if (seen.has(id)) {
+      repairs.push(`${label}: dropped duplicate ${id}`);
+      continue;
+    }
+    seen.add(id);
+    result.push(id);
+  }
+  if (result.length === 0) {
+    repairs.push(`${label}: empty → defaults`);
+    return [...fallback];
+  }
+  return result;
+}
+
+/** Field-level validation/repair of an already-merged state. Preserves all
+ *  valid progression; repairs only what is genuinely invalid. */
+export function normalizePlayerSave(input: PlayerState): { state: PlayerState; repairs: string[] } {
+  const repairs: string[] = [];
+  const s = input;
+
+  // Balances: reject NaN/Infinity, prevent negatives.
+  const currencies = Object.fromEntries(
+    Object.entries(DEFAULT_PLAYER_STATE.currencies).map(([id, def]) => [
+      id,
+      sanitizeBalance((s.currencies as Record<string, unknown>)[id], def, repairs, `currencies.${id}`),
+    ]),
+  ) as PlayerState["currencies"];
+  const materials = Object.fromEntries(
+    Object.entries(DEFAULT_PLAYER_STATE.materials).map(([id, def]) => [
+      id,
+      sanitizeBalance((s.materials as Record<string, unknown>)[id], def, repairs, `materials.${id}`),
+    ]),
+  ) as PlayerState["materials"];
+  const chests = Object.fromEntries(
+    Object.entries(DEFAULT_PLAYER_STATE.chests).map(([id]) => [
+      id,
+      sanitizeBalance((s.chests as Record<string, unknown>)[id], 0, repairs, `chests.${id}`),
+    ]),
+  ) as PlayerState["chests"];
+  const consumables = Object.fromEntries(
+    Object.entries(DEFAULT_PLAYER_STATE.consumables).map(([id]) => [
+      id,
+      sanitizeBalance((s.consumables as Record<string, unknown>)[id], 0, repairs, `consumables.${id}`),
+    ]),
+  ) as PlayerState["consumables"];
+
+  // Owned collections: dedupe + drop unknown ids; never left empty.
+  const ownedShipIds = dedupeKnown(s.ownedShipIds, (id) => !!getShipById(id), [DEFAULT_SHIP_ID], repairs, "ownedShipIds");
+  const ownedCompanionIds = dedupeKnown(s.ownedCompanionIds, (id) => !!getCompanionById(id), COMPANIONS.map((c) => c.id), repairs, "ownedCompanionIds");
+  const ownedModuleIds = dedupeKnown(s.ownedModuleIds, (id) => !!getModuleById(id), MODULES.map((m) => m.id), repairs, "ownedModuleIds");
+  const ownedWeaponIds = dedupeKnown(s.ownedWeaponIds, (id) => !!getWeaponById(id), DEFAULT_OWNED_WEAPON_IDS, repairs, "ownedWeaponIds");
+
+  // Equipped IDs must reference owned, existing content; fall back safely.
+  let selectedShipId = s.selectedShipId;
+  if (typeof selectedShipId !== "string" || !ownedShipIds.includes(selectedShipId)) {
+    repairs.push(`selectedShipId: ${String(selectedShipId)} → ${ownedShipIds[0]}`);
+    selectedShipId = ownedShipIds[0];
+  }
+  let equippedWeaponId = s.equippedWeaponId;
+  if (typeof equippedWeaponId !== "string" || !ownedWeaponIds.includes(equippedWeaponId)) {
+    const fallback = ownedWeaponIds.includes(DEFAULT_EQUIPPED_WEAPON_ID)
+      ? DEFAULT_EQUIPPED_WEAPON_ID
+      : ownedWeaponIds[0];
+    repairs.push(`equippedWeaponId: ${String(equippedWeaponId)} → ${fallback}`);
+    equippedWeaponId = fallback;
+  }
+  // Loadout slots may legitimately be null (empty slot) — only non-null
+  // values referencing unknown/unowned content are repaired.
+  const loadout = { ...s.activeLoadout };
+  if (loadout.companionId !== null && !ownedCompanionIds.includes(loadout.companionId)) {
+    repairs.push(`activeLoadout.companionId: ${String(loadout.companionId)} → default`);
+    loadout.companionId = DEFAULT_COMPANION_ID;
+  }
+  for (const [slot, fallback] of [
+    ["coreModuleId", DEFAULT_CORE_MODULE_ID],
+    ["platingModuleId", DEFAULT_PLATING_MODULE_ID],
+    ["systemModuleId", DEFAULT_SYSTEM_MODULE_ID],
+  ] as const) {
+    const value = loadout[slot];
+    if (value !== null && !ownedModuleIds.includes(value)) {
+      repairs.push(`activeLoadout.${slot}: ${String(value)} → default`);
+      loadout[slot] = fallback;
+    }
+  }
+
+  // Per-ship records: drop unknown ship keys, clamp progression ranges.
+  const shipProgress: PlayerState["shipProgress"] = {};
+  for (const [shipId, progress] of Object.entries(s.shipProgress ?? {})) {
+    if (!getShipById(shipId)) {
+      repairs.push(`shipProgress: dropped unknown ship ${shipId}`);
+      continue;
+    }
+    shipProgress[shipId] = {
+      ...createDefaultShipProgress(shipId),
+      ...progress,
+      level: clampLevel(progress?.level, 1, SHIP_MAX_LEVEL, repairs, `shipProgress.${shipId}.level`),
+      xp: sanitizeBalance(progress?.xp, 0, repairs, `shipProgress.${shipId}.xp`),
+      stars: clampLevel(progress?.stars, 0, SHIP_MAX_STAR_RANK, repairs, `shipProgress.${shipId}.stars`),
+      weaponLevel: clampLevel(progress?.weaponLevel, 1, 5, repairs, `shipProgress.${shipId}.weaponLevel`) as 1 | 2 | 3 | 4 | 5,
+    };
+  }
+  const shipFragments: PlayerState["shipFragments"] = {};
+  for (const [shipId, amount] of Object.entries(s.shipFragments ?? {})) {
+    if (!getShipById(shipId)) {
+      repairs.push(`shipFragments: dropped unknown ship ${shipId}`);
+      continue;
+    }
+    shipFragments[shipId] = sanitizeBalance(amount, 0, repairs, `shipFragments.${shipId}`);
+  }
+  const shipAbilityLevels: PlayerState["shipAbilityLevels"] = {};
+  for (const [shipId, levels] of Object.entries(s.shipAbilityLevels ?? {})) {
+    if (!getShipById(shipId)) {
+      repairs.push(`shipAbilityLevels: dropped unknown ship ${shipId}`);
+      continue;
+    }
+    shipAbilityLevels[shipId] = {
+      signature: clampLevel(levels?.signature, SHIP_ABILITY_MIN_LEVEL, SHIP_ABILITY_MAX_LEVEL, repairs, `shipAbilityLevels.${shipId}.signature`),
+      passive: clampLevel(levels?.passive, SHIP_ABILITY_MIN_LEVEL, SHIP_ABILITY_MAX_LEVEL, repairs, `shipAbilityLevels.${shipId}.passive`),
+      calamity: clampLevel(levels?.calamity, SHIP_ABILITY_MIN_LEVEL, SHIP_ABILITY_MAX_LEVEL, repairs, `shipAbilityLevels.${shipId}.calamity`),
+    };
+  }
+  const weaponProgress: PlayerState["weaponProgress"] = {};
+  for (const [weaponId, progress] of Object.entries(s.weaponProgress ?? {})) {
+    const weapon = getWeaponById(weaponId);
+    if (!weapon) {
+      repairs.push(`weaponProgress: dropped unknown weapon ${weaponId}`);
+      continue;
+    }
+    weaponProgress[weaponId] = {
+      level: clampLevel(progress?.level, 1, weapon.maxLevel, repairs, `weaponProgress.${weaponId}.level`),
+    };
+  }
+  const moduleProgress: PlayerState["moduleProgress"] = {};
+  for (const [moduleId, progress] of Object.entries(s.moduleProgress ?? {})) {
+    if (!getModuleById(moduleId)) {
+      repairs.push(`moduleProgress: dropped unknown module ${moduleId}`);
+      continue;
+    }
+    moduleProgress[moduleId] = {
+      ...progress,
+      level: clampLevel(progress?.level, MODULE_MIN_LEVEL, MODULE_MAX_LEVEL, repairs, `moduleProgress.${moduleId}.level`),
+    };
+  }
+  const companionProgress: PlayerState["companionProgress"] = {};
+  for (const [companionId, progress] of Object.entries(s.companionProgress ?? {})) {
+    if (!getCompanionById(companionId)) {
+      repairs.push(`companionProgress: dropped unknown companion ${companionId}`);
+      continue;
+    }
+    companionProgress[companionId] = {
+      ...progress,
+      level: clampLevel(progress?.level, COMPANION_MIN_LEVEL, COMPANION_MAX_LEVEL, repairs, `companionProgress.${companionId}.level`),
+    };
+  }
+
+  // Player XP/level: sanitize inputs, then the canonical progression
+  // normalization keeps level/xp/xpToNextLevel synchronized to the curve.
+  const safeXp = sanitizeBalance(s.xp, 0, repairs, "xp");
+  const safeLevel = clampLevel(s.level, 1, 999, repairs, "level");
+  const progression = normalizePlayerProgression({ level: safeLevel, xp: safeXp, xpToNextLevel: s.xpToNextLevel });
+  if (progression.changed) repairs.push("progression: resynced to canonical XP curve");
+
+  return {
+    state: {
+      ...s,
+      level: progression.level,
+      xp: progression.xp,
+      xpToNextLevel: progression.xpToNextLevel,
+      currencies,
+      materials,
+      chests,
+      consumables,
+      ownedShipIds,
+      ownedCompanionIds,
+      ownedModuleIds,
+      ownedWeaponIds,
+      selectedShipId,
+      equippedWeaponId,
+      activeLoadout: loadout,
+      shipProgress,
+      shipFragments,
+      shipAbilityLevels,
+      weaponProgress,
+      moduleProgress,
+      companionProgress,
+      highestClearedStageId:
+        typeof s.highestClearedStageId === "string" || s.highestClearedStageId === null
+          ? s.highestClearedStageId
+          : null,
+    },
+    repairs,
+  };
 }
 
 function mergePlayerWithDefaults(parsed: Partial<PlayerState>): PlayerState {
@@ -156,7 +422,13 @@ function mergePlayerWithDefaults(parsed: Partial<PlayerState>): PlayerState {
  * Rank, XP and every unrelated player field are preserved. */
 export function migratePlayerState(parsedValue: unknown): PlayerSaveLoadResult {
   if (!parsedValue || typeof parsedValue !== "object" || Array.isArray(parsedValue)) {
-    return { state: { ...DEFAULT_PLAYER_STATE }, shouldPersist: false, source: "fallback" };
+    return {
+      state: { ...DEFAULT_PLAYER_STATE },
+      shouldPersist: false,
+      source: "fallback",
+      recoveryReason: "invalid-shape",
+      repairs: [],
+    };
   }
 
   const parsed = parsedValue as Partial<PlayerState>;
@@ -165,7 +437,13 @@ export function migratePlayerState(parsedValue: unknown): PlayerSaveLoadResult {
     typeof sourceVersion !== "number" ||
     !MIGRATABLE_SCHEMA_VERSIONS.includes(sourceVersion as (typeof MIGRATABLE_SCHEMA_VERSIONS)[number])
   ) {
-    return { state: { ...DEFAULT_PLAYER_STATE }, shouldPersist: false, source: "fallback" };
+    return {
+      state: { ...DEFAULT_PLAYER_STATE },
+      shouldPersist: false,
+      source: "fallback",
+      recoveryReason: "unsupported-version",
+      repairs: [],
+    };
   }
 
   const merged = mergePlayerWithDefaults(parsed);
@@ -210,17 +488,8 @@ export function migratePlayerState(parsedValue: unknown): PlayerSaveLoadResult {
     !parsed.materials || typeof (parsed.materials as Partial<PlayerState["materials"]>).companionShards !== "number";
   const missingChests = !parsed.chests || typeof parsed.chests !== "object";
   const missingConsumables = !parsed.consumables || typeof parsed.consumables !== "object";
-  // Player progression normalization (no schema bump needed — same fields):
-  // re-sync the cached xpToNextLevel to the canonical curve in
-  // systems/playerProgression.ts and roll any overflowing within-level XP
-  // into derived levels. XP is preserved, level is derived, and historical
-  // level-up milestone rewards are deliberately NOT granted retroactively.
-  const progression = normalizePlayerProgression(merged);
   const state: PlayerState = {
     ...merged,
-    level: progression.level,
-    xp: progression.xp,
-    xpToNextLevel: progression.xpToNextLevel,
     materials: {
       ...merged.materials,
       companionShards:
@@ -249,20 +518,36 @@ export function migratePlayerState(parsedValue: unknown): PlayerSaveLoadResult {
     saveSchemaVersion: SAVE_SCHEMA_VERSION,
   };
 
+  // Canonical field-level normalization runs on EVERY load (current saves
+  // included) — this is where XP/level resync to the canonical curve, all
+  // balances/levels/equipped ids are validated, and single-field corruption
+  // is repaired without touching unrelated progress. Deterministic and
+  // idempotent: a normalized save re-normalizes with zero repairs.
+  const normalized = normalizePlayerSave(state);
+
   const shouldPersist =
-    sourceVersion !== SAVE_SCHEMA_VERSION || missingCompanionData || missingModuleParts || missingWeaponParts || missingWeaponState || missingUniversalShards || missingShipFragments || missingAbilityCores || missingAbilityLevels || missingCompanionShards || missingChests || missingConsumables || progression.changed || normalizedProgress;
+    sourceVersion !== SAVE_SCHEMA_VERSION || missingCompanionData || missingModuleParts || missingWeaponParts || missingWeaponState || missingUniversalShards || missingShipFragments || missingAbilityCores || missingAbilityLevels || missingCompanionShards || missingChests || missingConsumables || normalized.repairs.length > 0 || normalizedProgress;
   return {
-    state,
+    state: normalized.state,
     shouldPersist,
     source: shouldPersist ? "migrated" : "current",
+    repairs: normalized.repairs,
   };
 }
 
 export function parsePlayerSave(raw: string | null): PlayerSaveLoadResult {
-  if (!raw) return { state: { ...DEFAULT_PLAYER_STATE }, shouldPersist: false, source: "fresh" };
+  if (!raw) {
+    return { state: { ...DEFAULT_PLAYER_STATE }, shouldPersist: false, source: "fresh", repairs: [] };
+  }
   try {
     return migratePlayerState(JSON.parse(raw) as unknown);
   } catch {
-    return { state: { ...DEFAULT_PLAYER_STATE }, shouldPersist: false, source: "fallback" };
+    return {
+      state: { ...DEFAULT_PLAYER_STATE },
+      shouldPersist: false,
+      source: "fallback",
+      recoveryReason: "unreadable-json",
+      repairs: [],
+    };
   }
 }

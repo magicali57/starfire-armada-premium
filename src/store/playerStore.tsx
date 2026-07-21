@@ -46,20 +46,67 @@ import {
   type BattleSessionTransitionResult,
 } from "@/systems/battleSession";
 
+// The ONE canonical save key. The ":recovery" sibling is not a second save
+// — it only preserves the raw string of an unrecoverable save for manual
+// inspection, and is never read back by the game.
 const SAVE_KEY = "starfire-armada-v2:save";
+const RECOVERY_KEY = `${SAVE_KEY}:recovery`;
+
+export interface SaveDiagnostics {
+  schemaVersion: number;
+  loadSource: "fresh" | "current" | "migrated" | "fallback" | "unknown";
+  recoveryReason: string | null;
+  repairs: string[];
+  /** Message of the last failed persist attempt, or null. In-memory state
+   *  stays authoritative on failure — persistence never pretends success. */
+  persistenceError: string | null;
+}
+
+const saveDiagnostics: SaveDiagnostics = {
+  schemaVersion: 0,
+  loadSource: "unknown",
+  recoveryReason: null,
+  repairs: [],
+  persistenceError: null,
+};
+
+/** Compact development diagnostic — no production UI consumes this. */
+export function getSaveDiagnostics(): SaveDiagnostics {
+  return { ...saveDiagnostics, repairs: [...saveDiagnostics.repairs] };
+}
 
 function loadPlayerState(): PlayerState {
-  const loaded = parsePlayerSave(window.localStorage.getItem(SAVE_KEY));
+  const raw = window.localStorage.getItem(SAVE_KEY);
+  const loaded = parsePlayerSave(raw);
+  saveDiagnostics.schemaVersion = loaded.state.saveSchemaVersion;
+  saveDiagnostics.loadSource = loaded.source;
+  saveDiagnostics.recoveryReason = loaded.recoveryReason ?? null;
+  saveDiagnostics.repairs = loaded.repairs;
+  if (loaded.source === "fallback" && raw) {
+    // Whole save was unrecoverable: keep a raw backup once, then start
+    // fresh. Never crashes; never read back automatically.
+    try {
+      window.localStorage.setItem(RECOVERY_KEY, raw);
+    } catch {
+      // Backup is best-effort only.
+    }
+  }
   if (loaded.shouldPersist) persistPlayerState(loaded.state);
   return loaded.state;
 }
 
-function persistPlayerState(state: PlayerState) {
+/** Returns true when the write actually succeeded. On failure the valid
+ *  in-memory state is retained, a typed diagnostic is recorded, and no
+ *  rewards/transactions are re-run — the app continues un-crashed.
+ *  Exported for the focused verification suite only. */
+export function persistPlayerState(state: PlayerState): boolean {
   try {
     window.localStorage.setItem(SAVE_KEY, JSON.stringify(state));
-  } catch {
-    // Storage may be unavailable (private mode, quota) — fail silently,
-    // gameplay continues with in-memory state only.
+    saveDiagnostics.persistenceError = null;
+    return true;
+  } catch (error) {
+    saveDiagnostics.persistenceError = error instanceof Error ? error.message : String(error);
+    return false;
   }
 }
 

@@ -96,13 +96,13 @@ export function validateDisplayName(raw: string): DisplayNameValidation {
 // Rewards preview.
 // ---------------------------------------------------------------------------
 
-const CURRENCY_LABEL: Record<CurrencyId, string> = {
+export const CURRENCY_LABEL: Record<CurrencyId, string> = {
   coins: "Credits",
   crystals: "Crystals",
   energy: "Energy",
 };
 
-const MATERIAL_LABEL: Record<MaterialId, string> = {
+export const MATERIAL_LABEL: Record<MaterialId, string> = {
   shipAlloy: "Ship Alloy",
   companionData: "Companion Data",
   moduleParts: "Module Parts",
@@ -112,13 +112,13 @@ const MATERIAL_LABEL: Record<MaterialId, string> = {
   companionShards: "Companion Shards",
 };
 
-const CHEST_LABEL: Record<ChestId, string> = {
+export const CHEST_LABEL: Record<ChestId, string> = {
   chestBasic: "Basic Chest",
   chestRare: "Rare Chest",
   chestEpic: "Epic Chest",
 };
 
-const CONSUMABLE_LABEL: Record<ConsumableId, string> = {
+export const CONSUMABLE_LABEL: Record<ConsumableId, string> = {
   consumableShieldCharge: "Shield Charge",
   consumableRepairKit: "Repair Kit",
   consumableDamageAmplifier: "Damage Amplifier",

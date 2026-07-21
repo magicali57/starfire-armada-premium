@@ -1,4 +1,4 @@
-import type { BattleCompletionSummary, PlayerState, RandomSource, RewardDifficulty } from "@/types";
+import type { BattleCompletionSummary, PlayerState, RandomSource, ResolvedReward, RewardDifficulty } from "@/types";
 import { getStageById } from "@/data/campaign";
 import {
   applyCompleteCampaignStage,
@@ -388,6 +388,12 @@ export interface BattleResultsView {
   newPlayerLevel: number;
   playerLevelsGained: number;
   unlocksEarned: PlayerUnlockDefinition[];
+  /** Player-level milestone rewards crossed by this completion ONLY (the
+   *  entries the atomic application tagged `source: "level-up"`) — never
+   *  the stage/campaign bundle itself, and never recomputed here. Empty
+   *  when playerLevelsGained is 0. Feeds PlayerLevelUpModal exclusively;
+   *  ResultsScreen's own reward list continues to read `rewards`. */
+  levelUpRewards: ResolvedReward[];
   nextStageId: string | null;
   /** Victory: continue/replay/return · Defeat: retry/return. */
   availableActions: ("continue" | "replay" | "retry" | "return-to-campaign")[];
@@ -425,6 +431,8 @@ export function getBattleResultsView(session: BattleSession | null): BattleResul
     newPlayerLevel: completion.newPlayerLevel,
     playerLevelsGained: completion.playerLevelsGained,
     unlocksEarned: completion.unlocksEarned,
+    levelUpRewards:
+      completion.summary?.application?.applied.filter((reward) => reward.source === "level-up") ?? [],
     nextStageId: completion.nextStageId,
     availableActions: victory
       ? completion.nextStageId

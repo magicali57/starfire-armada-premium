@@ -1,10 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ScreenHeader } from "@/components/layout/ScreenHeader";
 import { NeonPanel } from "@/components/cards/NeonPanel";
 import { PrimaryButton } from "@/components/controls/PrimaryButton";
 import { SecondaryButton } from "@/components/controls/SecondaryButton";
+import { PlayerLevelUpModal } from "@/components/level-up/PlayerLevelUpModal";
 import { usePlayerStore } from "@/store/playerStore";
 import { getBattleResultsView } from "@/systems/battleSession";
+import { isPlayerMaxLevel } from "@/systems/playerProgression";
 import { navigate } from "@/app/routes";
 import "./ResultsScreen.css";
 
@@ -26,7 +28,18 @@ export function ResultsScreen() {
     if (!view) navigate("campaign");
   }, [view]);
 
+  // In-memory presentation marker only (never written to PlayerState/save):
+  // tracks which sessionId's Level-Up modal has already been shown/closed
+  // this Results visit, so a rerender (or a duplicate completion callback,
+  // which the battle-session transaction already ignores) never reopens
+  // it. A genuinely new session (e.g. Replay) gets a new sessionId and is
+  // free to show its own Level-Up modal again.
+  const [levelUpConsumedSessionId, setLevelUpConsumedSessionId] = useState<string | null>(null);
+
   if (!view) return null;
+
+  const showLevelUpModal =
+    view.outcome === "victory" && view.playerLevelsGained > 0 && levelUpConsumedSessionId !== view.sessionId;
 
   const finish = (route: "home" | "campaign") => {
     // Clears TEMPORARY session state only — awarded progression persists.
@@ -80,6 +93,16 @@ export function ResultsScreen() {
           Back to Campaign
         </SecondaryButton>
       </div>
+      <PlayerLevelUpModal
+        isOpen={showLevelUpModal}
+        previousLevel={view.previousPlayerLevel}
+        newLevel={view.newPlayerLevel}
+        levelsGained={view.playerLevelsGained}
+        rewards={view.levelUpRewards}
+        unlocks={view.unlocksEarned}
+        reachedMaxLevel={isPlayerMaxLevel(view.newPlayerLevel)}
+        onClose={() => setLevelUpConsumedSessionId(view.sessionId)}
+      />
     </div>
   );
 }

@@ -1,0 +1,209 @@
+.level-up-modal,
+.level-up-modal * {
+  box-sizing: border-box;
+}
+
+.level-up-modal {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  /* ModalLayer's own panel already scrolls the whole dialog; this
+     wrapper adds its own restrained entrance animation on mount. */
+  animation: level-up-modal-enter 0.28s ease-out;
+}
+
+.level-up-modal__scroll {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 0;
+  max-height: 60dvh;
+  overflow-y: auto;
+  padding-right: var(--space-1);
+}
+
+.level-up-modal__heading {
+  margin: 0;
+  text-align: center;
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--color-gold-300, var(--color-text-primary));
+}
+
+.level-up-modal__transition {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.level-up-modal__level {
+  font-size: clamp(28px, 10vw, var(--font-size-3xl));
+  font-weight: 800;
+  line-height: 1;
+  min-width: 0;
+}
+
+.level-up-modal__level--from {
+  color: var(--color-text-secondary);
+}
+
+.level-up-modal__level--to {
+  color: var(--color-text-primary);
+  text-shadow: var(--glow-gold);
+  animation: level-up-modal-emphasis 0.5s ease-out 0.15s both;
+}
+
+.level-up-modal__arrow {
+  font-size: var(--font-size-xl);
+  color: var(--color-text-secondary);
+}
+
+.level-up-modal__multi,
+.level-up-modal__max {
+  margin: 0;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.level-up-modal__multi {
+  color: var(--color-text-secondary);
+}
+
+.level-up-modal__max {
+  color: var(--color-gold-300, var(--color-text-primary));
+}
+
+.level-up-modal__section h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.level-up-modal__rewards,
+.level-up-modal__unlocks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.level-up-modal__reward {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: var(--border-hairline);
+  border-left: 3px solid var(--color-rarity-common);
+  background: var(--color-bg-inset);
+  opacity: 0;
+  animation: level-up-modal-reveal 0.3s ease-out both;
+  animation-delay: calc(var(--reveal-index, 0) * 60ms);
+}
+
+.level-up-modal__reward--rare {
+  border-left-color: var(--color-rarity-rare);
+}
+.level-up-modal__reward--epic {
+  border-left-color: var(--color-rarity-epic);
+}
+.level-up-modal__reward--legendary {
+  border-left-color: var(--color-rarity-legendary);
+}
+
+.level-up-modal__reward img {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.level-up-modal__reward-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.level-up-modal__reward-amount {
+  flex-shrink: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.level-up-modal__unlock {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: var(--border-neon-primary, var(--border-hairline));
+  background: var(--color-bg-inset);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+  opacity: 0;
+  animation: level-up-modal-reveal 0.3s ease-out both;
+  animation-delay: calc(var(--reveal-index, 0) * 60ms);
+}
+
+.level-up-modal__actions {
+  position: sticky;
+  bottom: 0;
+  background: var(--color-bg-panel);
+  padding-top: var(--space-2);
+  margin-top: calc(var(--space-2) * -1);
+}
+
+@keyframes level-up-modal-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes level-up-modal-emphasis {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes level-up-modal-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 360px) {
+  .level-up-modal__level {
+    font-size: clamp(24px, 12vw, var(--font-size-2xl));
+  }
+}

@@ -1,5 +1,10 @@
 import type { DropTableGroup, RewardEntry, StageRewardDefinition } from "@/types";
 import { CAMPAIGN_STAGES, getChapterById, getStageById } from "./campaign";
+import {
+  getStageBaseXp,
+  getStageFirstClearBonusXp,
+  getStageRepeatXp,
+} from "@/systems/playerProgression";
 
 // Data-driven campaign stage reward definitions — the STATIC side of the
 // reward system. Built deterministically from the canonical campaign data
@@ -78,7 +83,12 @@ function buildStageRewardDefinition(stageId: string): StageRewardDefinition | nu
   const bossStage = stage.kind === "boss";
   const chapterMultiplier = getChapterRewardMultiplier(chapterIndex);
 
-  const baseXp = 40 + stage.index * 15 + (bossStage ? 40 : 0);
+  // Player XP comes ONLY from the canonical stage-XP helpers in
+  // systems/playerProgression.ts (balanced against the account XP curve) —
+  // never hand-tuned per stage here. Chapter + difficulty scaling is
+  // applied downstream by resolveRewards' existing multipliers.
+  const xpInputs = { stageIndex: stage.index, bossStage };
+  const baseXp = getStageBaseXp(xpInputs);
 
   return {
     stageId: stage.id,
@@ -96,7 +106,7 @@ function buildStageRewardDefinition(stageId: string): StageRewardDefinition | nu
       // Small one-time premium payout — the stage's advertised crystals are
       // first-clear-only by design (never repeat-farmable).
       { kind: "currency", currencyId: "crystals", amount: stage.rewardCrystals },
-      { kind: "playerXp", amount: baseXp },
+      { kind: "playerXp", amount: getStageFirstClearBonusXp(xpInputs) },
       ...(FIRST_CLEAR_MATERIALS[stage.index] ?? []),
       ...(bossStage
         ? [{ kind: "chest", chestId: "chestRare", amount: 1 } satisfies RewardEntry]
@@ -104,7 +114,7 @@ function buildStageRewardDefinition(stageId: string): StageRewardDefinition | nu
     ],
     repeatClear: [
       { kind: "currency", currencyId: "coins", amount: Math.round(stage.rewardCoins * 0.35) },
-      { kind: "playerXp", amount: Math.round(baseXp * 0.5) },
+      { kind: "playerXp", amount: getStageRepeatXp(xpInputs) },
       { kind: "material", materialId: "shipAlloy", amount: bossStage ? 8 : 4 },
     ],
     dropTable: buildStandardDropTable(bossStage),

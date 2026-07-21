@@ -11,6 +11,7 @@ import { getCompanionById } from "@/data/companions";
 import { getModuleById } from "@/data/modules";
 import { getWeaponById } from "@/data/weapons";
 import { createDefaultShipProgress } from "@/systems/shipStats";
+import { planPlayerXpGain, type PlayerXpGainPlan } from "@/systems/playerProgression";
 
 // Atomic reward application — the ONE function that turns a resolved
 // RewardBundle into player state. Validate-everything-first, then build a
@@ -158,35 +159,6 @@ function validateEntry(state: PlayerState, entry: RewardEntry): string | null {
 }
 
 // ---------------------------------------------------------------------------
-// Player XP / level
-// ---------------------------------------------------------------------------
-
-/** Provisional XP requirement curve for the NEXT level. There is no other
- *  level-up implementation in the project yet (player.level/xp/
- *  xpToNextLevel were display-only), so this becomes the one canonical
- *  place; retune freely once missions/real XP sources land. Matches the
- *  fresh-install anchor (Level 1 → 500 XP). */
-export function calculatePlayerXpRequirement(level: number): number {
-  return 500 + Math.max(0, level - 1) * 250;
-}
-
-function applyPlayerXp(
-  state: PlayerState,
-  amount: number,
-): { state: PlayerState; levelsGained: number } {
-  let { level, xp, xpToNextLevel } = state;
-  xp += amount;
-  let levelsGained = 0;
-  while (xp >= xpToNextLevel) {
-    xp -= xpToNextLevel;
-    level += 1;
-    levelsGained += 1;
-    xpToNextLevel = calculatePlayerXpRequirement(level);
-  }
-  return { state: { ...state, level, xp, xpToNextLevel }, levelsGained };
-}
-
-// ---------------------------------------------------------------------------
 // Application
 // ---------------------------------------------------------------------------
 
@@ -201,11 +173,23 @@ export function applyRewardBundle(
 
   if (rewards.length === 0) return failed("empty-bundle");
 
-  // 1. Validate EVERYTHING before touching anything.
+  // 1. Validate EVERYTHING before touching anything — including the
+  // level-up milestone rewards this bundle's XP would cross, so a bad
+  // milestone definition rejects the whole bundle with zero side effects.
   for (const reward of rewards) {
     const error = validateEntry(state, reward.entry);
     if (error) {
       return failed(error.includes("amount") ? "invalid-amount" : "invalid-reward-id");
+    }
+  }
+  const plannedXp = rewards.reduce(
+    (sum, reward) => (reward.entry.kind === "playerXp" ? sum + reward.entry.amount : sum),
+    0,
+  );
+  if (plannedXp > 0) {
+    for (const entry of planPlayerXpGain(state, plannedXp).levelRewards) {
+      const error = validateEntry(state, entry);
+      if (error) return failed(error.includes("amount") ? "invalid-amount" : "invalid-reward-id");
     }
   }
 
@@ -294,16 +278,66 @@ export function applyRewardBundle(
     applied.push(reward);
   }
 
-  // 3. Player XP through the one canonical level curve.
+  // 3. Player XP through the ONE canonical progression curve
+  // (systems/playerProgression.ts). Crossing levels resolves that level's
+  // milestone rewards exactly once and applies them inside this same
+  // atomic pass — level-up rewards were pre-validated above via the plan,
+  // so a bad milestone definition rejects the whole bundle up front rather
+  // than half-applying. Multiple crossed levels all pay out in one gain.
   let levelsGained = 0;
   if (totalXp > 0) {
-    const xpResult = applyPlayerXp(next, totalXp);
-    next = xpResult.state;
-    levelsGained = xpResult.levelsGained;
+    const plan = planPlayerXpGain(next, totalXp);
+    for (const entry of plan.levelRewards) {
+      if (entry.kind === "collectible" || entry.kind === "playerXp") continue; // defensive: milestone data never defines these
+      applyEntry(entry);
+      applied.push({ entry, source: "level-up", rarity: "common" });
+    }
+    next = {
+      ...next,
+      level: plan.newLevel,
+      xp: plan.newXp,
+      xpToNextLevel: plan.newXpToNextLevel,
+    };
+    levelsGained = plan.levelsGained;
   }
 
   return {
     state: next,
     result: { success: true, applied, duplicateConversions, playerLevelsGained: levelsGained },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Standalone canonical XP application (missions, future profile flows).
+// Same atomic guarantees; returns the full detailed level-up result.
+// ---------------------------------------------------------------------------
+
+export interface PlayerLevelUpResult extends PlayerXpGainPlan {
+  success: boolean;
+  failureReason?: "invalid-amount" | "invalid-reward-id";
+}
+
+export function applyPlayerXp(
+  state: PlayerState,
+  amount: number,
+): { state: PlayerState; result: PlayerLevelUpResult } {
+  const basePlan = planPlayerXpGain(state, 0);
+  if (!Number.isInteger(amount) || amount <= 0) {
+    return { state, result: { ...basePlan, success: false, failureReason: "invalid-amount" } };
+  }
+  const plan = planPlayerXpGain(state, amount);
+  const applied = applyRewardBundle(state, [
+    { entry: { kind: "playerXp", amount }, source: "level-up", rarity: "common" },
+  ]);
+  if (!applied.result.success) {
+    return {
+      state,
+      result: {
+        ...basePlan,
+        success: false,
+        failureReason: applied.result.failureReason === "invalid-amount" ? "invalid-amount" : "invalid-reward-id",
+      },
+    };
+  }
+  return { state: applied.state, result: { ...plan, success: true } };
 }

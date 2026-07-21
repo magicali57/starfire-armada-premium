@@ -13,6 +13,8 @@ export type RewardSource =
   | "campaign-repeat"
   | "campaign-drop"
   | "chest"
+  /** Player level-up milestone rewards (systems/playerProgression.ts). */
+  | "level-up"
   // Defined for future systems; nothing awards from these yet.
   | "mission"
   | "event";

@@ -8,6 +8,7 @@ import {
   COMPANION_MAX_LEVEL,
   COMPANION_MIN_LEVEL,
 } from "@/systems/companionProgression";
+import { normalizePlayerProgression } from "@/systems/playerProgression";
 
 const DEFAULT_SHIP_ID = "ship-01-rapid-fire";
 
@@ -209,8 +210,17 @@ export function migratePlayerState(parsedValue: unknown): PlayerSaveLoadResult {
     !parsed.materials || typeof (parsed.materials as Partial<PlayerState["materials"]>).companionShards !== "number";
   const missingChests = !parsed.chests || typeof parsed.chests !== "object";
   const missingConsumables = !parsed.consumables || typeof parsed.consumables !== "object";
+  // Player progression normalization (no schema bump needed — same fields):
+  // re-sync the cached xpToNextLevel to the canonical curve in
+  // systems/playerProgression.ts and roll any overflowing within-level XP
+  // into derived levels. XP is preserved, level is derived, and historical
+  // level-up milestone rewards are deliberately NOT granted retroactively.
+  const progression = normalizePlayerProgression(merged);
   const state: PlayerState = {
     ...merged,
+    level: progression.level,
+    xp: progression.xp,
+    xpToNextLevel: progression.xpToNextLevel,
     materials: {
       ...merged.materials,
       companionShards:
@@ -240,7 +250,7 @@ export function migratePlayerState(parsedValue: unknown): PlayerSaveLoadResult {
   };
 
   const shouldPersist =
-    sourceVersion !== SAVE_SCHEMA_VERSION || missingCompanionData || missingModuleParts || missingWeaponParts || missingWeaponState || missingUniversalShards || missingShipFragments || missingAbilityCores || missingAbilityLevels || missingCompanionShards || missingChests || missingConsumables || normalizedProgress;
+    sourceVersion !== SAVE_SCHEMA_VERSION || missingCompanionData || missingModuleParts || missingWeaponParts || missingWeaponState || missingUniversalShards || missingShipFragments || missingAbilityCores || missingAbilityLevels || missingCompanionShards || missingChests || missingConsumables || progression.changed || normalizedProgress;
   return {
     state,
     shouldPersist,

@@ -56,6 +56,22 @@ export const DEFAULT_PLAYER_STATE: PlayerState = {
     // Cores material (economy catalog id `abilityCores`). Real earning
     // sources (chests, events, Shop) are not built yet.
     abilityCores: 24,
+    // Companion Shards (battle reward foundation, schema v10). Accumulates
+    // from rewards/duplicate conversions; no spender exists yet because
+    // Companion Rank Up is postponed.
+    companionShards: 0,
+  },
+  // Unopened reward chests + persistent pre-battle consumables (schema
+  // v10). Fresh installs start empty; battle rewards fill these.
+  chests: {
+    chestBasic: 0,
+    chestRare: 0,
+    chestEpic: 0,
+  },
+  consumables: {
+    consumableShieldCharge: 0,
+    consumableRepairKit: 0,
+    consumableDamageAmplifier: 0,
   },
   ownedShipIds: [DEFAULT_SHIP_ID],
   selectedShipId: DEFAULT_SHIP_ID,
@@ -105,7 +121,7 @@ export const DEFAULT_PLAYER_STATE: PlayerState = {
   saveSchemaVersion: SAVE_SCHEMA_VERSION,
 };
 
-const MIGRATABLE_SCHEMA_VERSIONS = [2, 3, 4, 5, 6, 7, 8, 9] as const;
+const MIGRATABLE_SCHEMA_VERSIONS = [2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
 export interface PlayerSaveLoadResult {
   state: PlayerState;
@@ -126,6 +142,8 @@ function mergePlayerWithDefaults(parsed: Partial<PlayerState>): PlayerState {
     weaponProgress: { ...DEFAULT_PLAYER_STATE.weaponProgress, ...parsed.weaponProgress },
     shipFragments: { ...DEFAULT_PLAYER_STATE.shipFragments, ...parsed.shipFragments },
     shipAbilityLevels: { ...DEFAULT_PLAYER_STATE.shipAbilityLevels, ...parsed.shipAbilityLevels },
+    chests: { ...DEFAULT_PLAYER_STATE.chests, ...parsed.chests },
+    consumables: { ...DEFAULT_PLAYER_STATE.consumables, ...parsed.consumables },
   };
 }
 
@@ -183,10 +201,22 @@ export function migratePlayerState(parsedValue: unknown): PlayerSaveLoadResult {
   const missingAbilityCores =
     !parsed.materials || typeof (parsed.materials as Partial<PlayerState["materials"]>).abilityCores !== "number";
   const missingAbilityLevels = !parsed.shipAbilityLevels || typeof parsed.shipAbilityLevels !== "object";
+  // v9→v10: battle reward foundation added Companion Shards, unopened chest
+  // inventory, and pre-battle consumables — all backfilled with zeroed
+  // defaults only when absent; every existing field passes through
+  // mergePlayerWithDefaults untouched.
+  const missingCompanionShards =
+    !parsed.materials || typeof (parsed.materials as Partial<PlayerState["materials"]>).companionShards !== "number";
+  const missingChests = !parsed.chests || typeof parsed.chests !== "object";
+  const missingConsumables = !parsed.consumables || typeof parsed.consumables !== "object";
   const state: PlayerState = {
     ...merged,
     materials: {
       ...merged.materials,
+      companionShards:
+        typeof merged.materials.companionShards === "number"
+          ? merged.materials.companionShards
+          : DEFAULT_PLAYER_STATE.materials.companionShards,
       abilityCores:
         typeof merged.materials.abilityCores === "number"
           ? merged.materials.abilityCores
@@ -210,7 +240,7 @@ export function migratePlayerState(parsedValue: unknown): PlayerSaveLoadResult {
   };
 
   const shouldPersist =
-    sourceVersion !== SAVE_SCHEMA_VERSION || missingCompanionData || missingModuleParts || missingWeaponParts || missingWeaponState || missingUniversalShards || missingShipFragments || missingAbilityCores || missingAbilityLevels || normalizedProgress;
+    sourceVersion !== SAVE_SCHEMA_VERSION || missingCompanionData || missingModuleParts || missingWeaponParts || missingWeaponState || missingUniversalShards || missingShipFragments || missingAbilityCores || missingAbilityLevels || missingCompanionShards || missingChests || missingConsumables || normalizedProgress;
   return {
     state,
     shouldPersist,

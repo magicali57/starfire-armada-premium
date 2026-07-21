@@ -5,3 +5,4 @@ export * from "./loadout";
 export * from "./companion";
 export * from "./module";
 export * from "./weapon";
+export * from "./reward";

@@ -20,13 +20,18 @@ export type CurrencyBalances = Record<CurrencyId, number>;
 // economy catalog (id `abilityCores`, "Ability Cores") — used together with
 // Credits by Ship Abilities upgrades. Deliberately the only ability-upgrade
 // material id.
+// "companionShards" is the canonical companion-fragment shard from the
+// economy catalog (id `companionShards`) — awarded by battle rewards and by
+// duplicate-companion conversion. It is NOT a Companion Rank Up material
+// (Rank Up is postponed); it simply accumulates until that system exists.
 export type MaterialId =
   | "shipAlloy"
   | "companionData"
   | "moduleParts"
   | "weaponParts"
   | "universalShards"
-  | "abilityCores";
+  | "abilityCores"
+  | "companionShards";
 
 export type MaterialBalances = Record<MaterialId, number>;
 
@@ -38,13 +43,15 @@ export type MaterialBalances = Record<MaterialId, number>;
 // Rank added Universal Shards (materials.universalShards) and per-ship
 // fragment balances (shipFragments), and to 9 when Ship Abilities added
 // Ability Cores (materials.abilityCores) and per-ship ability levels
-// (shipAbilityLevels).
+// (shipAbilityLevels), and to 10 when the battle reward foundation added
+// Companion Shards (materials.companionShards), unopened chest inventory
+// (chests) and persistent pre-battle consumables (consumables).
 // Each version's saves
 // are migrated forward in store/playerStore.tsx's loadPlayerState — not
 // discarded — by merging in defaults for whatever fields that version
 // introduced; only saves that are missing/unparseable/from an unrecognized
 // future version fall back to DEFAULT_PLAYER_STATE.
-export const SAVE_SCHEMA_VERSION = 9;
+export const SAVE_SCHEMA_VERSION = 10;
 
 export interface PlayerState {
   playerId: string;
@@ -72,6 +79,14 @@ export interface PlayerState {
    *  definitions live in systems/shipAbilities.ts, never duplicated here.
    *  Missing key = all abilities at Level 1. Schema v9+. */
   shipAbilityLevels: Record<string, import("@/systems/shipAbilities").ShipAbilityLevels>;
+  /** Unopened reward-container chests (economy ids chestBasic/chestRare/
+   *  chestEpic). Chests are awarded here and stay unopened until a future
+   *  Chest Open / Reward Reveal flow. Schema v10+. */
+  chests: Record<import("./reward").ChestId, number>;
+  /** Persistent pre-battle consumables (the only battle items the economy
+   *  document defines as owned inventory — battle-drop power-ups are
+   *  session-temporary and never stored here). Schema v10+. */
+  consumables: Record<import("./reward").ConsumableId, number>;
 
   /** Companion + module loadout (Loadout Manager, schema v4+). The equipped
    *  ship itself is NOT duplicated here — it stays authoritative through

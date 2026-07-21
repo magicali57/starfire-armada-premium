@@ -28,6 +28,11 @@ import {
   type AbilityUpgradeBlockReason,
   type ShipAbilityCategory,
 } from "@/systems/shipAbilities";
+import {
+  applyCompleteCampaignStage,
+  type CompleteCampaignStageArgs,
+} from "@/systems/rewards/completeCampaignStage";
+import type { BattleCompletionSummary } from "@/types";
 
 const SAVE_KEY = "starfire-armada-v2:save";
 
@@ -403,6 +408,10 @@ interface PlayerStoreValue {
   rankUpShip: (shipId: string) => RankUpShipResult;
   /** Atomic one-level Ship Ability upgrade using Credits + Ability Cores. */
   upgradeShipAbility: (shipId: string, category: ShipAbilityCategory) => UpgradeShipAbilityResult;
+  /** Canonical battle-completion entry point (reward foundation): resolves
+   *  + atomically applies stage rewards and advances campaign progression.
+   *  Not yet called by gameplay — future Victory/Results flows use this. */
+  completeCampaignStage: (args: CompleteCampaignStageArgs) => BattleCompletionSummary;
   equipWeapon:(weaponId:string)=>boolean;
   resetSave: () => void;
 }
@@ -727,6 +736,28 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
     [player, update],
   );
 
+  const completeCampaignStage = useCallback(
+    (args: CompleteCampaignStageArgs): BattleCompletionSummary => {
+      // Resolve ONCE against this render's committed state so the returned
+      // summary's random rolls are exactly what gets persisted. The updater
+      // reuses that resolved state when `prev` is unchanged (always true in
+      // this single-threaded store); if a concurrent update ever landed
+      // first, it re-runs the whole transaction against the freshest state
+      // rather than persisting a stale roll. Commit + persist happen in
+      // `update`'s single atomic pass, same as every other transaction.
+      const preflight = applyCompleteCampaignStage(player, args);
+      let summary = preflight.summary;
+      update((prev) => {
+        if (prev === player) return preflight.state;
+        const applied = applyCompleteCampaignStage(prev, args);
+        summary = applied.summary;
+        return applied.state;
+      });
+      return summary;
+    },
+    [player, update],
+  );
+
   const saveActiveLoadout = useCallback(
     (loadout: PlayerLoadout): SaveLoadoutResult => {
       if (loadoutSaveInFlight.current) {
@@ -789,6 +820,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       upgradeWeaponLevel,
       rankUpShip,
       upgradeShipAbility,
+      completeCampaignStage,
       equipWeapon,
       saveActiveLoadout,
       resetSave,
@@ -809,6 +841,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       upgradeWeaponLevel,
       rankUpShip,
       upgradeShipAbility,
+      completeCampaignStage,
       equipWeapon,
       saveActiveLoadout,
       resetSave,

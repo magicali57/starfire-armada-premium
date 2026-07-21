@@ -32,7 +32,19 @@ import {
   applyCompleteCampaignStage,
   type CompleteCampaignStageArgs,
 } from "@/systems/rewards/completeCampaignStage";
-import type { BattleCompletionSummary } from "@/types";
+import type { BattleCompletionSummary, RewardDifficulty } from "@/types";
+import {
+  completeBattleSession as applyBattleCompletion,
+  declareBattleOutcome,
+  enterBattleResults as applyEnterBattleResults,
+  pauseBattleSession,
+  prepareBattleSession,
+  resumeBattleSession,
+  startBattleSession as applyBattleStart,
+  type BattlePerformance,
+  type BattleSession,
+  type BattleSessionTransitionResult,
+} from "@/systems/battleSession";
 
 const SAVE_KEY = "starfire-armada-v2:save";
 
@@ -412,6 +424,26 @@ interface PlayerStoreValue {
    *  + atomically applies stage rewards and advances campaign progression.
    *  Not yet called by gameplay — future Victory/Results flows use this. */
   completeCampaignStage: (args: CompleteCampaignStageArgs) => BattleCompletionSummary;
+  /** Canonical battle-session lifecycle (systems/battleSession.ts). The
+   *  session lives HERE (in-memory, never persisted) — the one owner of
+   *  battle lifecycle/outcome/completion truth. */
+  battleSession: BattleSession | null;
+  /** Prepare + start in one action: creates a fresh session and atomically
+   *  deducts Energy exactly once. Rejects when a session is in flight. */
+  startBattle: (args: { stageId: string; difficulty?: RewardDifficulty }) => BattleSessionTransitionResult;
+  pauseBattle: () => BattleSessionTransitionResult;
+  resumeBattle: () => BattleSessionTransitionResult;
+  declareBattleVictory: (performance?: BattlePerformance) => BattleSessionTransitionResult;
+  declareBattleDefeat: (performance?: BattlePerformance) => BattleSessionTransitionResult;
+  /** Runs the canonical completion transaction exactly once per session. */
+  completeBattle: (sessionId: string) => BattleSessionTransitionResult;
+  enterBattleResults: (sessionId: string) => BattleSessionTransitionResult;
+  /** Clears temporary session state only (progression untouched). */
+  resetBattle: () => void;
+  /** New session for the SAME stage/difficulty (retry after defeat /
+   *  replay after victory): fresh sessionId, Energy validated + spent
+   *  again, no stale state. */
+  retryBattle: () => BattleSessionTransitionResult;
   equipWeapon:(weaponId:string)=>boolean;
   resetSave: () => void;
 }
@@ -736,6 +768,136 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
     [player, update],
   );
 
+  // ---- Canonical battle session (in-memory only, one owner) ----
+  // The ref mirror is the synchronous source of truth so chained actions
+  // inside one event handler (declare → complete → results) always see the
+  // freshest session; the state copy drives re-renders.
+  const [battleSession, setBattleSessionState] = useState<BattleSession | null>(null);
+  const battleSessionRef = useRef<BattleSession | null>(null);
+  const setBattleSession = useCallback((session: BattleSession | null) => {
+    battleSessionRef.current = session;
+    setBattleSessionState(session);
+  }, []);
+  const battleStartInFlight = useRef(false);
+  const battleCompleteInFlight = useRef(false);
+
+  const startBattle = useCallback(
+    (args: { stageId: string; difficulty?: RewardDifficulty }): BattleSessionTransitionResult => {
+      const current = battleSessionRef.current;
+      // Synchronous guard: rapid repeated taps cannot double-spend Energy.
+      if (battleStartInFlight.current) {
+        return { ok: false, session: current, error: "busy" };
+      }
+      // An in-flight (non-finished) session cannot be replaced or restarted.
+      if (current && current.status !== "completed" && current.status !== "results") {
+        return { ok: false, session: current, error: "invalid-transition" };
+      }
+      const prepared = prepareBattleSession(current, {
+        stageId: args.stageId,
+        difficulty: args.difficulty,
+        shipId: player.selectedShipId,
+      });
+      if (!prepared.ok || !prepared.session) return prepared;
+
+      const started = applyBattleStart(player, prepared.session);
+      if (!started.result.ok) return started.result;
+
+      battleStartInFlight.current = true;
+      // Energy deduction + session activation commit together: the player
+      // update re-derives the deduction against the freshest state, and the
+      // session is only stored when the spend succeeded.
+      update((prev) => {
+        if (prev === player) return started.player;
+        const reapplied = applyBattleStart(prev, prepared.session);
+        return reapplied.result.ok ? reapplied.player : prev;
+      });
+      setBattleSession(started.result.session);
+      globalThis.setTimeout(() => {
+        battleStartInFlight.current = false;
+      }, 300);
+      return started.result;
+    },
+    [player, update, setBattleSession],
+  );
+
+  const pauseBattle = useCallback((): BattleSessionTransitionResult => {
+    const result = pauseBattleSession(battleSessionRef.current);
+    if (result.ok) setBattleSession(result.session);
+    return result;
+  }, [setBattleSession]);
+
+  const resumeBattle = useCallback((): BattleSessionTransitionResult => {
+    const result = resumeBattleSession(battleSessionRef.current);
+    if (result.ok) setBattleSession(result.session);
+    return result;
+  }, [setBattleSession]);
+
+  const declareBattleVictory = useCallback(
+    (performance?: BattlePerformance): BattleSessionTransitionResult => {
+      const result = declareBattleOutcome(battleSessionRef.current, "victory", performance);
+      if (result.ok) setBattleSession(result.session);
+      return result;
+    },
+    [setBattleSession],
+  );
+
+  const declareBattleDefeat = useCallback(
+    (performance?: BattlePerformance): BattleSessionTransitionResult => {
+      const result = declareBattleOutcome(battleSessionRef.current, "defeat", performance);
+      if (result.ok) setBattleSession(result.session);
+      return result;
+    },
+    [setBattleSession],
+  );
+
+  const completeBattle = useCallback(
+    (sessionId: string): BattleSessionTransitionResult => {
+      const current = battleSessionRef.current;
+      if (battleCompleteInFlight.current) {
+        return { ok: false, session: current, error: "busy" };
+      }
+      const completed = applyBattleCompletion(player, current, sessionId);
+      if (!completed.result.ok) return completed.result;
+
+      battleCompleteInFlight.current = true;
+      // Same resolve-once pattern as completeCampaignStage below: the
+      // returned summary's random rolls are exactly what persists.
+      update((prev) => {
+        if (prev === player) return completed.player;
+        const reapplied = applyBattleCompletion(prev, current, sessionId);
+        return reapplied.result.ok ? reapplied.player : prev;
+      });
+      setBattleSession(completed.result.session);
+      globalThis.setTimeout(() => {
+        battleCompleteInFlight.current = false;
+      }, 300);
+      return completed.result;
+    },
+    [player, update, setBattleSession],
+  );
+
+  const enterBattleResults = useCallback(
+    (sessionId: string): BattleSessionTransitionResult => {
+      const result = applyEnterBattleResults(battleSessionRef.current, sessionId);
+      if (result.ok) setBattleSession(result.session);
+      return result;
+    },
+    [setBattleSession],
+  );
+
+  const resetBattle = useCallback(() => {
+    setBattleSession(null);
+  }, [setBattleSession]);
+
+  const retryBattle = useCallback((): BattleSessionTransitionResult => {
+    const current = battleSessionRef.current;
+    if (!current || (current.status !== "completed" && current.status !== "results")) {
+      return { ok: false, session: current, error: "invalid-transition" };
+    }
+    // Fresh sessionId, same stage/difficulty; Energy validated + spent again.
+    return startBattle({ stageId: current.stageId, difficulty: current.difficulty });
+  }, [startBattle]);
+
   const completeCampaignStage = useCallback(
     (args: CompleteCampaignStageArgs): BattleCompletionSummary => {
       // Resolve ONCE against this render's committed state so the returned
@@ -797,6 +959,9 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
     upgradeInFlight.current.clear();
     rankUpInFlight.current.clear();
     abilityUpgradeInFlight.current.clear();
+    battleStartInFlight.current = false;
+    battleCompleteInFlight.current = false;
+    setBattleSession(null);
     companionUpgradeInFlight.current.clear();
     moduleUpgradeInFlight.current.clear();
     weaponUpgradeInFlight.current.clear();
@@ -821,6 +986,16 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       rankUpShip,
       upgradeShipAbility,
       completeCampaignStage,
+      battleSession,
+      startBattle,
+      pauseBattle,
+      resumeBattle,
+      declareBattleVictory,
+      declareBattleDefeat,
+      completeBattle,
+      enterBattleResults,
+      resetBattle,
+      retryBattle,
       equipWeapon,
       saveActiveLoadout,
       resetSave,
@@ -842,6 +1017,16 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       rankUpShip,
       upgradeShipAbility,
       completeCampaignStage,
+      battleSession,
+      startBattle,
+      pauseBattle,
+      resumeBattle,
+      declareBattleVictory,
+      declareBattleDefeat,
+      completeBattle,
+      enterBattleResults,
+      resetBattle,
+      retryBattle,
       equipWeapon,
       saveActiveLoadout,
       resetSave,

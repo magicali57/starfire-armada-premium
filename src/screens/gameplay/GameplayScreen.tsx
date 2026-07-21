@@ -8,7 +8,8 @@ import "./GameplayScreen.css";
 // (translated from legacy/current-prototype) will mount here in a later
 // batch; this batch only proves the route and layout.
 export function GameplayScreen() {
-  const { player } = usePlayerStore();
+  const { player, battleSession, declareBattleVictory, completeBattle, enterBattleResults } =
+    usePlayerStore();
   const ship = getShipById(player.selectedShipId);
   const stage = getStageById(player.currentStageId);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -36,7 +37,23 @@ export function GameplayScreen() {
       <button
         type="button"
         className="gameplay-screen__end press-scale"
-        onClick={() => navigate("results")}
+        onClick={() => {
+          // Debug path only — the future real engine will declare victory/
+          // defeat from actual combat conditions. When a canonical battle
+          // session is active this flows through the exactly-once
+          // completion pipeline; without one, Results redirects safely and
+          // grants nothing (the old direct-to-results prototype behavior).
+          if (battleSession?.status === "active") {
+            const declared = declareBattleVictory();
+            if (declared.ok && declared.session) {
+              const completed = completeBattle(declared.session.sessionId);
+              if (completed.ok && completed.session) {
+                enterBattleResults(completed.session.sessionId);
+              }
+            }
+          }
+          navigate("results");
+        }}
       >
         End Stage (debug)
       </button>

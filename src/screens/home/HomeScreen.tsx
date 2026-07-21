@@ -98,7 +98,7 @@ function HomeTopBar({ player, xpPct, onOpen }: { player: PlayerState; xpPct: num
 
   return (
     <header className="home-final__topbar">
-      <button className="home-final__profile press-scale" type="button" onClick={() => onOpen("Profile", "Player profile is coming soon.")}>
+      <button className="home-final__profile press-scale" type="button" onClick={() => navigate("profile")}>
         <img className="home-final__profile-panel-frame" src={HOME_TOPBAR_FINAL.profileFrame} alt="" />
         <span className="home-final__avatar-wrap">
           <img className="home-final__avatar" src={HOME_TOPBAR_FINAL.avatar} alt="Player avatar" />

@@ -22,6 +22,7 @@ import {
   isMaxLevel,
 } from "@/systems/shipStats";
 import { calculateShipRankUpQuote, type RankUpBlockReason } from "@/systems/shipStarRank";
+import { PROFILE_AVATAR_IDS, validateDisplayName } from "@/data/playerProfile";
 import {
   DEFAULT_SHIP_ABILITY_LEVELS,
   getShipAbilityPreview,
@@ -430,6 +431,33 @@ export function applyShipAbilityUpgradeState(
   };
 }
 
+export type UpdateProfileFailureReason = "invalid-name" | "invalid-avatar";
+
+export type UpdateProfileResult =
+  | { success: true; displayName: string; avatarId: string }
+  | { success: false; reason: UpdateProfileFailureReason };
+
+/** Pure atomic Edit Profile transaction — validates the name (trim, 2-16
+ * visible characters, no control characters) and avatar id (must be a real
+ * PROFILE_AVATARS entry) before touching state; on any failure the
+ * original state is returned unchanged. */
+export function applyUpdatePlayerProfileState(
+  state: PlayerState,
+  input: { displayName: string; avatarId: string },
+): { state: PlayerState; result: UpdateProfileResult } {
+  const nameValidation = validateDisplayName(input.displayName);
+  if (!nameValidation.valid) {
+    return { state, result: { success: false, reason: "invalid-name" } };
+  }
+  if (!PROFILE_AVATAR_IDS.has(input.avatarId)) {
+    return { state, result: { success: false, reason: "invalid-avatar" } };
+  }
+  return {
+    state: { ...state, displayName: nameValidation.value, avatarId: input.avatarId },
+    result: { success: true, displayName: nameValidation.value, avatarId: input.avatarId },
+  };
+}
+
 export interface LockedShipInfo {
   shipId: string;
   unlockType: string;
@@ -492,6 +520,8 @@ interface PlayerStoreValue {
    *  again, no stale state. */
   retryBattle: () => BattleSessionTransitionResult;
   equipWeapon:(weaponId:string)=>boolean;
+  /** Atomic Edit Profile save (display name + built-in avatar id). */
+  updatePlayerProfile: (input: { displayName: string; avatarId: string }) => UpdateProfileResult;
   resetSave: () => void;
 }
 
@@ -1002,6 +1032,16 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
     [player, update],
   );
 
+  const updatePlayerProfile = useCallback(
+    (input: { displayName: string; avatarId: string }): UpdateProfileResult => {
+      const preflight = applyUpdatePlayerProfileState(player, input);
+      if (!preflight.result.success) return preflight.result;
+      update((prev) => applyUpdatePlayerProfileState(prev, input).state);
+      return preflight.result;
+    },
+    [player, update],
+  );
+
   const resetSave = useCallback(() => {
     upgradeInFlight.current.clear();
     rankUpInFlight.current.clear();
@@ -1045,6 +1085,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       retryBattle,
       equipWeapon,
       saveActiveLoadout,
+      updatePlayerProfile,
       resetSave,
     }),
     [
@@ -1076,6 +1117,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       retryBattle,
       equipWeapon,
       saveActiveLoadout,
+      updatePlayerProfile,
       resetSave,
     ],
   );

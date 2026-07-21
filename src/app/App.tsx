@@ -30,6 +30,7 @@ import { ModulesInventoryScreen } from "@/screens/modules/ModulesInventoryScreen
 import { ArsenalScreen } from "@/screens/arsenal/ArsenalScreen";
 import { WeaponDetailScreen } from "@/screens/arsenal/WeaponDetailScreen";
 import { WeaponUpgradeScreen } from "@/screens/arsenal/WeaponUpgradeScreen";
+import { ProfileScreen } from "@/screens/profile/ProfileScreen";
 import { PlayerStoreProvider } from "@/store/playerStore";
 
 function ActiveScreen() {
@@ -102,6 +103,8 @@ function ActiveScreen() {
       return <WeaponDetailScreen />;
     case "weapon-upgrade":
       return <WeaponUpgradeScreen />;
+    case "profile":
+      return <ProfileScreen />;
     default:
       return <HomeScreen />;
   }

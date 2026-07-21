@@ -82,7 +82,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     route !== "module-detail" &&
     route !== "arsenal" &&
     route !== "weapon-detail" &&
-    route !== "weapon-upgrade";
+    route !== "weapon-upgrade" &&
+    // Player Profile ("profile") renders its own <HubScreenShell>/
+    // <HubBottomNav>, same double-footer reason as Arsenal/Companions/
+    // Modules above.
+    route !== "profile";
   const isHome = route === "home";
 
   return (

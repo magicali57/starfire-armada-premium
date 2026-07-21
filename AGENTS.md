@@ -30,7 +30,7 @@
 - Companion Rank Up and Ship Skins are postponed.
 - Do not reset or damage existing save data.
   - Current save key: `starfire-armada-v2:save`
-  - Current save schema: version 10
+  - Current save schema: version 11
 - Use focused verification: TypeScript type-check, one production build, and task-specific checks.
 - Do not run browser automation or capture screenshots unless explicitly requested.
 - Keep completion reports brief.

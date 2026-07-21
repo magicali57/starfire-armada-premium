@@ -1,4 +1,5 @@
 import { HOME_TOPBAR_FINAL } from "@/data/assetRegistry";
+import { navigate } from "@/app/routes";
 import type { PlayerState } from "@/types";
 import "./HubHeader.css";
 
@@ -41,7 +42,7 @@ export function HubHeader({ player, xpPct, onOpen = () => {} }: HubHeaderProps) 
         <button
           className="hub-header__profile press-scale"
           type="button"
-          onClick={() => onOpen("Profile", "Player profile is coming soon.")}
+          onClick={() => navigate("profile")}
         >
           <img className="hub-header__profile-panel-frame" src={HOME_TOPBAR_FINAL.profileFrame} alt="" />
           <span className="hub-header__avatar-wrap">

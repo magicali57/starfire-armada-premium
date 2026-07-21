@@ -45,17 +45,23 @@ export type MaterialBalances = Record<MaterialId, number>;
 // Ability Cores (materials.abilityCores) and per-ship ability levels
 // (shipAbilityLevels), and to 10 when the battle reward foundation added
 // Companion Shards (materials.companionShards), unopened chest inventory
-// (chests) and persistent pre-battle consumables (consumables).
+// (chests) and persistent pre-battle consumables (consumables), and to 11
+// when Player Profile added the selected built-in avatar id (`avatarId`;
+// `displayName` already existed since schema 1 and is unchanged).
 // Each version's saves
 // are migrated forward in store/playerStore.tsx's loadPlayerState — not
 // discarded — by merging in defaults for whatever fields that version
 // introduced; only saves that are missing/unparseable/from an unrecognized
 // future version fall back to DEFAULT_PLAYER_STATE.
-export const SAVE_SCHEMA_VERSION = 10;
+export const SAVE_SCHEMA_VERSION = 11;
 
 export interface PlayerState {
   playerId: string;
   displayName: string;
+  /** Selected built-in Player Profile avatar id — always one of
+   *  PROFILE_AVATARS in data/playerProfile.ts. There is deliberately no
+   *  image upload/URL/account-login avatar path. Schema v11+. */
+  avatarId: string;
   level: number;
   xp: number;
   xpToNextLevel: number;

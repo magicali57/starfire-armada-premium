@@ -33,6 +33,7 @@ export type RouteId =
   | "arsenal"
   | "weapon-detail"
   | "weapon-upgrade"
+  | "profile"
   // Dynamic route — see COMPANION_DETAIL_PREFIX / getCompanionIdFromHash /
   // pathForCompanionDetail below. There is no single static path for this
   // id (the real path always carries a companion id segment), so it is
@@ -158,6 +159,7 @@ export const ROUTES: { id: RouteId; path: string; label: string }[] = [
   { id: "arsenal", path: "#/arsenal", label: "Arsenal" },
   { id: "weapon-detail", path: "#/arsenal/weapon/:weaponId", label: "Weapon Detail" },
   { id: "weapon-upgrade", path: "#/arsenal/weapon/:weaponId/upgrade", label: "Weapon Upgrade" },
+  { id: "profile", path: "#/profile", label: "Profile" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -381,6 +383,7 @@ const HASH_TO_ROUTE: Record<string, RouteId> = {
   "#/inventory/companions": "companions",
   "#/inventory/modules": "modules",
   "#/arsenal": "arsenal",
+  "#/profile": "profile",
 };
 
 export function resolveRoute(hash: string): RouteId {

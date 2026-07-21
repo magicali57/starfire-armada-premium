@@ -14,6 +14,7 @@ Factual snapshot based on the current repository and recent Git history. This do
 - Inventory Hub (`src/screens/inventory`)
 - Gameplay (placeholder canvas + debug victory/defeat trigger) (`src/screens/gameplay`)
 - Results (consumes canonical battle-results contract) (`src/screens/results`)
+- Player Profile + Edit Profile modal (`src/screens/profile`, `src/components/profile`)
 
 ## Implemented progression systems
 
@@ -25,6 +26,7 @@ Factual snapshot based on the current repository and recent Git history. This do
 - Reward resolution and atomic application (`src/systems/rewards/`)
 - Campaign stage completion (first-clear detection, stage-clear advancement) (`src/systems/rewards/completeCampaignStage.ts`)
 - Battle session state machine (`src/systems/battleSession.ts`)
+- Player Profile summary contract (display name, avatar, XP/level, Power, campaign/collection counts, tracked-only battle statistics) (`src/data/playerProfile.ts`)
 
 ## Current architecture
 
@@ -57,7 +59,7 @@ Factual snapshot based on the current repository and recent Git history. This do
 - Player (account) XP/Level: `src/systems/playerProgression.ts`
 - Battle session state machine: `src/systems/battleSession.ts`
 - Save persistence and migrations: `src/store/playerStore.tsx`, `src/data/player.ts`
-- Save schema version constant: `src/types/player.ts` (`SAVE_SCHEMA_VERSION = 10`)
+- Save schema version constant: `src/types/player.ts` (`SAVE_SCHEMA_VERSION = 11`)
 - Save key: `starfire-armada-v2:save` (`src/store/playerStore.tsx`)
 - Stage/economy reward definitions: `src/data/stageRewards.ts`, `src/data/chestRewards.ts`
 - Launch economy audit reference: `docs/economy/LAUNCH_ECONOMY_AUDIT.md`, `docs/economy/STARFIRE_ARMADA_COMPLETE_ECONOMY_DOCUMENT.md`
@@ -80,8 +82,9 @@ Factual snapshot based on the current repository and recent Git history. This do
 ## Known current limitations
 
 - Real combat victory/defeat conditions are not yet integrated — the gameplay engine is still a placeholder canvas; outcomes are only triggered via a debug button.
-- Shop, Daily Rewards, Chest Opening, Reward Reveal, and Player Profile remain to be developed.
+- Shop, Daily Rewards, Chest Opening, and Reward Reveal remain to be developed.
+- Battle statistics on Player Profile are limited to what the save genuinely tracks today (stages cleared, highest stage reached, derived from `highestClearedStageId`) — battles-completed/victories/bosses-defeated counters are not persisted anywhere yet, so Profile intentionally omits them rather than showing invented zeros.
 
 ## Recommended next task
 
-Build the Player Profile screen using the existing canonical player-progression summary contract.
+Player Profile is implemented (route `#/profile`, schema v11 added `avatarId`). Shop, Daily Rewards, Chest Opening, and Reward Reveal remain the next major screens to build.

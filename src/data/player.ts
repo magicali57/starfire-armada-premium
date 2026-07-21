@@ -21,6 +21,7 @@ import {
   COMPANION_MIN_LEVEL,
 } from "@/systems/companionProgression";
 import { normalizePlayerProgression } from "@/systems/playerProgression";
+import { DEFAULT_AVATAR_ID, PROFILE_AVATAR_IDS } from "./playerProfile";
 
 const DEFAULT_SHIP_ID = "ship-01-rapid-fire";
 
@@ -38,6 +39,10 @@ const DEFAULT_SYSTEM_MODULE_ID = "module-calamity-capacitor";
 export const DEFAULT_PLAYER_STATE: PlayerState = {
   playerId: "local-player",
   displayName: "Commander",
+  // Fresh installs and legacy saves migrated forward both default to the
+  // first built-in avatar (schema v11) — see PROFILE_AVATARS in
+  // data/playerProfile.ts.
+  avatarId: DEFAULT_AVATAR_ID,
   level: 1,
   xp: 0,
   xpToNextLevel: 500,
@@ -134,7 +139,7 @@ export const DEFAULT_PLAYER_STATE: PlayerState = {
   saveSchemaVersion: SAVE_SCHEMA_VERSION,
 };
 
-const MIGRATABLE_SCHEMA_VERSIONS = [2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+const MIGRATABLE_SCHEMA_VERSIONS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const;
 
 export type SaveRecoveryReason = "unreadable-json" | "invalid-shape" | "unsupported-version";
 
@@ -255,6 +260,13 @@ export function normalizePlayerSave(input: PlayerState): { state: PlayerState; r
   const ownedWeaponIds = dedupeKnown(s.ownedWeaponIds, (id) => !!getWeaponById(id), DEFAULT_OWNED_WEAPON_IDS, repairs, "ownedWeaponIds");
 
   // Equipped IDs must reference owned, existing content; fall back safely.
+  // Profile avatar: must be one of the real built-in options (schema v11).
+  let avatarId = s.avatarId;
+  if (typeof avatarId !== "string" || !PROFILE_AVATAR_IDS.has(avatarId)) {
+    repairs.push(`avatarId: ${String(avatarId)} → ${DEFAULT_AVATAR_ID}`);
+    avatarId = DEFAULT_AVATAR_ID;
+  }
+
   let selectedShipId = s.selectedShipId;
   if (typeof selectedShipId !== "string" || !ownedShipIds.includes(selectedShipId)) {
     repairs.push(`selectedShipId: ${String(selectedShipId)} → ${ownedShipIds[0]}`);
@@ -367,6 +379,7 @@ export function normalizePlayerSave(input: PlayerState): { state: PlayerState; r
   return {
     state: {
       ...s,
+      avatarId,
       level: progression.level,
       xp: progression.xp,
       xpToNextLevel: progression.xpToNextLevel,
@@ -488,6 +501,9 @@ export function migratePlayerState(parsedValue: unknown): PlayerSaveLoadResult {
     !parsed.materials || typeof (parsed.materials as Partial<PlayerState["materials"]>).companionShards !== "number";
   const missingChests = !parsed.chests || typeof parsed.chests !== "object";
   const missingConsumables = !parsed.consumables || typeof parsed.consumables !== "object";
+  // v10→v11: Player Profile added the selected built-in avatar id.
+  // `displayName` already existed since schema 1 and needs no backfill.
+  const missingAvatarId = typeof parsed.avatarId !== "string" || parsed.avatarId.length === 0;
   const state: PlayerState = {
     ...merged,
     materials: {
@@ -526,7 +542,7 @@ export function migratePlayerState(parsedValue: unknown): PlayerSaveLoadResult {
   const normalized = normalizePlayerSave(state);
 
   const shouldPersist =
-    sourceVersion !== SAVE_SCHEMA_VERSION || missingCompanionData || missingModuleParts || missingWeaponParts || missingWeaponState || missingUniversalShards || missingShipFragments || missingAbilityCores || missingAbilityLevels || missingCompanionShards || missingChests || missingConsumables || normalized.repairs.length > 0 || normalizedProgress;
+    sourceVersion !== SAVE_SCHEMA_VERSION || missingCompanionData || missingModuleParts || missingWeaponParts || missingWeaponState || missingUniversalShards || missingShipFragments || missingAbilityCores || missingAbilityLevels || missingCompanionShards || missingChests || missingConsumables || missingAvatarId || normalized.repairs.length > 0 || normalizedProgress;
   return {
     state: normalized.state,
     shouldPersist,

@@ -1,0 +1,51 @@
+.edit-profile,
+.edit-profile * { box-sizing: border-box; }
+
+.edit-profile { width: 100%; max-width: 100%; min-width: 0; display: flex; flex-direction: column; gap: var(--space-4); }
+
+.edit-profile__field { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.edit-profile__field span { font-size: var(--font-size-xs); letter-spacing: .06em; text-transform: uppercase; color: var(--color-text-secondary); }
+.edit-profile__field-label { font-size: var(--font-size-xs); letter-spacing: .06em; text-transform: uppercase; color: var(--color-text-secondary); }
+
+.edit-profile__input {
+  width: 100%; min-width: 0; height: 44px; padding: 0 var(--space-3);
+  border-radius: var(--radius-md); border: var(--border-hairline);
+  background: var(--color-bg-inset); color: var(--color-text-primary);
+  font-size: var(--font-size-md); font-family: var(--font-family-base);
+}
+.edit-profile__input:focus { outline: none; border: var(--border-neon-primary); box-shadow: var(--glow-primary); }
+.edit-profile__input[aria-invalid="true"] { border: 1px solid var(--color-danger-500); box-shadow: var(--glow-danger); }
+
+.edit-profile__error { margin: 0; color: var(--color-danger-300); font-size: var(--font-size-sm); }
+
+.edit-profile__avatars {
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-2);
+  width: 100%; max-width: 100%; min-width: 0;
+}
+
+.edit-profile__avatar {
+  aspect-ratio: 1 / 1; min-width: 0; display: grid; place-items: center;
+  border-radius: var(--radius-md); border: var(--border-hairline);
+  background: var(--color-bg-inset); font-size: var(--font-size-xl);
+  color: var(--color-text-primary);
+}
+.edit-profile__avatar.is-selected { box-shadow: 0 0 0 2px var(--color-text-primary) inset; }
+
+.edit-profile__avatar--primary { border-color: var(--color-primary-500); background: radial-gradient(circle, var(--color-primary-700), var(--color-bg-inset)); }
+.edit-profile__avatar--primary.is-selected { box-shadow: var(--glow-primary), 0 0 0 2px var(--color-primary-300) inset; }
+.edit-profile__avatar--secondary { border-color: var(--color-secondary-500); background: radial-gradient(circle, var(--color-secondary-600), var(--color-bg-inset)); }
+.edit-profile__avatar--secondary.is-selected { box-shadow: var(--glow-secondary), 0 0 0 2px var(--color-secondary-300) inset; }
+.edit-profile__avatar--gold { border-color: var(--color-gold-500); background: radial-gradient(circle, var(--color-gold-600), var(--color-bg-inset)); }
+.edit-profile__avatar--gold.is-selected { box-shadow: var(--glow-gold), 0 0 0 2px var(--color-gold-300) inset; }
+.edit-profile__avatar--danger { border-color: var(--color-danger-500); background: radial-gradient(circle, var(--color-danger-600), var(--color-bg-inset)); }
+.edit-profile__avatar--danger.is-selected { box-shadow: var(--glow-danger), 0 0 0 2px var(--color-danger-300) inset; }
+.edit-profile__avatar--success { border-color: var(--color-success-500); background: radial-gradient(circle, var(--color-success-600), var(--color-bg-inset)); }
+.edit-profile__avatar--success.is-selected { box-shadow: var(--glow-success), 0 0 0 2px var(--color-success-300) inset; }
+.edit-profile__avatar--mythic { border-color: var(--color-rarity-mythic); background: radial-gradient(circle, #a3247f, var(--color-bg-inset)); }
+.edit-profile__avatar--mythic.is-selected { box-shadow: 0 0 18px rgba(255, 95, 214, .55), 0 0 0 2px var(--color-rarity-mythic) inset; }
+
+.edit-profile__actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+
+@media (max-width: 360px) {
+  .edit-profile__avatars { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

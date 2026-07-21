@@ -19,9 +19,10 @@ import {
   calculateShipRankUpQuote,
   getShipRankMilestones,
 } from "@/systems/shipStarRank";
+import { canUpgradeAnyShipAbility } from "@/systems/shipAbilities";
 import { calculateShipLevelUpgradeQuote, createDefaultShipProgress, isMaxLevel } from "@/systems/shipStats";
 import { getResourceState } from "@/data/shipUpgrade";
-import { getShipStarRankIdFromHash, navigate, pathFor } from "@/app/routes";
+import { getShipStarRankIdFromHash, navigate, pathFor, pathForShipAbilities } from "@/app/routes";
 import "./ShipStarRankScreen.css";
 
 interface DialogState {
@@ -161,7 +162,7 @@ export function ShipStarRankScreen() {
       case "star-rank":
         break; // already here
       case "abilities":
-        openDialog("Abilities", "The Abilities screen isn't built yet — coming soon.");
+        window.location.hash = pathForShipAbilities(ship.id);
         break;
       case "skins":
         openDialog("Skins", "The Skins screen isn't built yet — coming soon.");
@@ -208,7 +209,11 @@ export function ShipStarRankScreen() {
         <ShipProgressionTabs
           shipId={ship.id}
           activeTab="star-rank"
-          badges={{ "level-up": levelUpActionable, "star-rank": quote.canRankUp }}
+          badges={{
+            "level-up": levelUpActionable,
+            "star-rank": quote.canRankUp,
+            abilities: canUpgradeAnyShipAbility(ship, player),
+          }}
           onSelect={handleProgressionTab}
         />
 

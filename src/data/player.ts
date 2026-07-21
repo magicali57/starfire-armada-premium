@@ -52,6 +52,10 @@ export const DEFAULT_PLAYER_STATE: PlayerState = {
     // material (economy catalog id `universalShards`). Real earning sources
     // (chests, events, Shop) are not built yet.
     universalShards: 40,
+    // Prototype Ship Abilities testing balance for the canonical Ability
+    // Cores material (economy catalog id `abilityCores`). Real earning
+    // sources (chests, events, Shop) are not built yet.
+    abilityCores: 24,
   },
   ownedShipIds: [DEFAULT_SHIP_ID],
   selectedShipId: DEFAULT_SHIP_ID,
@@ -64,6 +68,11 @@ export const DEFAULT_PLAYER_STATE: PlayerState = {
   shipFragments: {
     [DEFAULT_SHIP_ID]: 36,
   },
+  // Per-ship ability levels (Ship Abilities, schema v9). Missing ships
+  // default to Level 1 everywhere via getShipAbilityLevel — this record
+  // only needs entries once a player actually upgrades something, so a
+  // fresh install starts empty.
+  shipAbilityLevels: {},
   // PROTOTYPE OWNERSHIP NOTICE: every current companion/module definition is
   // owned by default because no Companion Roster, Module Inventory, or
   // reward/acquisition system exists yet to grant them individually — see
@@ -96,7 +105,7 @@ export const DEFAULT_PLAYER_STATE: PlayerState = {
   saveSchemaVersion: SAVE_SCHEMA_VERSION,
 };
 
-const MIGRATABLE_SCHEMA_VERSIONS = [2, 3, 4, 5, 6, 7, 8] as const;
+const MIGRATABLE_SCHEMA_VERSIONS = [2, 3, 4, 5, 6, 7, 8, 9] as const;
 
 export interface PlayerSaveLoadResult {
   state: PlayerState;
@@ -116,6 +125,7 @@ function mergePlayerWithDefaults(parsed: Partial<PlayerState>): PlayerState {
     moduleProgress: { ...DEFAULT_PLAYER_STATE.moduleProgress, ...parsed.moduleProgress },
     weaponProgress: { ...DEFAULT_PLAYER_STATE.weaponProgress, ...parsed.weaponProgress },
     shipFragments: { ...DEFAULT_PLAYER_STATE.shipFragments, ...parsed.shipFragments },
+    shipAbilityLevels: { ...DEFAULT_PLAYER_STATE.shipAbilityLevels, ...parsed.shipAbilityLevels },
   };
 }
 
@@ -166,10 +176,21 @@ export function migratePlayerState(parsedValue: unknown): PlayerSaveLoadResult {
   const missingUniversalShards =
     !parsed.materials || typeof (parsed.materials as Partial<PlayerState["materials"]>).universalShards !== "number";
   const missingShipFragments = !parsed.shipFragments || typeof parsed.shipFragments !== "object";
+  // v8→v9: Ship Abilities added Ability Cores + per-ship ability levels
+  // (existing owned ships simply default to Level 1 for every unlocked
+  // ability via getShipAbilityLevel — no per-ship backfill entries needed).
+  // Everything else passes through mergePlayerWithDefaults untouched.
+  const missingAbilityCores =
+    !parsed.materials || typeof (parsed.materials as Partial<PlayerState["materials"]>).abilityCores !== "number";
+  const missingAbilityLevels = !parsed.shipAbilityLevels || typeof parsed.shipAbilityLevels !== "object";
   const state: PlayerState = {
     ...merged,
     materials: {
       ...merged.materials,
+      abilityCores:
+        typeof merged.materials.abilityCores === "number"
+          ? merged.materials.abilityCores
+          : DEFAULT_PLAYER_STATE.materials.abilityCores,
       universalShards:
         typeof merged.materials.universalShards === "number"
           ? merged.materials.universalShards
@@ -189,7 +210,7 @@ export function migratePlayerState(parsedValue: unknown): PlayerSaveLoadResult {
   };
 
   const shouldPersist =
-    sourceVersion !== SAVE_SCHEMA_VERSION || missingCompanionData || missingModuleParts || missingWeaponParts || missingWeaponState || missingUniversalShards || missingShipFragments || normalizedProgress;
+    sourceVersion !== SAVE_SCHEMA_VERSION || missingCompanionData || missingModuleParts || missingWeaponParts || missingWeaponState || missingUniversalShards || missingShipFragments || missingAbilityCores || missingAbilityLevels || normalizedProgress;
   return {
     state,
     shouldPersist,

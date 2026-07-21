@@ -22,6 +22,12 @@ import {
   isMaxLevel,
 } from "@/systems/shipStats";
 import { calculateShipRankUpQuote, type RankUpBlockReason } from "@/systems/shipStarRank";
+import {
+  DEFAULT_SHIP_ABILITY_LEVELS,
+  getShipAbilityPreview,
+  type AbilityUpgradeBlockReason,
+  type ShipAbilityCategory,
+} from "@/systems/shipAbilities";
 
 const SAVE_KEY = "starfire-armada-v2:save";
 
@@ -293,6 +299,73 @@ export function applyShipRankUpState(
   };
 }
 
+export type UpgradeShipAbilityResult =
+  | {
+      success: true;
+      shipId: string;
+      category: ShipAbilityCategory;
+      abilityName: string;
+      previousLevel: number;
+      newLevel: number;
+      creditsSpent: number;
+      abilityCoresSpent: number;
+      previousEffectText: string;
+      newEffectText: string;
+    }
+  | { success: false; reason: AbilityUpgradeBlockReason | "busy" | "not-found" };
+
+/**
+ * Pure atomic Ship Ability upgrade. All validation flows through
+ * getShipAbilityPreview (the exact helper the Abilities screen renders
+ * from): ship exists + owned, ability unlocked by Star Rank, below max
+ * level, enough Credits AND Ability Cores. On any failure the original
+ * state object is returned unchanged; on success both costs are deducted
+ * and the one chosen ability is raised by exactly one level in the same
+ * state transition. Arsenal weapon state is never touched.
+ */
+export function applyShipAbilityUpgradeState(
+  state: PlayerState,
+  shipId: string,
+  category: ShipAbilityCategory,
+): { state: PlayerState; result: UpgradeShipAbilityResult } {
+  const ship = getShipById(shipId);
+  if (!ship) return { state, result: { success: false, reason: "not-found" } };
+  const preview = getShipAbilityPreview(ship, state, category);
+  if (!preview.canUpgrade || preview.cost === null) {
+    return { state, result: { success: false, reason: preview.blockReason ?? "max-level" } };
+  }
+
+  const currentLevels = state.shipAbilityLevels[shipId] ?? DEFAULT_SHIP_ABILITY_LEVELS;
+  const nextLevel = preview.level + 1;
+  const nextState: PlayerState = {
+    ...state,
+    currencies: { ...state.currencies, coins: state.currencies.coins - preview.cost.credits },
+    materials: {
+      ...state.materials,
+      abilityCores: state.materials.abilityCores - preview.cost.abilityCores,
+    },
+    shipAbilityLevels: {
+      ...state.shipAbilityLevels,
+      [shipId]: { ...currentLevels, [category]: nextLevel },
+    },
+  };
+  return {
+    state: nextState,
+    result: {
+      success: true,
+      shipId,
+      category,
+      abilityName: preview.definition.name,
+      previousLevel: preview.level,
+      newLevel: nextLevel,
+      creditsSpent: preview.cost.credits,
+      abilityCoresSpent: preview.cost.abilityCores,
+      previousEffectText: preview.currentEffectText,
+      newEffectText: preview.nextEffectText ?? preview.currentEffectText,
+    },
+  };
+}
+
 export interface LockedShipInfo {
   shipId: string;
   unlockType: string;
@@ -328,6 +401,8 @@ interface PlayerStoreValue {
   /** Atomic one-rank Star Rank up using ship fragments + universal-shard
    *  shortage fill + Credits. See applyShipRankUpState. */
   rankUpShip: (shipId: string) => RankUpShipResult;
+  /** Atomic one-level Ship Ability upgrade using Credits + Ability Cores. */
+  upgradeShipAbility: (shipId: string, category: ShipAbilityCategory) => UpgradeShipAbilityResult;
   equipWeapon:(weaponId:string)=>boolean;
   resetSave: () => void;
 }
@@ -349,6 +424,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
   const moduleUpgradeInFlight = useRef<Set<string>>(new Set());
   const weaponUpgradeInFlight = useRef<Set<string>>(new Set());
   const rankUpInFlight = useRef<Set<string>>(new Set());
+  const abilityUpgradeInFlight = useRef<Set<string>>(new Set());
 
   const update = useCallback((updater: (prev: PlayerState) => PlayerState) => {
     setPlayer((prev) => {
@@ -630,6 +706,27 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
     [player, update],
   );
 
+  const upgradeShipAbility = useCallback(
+    (shipId: string, category: ShipAbilityCategory): UpgradeShipAbilityResult => {
+      const key = `${shipId}:${category}`;
+      if (abilityUpgradeInFlight.current.has(key)) return { success: false, reason: "busy" };
+      const preflight = applyShipAbilityUpgradeState(player, shipId, category);
+      if (!preflight.result.success) return preflight.result;
+
+      abilityUpgradeInFlight.current.add(key);
+      let result: UpgradeShipAbilityResult = preflight.result;
+      update((prev) => {
+        const applied = applyShipAbilityUpgradeState(prev, shipId, category);
+        result = applied.result;
+        return applied.state;
+      });
+      // Same double-tap guard window as the other upgrade transactions.
+      globalThis.setTimeout(() => abilityUpgradeInFlight.current.delete(key), 300);
+      return result;
+    },
+    [player, update],
+  );
+
   const saveActiveLoadout = useCallback(
     (loadout: PlayerLoadout): SaveLoadoutResult => {
       if (loadoutSaveInFlight.current) {
@@ -668,6 +765,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
   const resetSave = useCallback(() => {
     upgradeInFlight.current.clear();
     rankUpInFlight.current.clear();
+    abilityUpgradeInFlight.current.clear();
     companionUpgradeInFlight.current.clear();
     moduleUpgradeInFlight.current.clear();
     weaponUpgradeInFlight.current.clear();
@@ -690,6 +788,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       upgradeModuleLevel,
       upgradeWeaponLevel,
       rankUpShip,
+      upgradeShipAbility,
       equipWeapon,
       saveActiveLoadout,
       resetSave,
@@ -709,6 +808,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       upgradeModuleLevel,
       upgradeWeaponLevel,
       rankUpShip,
+      upgradeShipAbility,
       equipWeapon,
       saveActiveLoadout,
       resetSave,

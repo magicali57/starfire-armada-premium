@@ -10,6 +10,9 @@ export type RouteId =
   // companion/module/weapon detail routes. Never passed to pathFor/navigate;
   // always build URLs with pathForShipStarRank(shipId).
   | "ship-star-rank"
+  // Dynamic route (#/ships/<shipId>/abilities) — same pattern as
+  // ship-star-rank. Always build URLs with pathForShipAbilities(shipId).
+  | "ship-abilities"
   | "campaign"
   | "campaign-chapter-map"
   | "campaign-chapter-map-legacy"
@@ -74,6 +77,7 @@ export const ROUTES: { id: RouteId; path: string; label: string }[] = [
   // below) — real URLs always carry a ship id segment via
   // pathForShipStarRank.
   { id: "ship-star-rank", path: "#/ships/:shipId/rank", label: "Star Rank" },
+  { id: "ship-abilities", path: "#/ships/:shipId/abilities", label: "Abilities" },
   { id: "campaign", path: "#/campaign", label: "Campaign" },
   { id: "campaign-chapter-map", path: "#/campaign/chapter-map", label: "Chapter Map" },
   // Internal/debug only — the relocated legacy stage-list screen, kept
@@ -185,6 +189,29 @@ export function getShipStarRankIdFromHash(hash: string): string | null {
 /** The only supported way to build a Ship Star Rank URL. */
 export const pathForShipStarRank = (shipId: string) =>
   `${SHIPS_PREFIX}${encodeURIComponent(shipId)}/rank`;
+
+/** Strictly parses `#/ships/<shipId>/abilities` — same rules as
+ * getShipStarRankIdFromHash. */
+export function getShipAbilitiesIdFromHash(hash: string): string | null {
+  const queryIndex = hash.indexOf("?");
+  const path = queryIndex === -1 ? hash : hash.slice(0, queryIndex);
+  if (!path.startsWith(SHIPS_PREFIX)) return null;
+  const remainder = path.slice(SHIPS_PREFIX.length);
+  const suffix = "/abilities";
+  if (!remainder.endsWith(suffix)) return null;
+  const rawId = remainder.slice(0, -suffix.length);
+  if (!rawId || rawId.includes("/")) return null;
+  try {
+    const decoded = decodeURIComponent(rawId);
+    return decoded.length > 0 ? decoded : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The only supported way to build a Ship Abilities URL. */
+export const pathForShipAbilities = (shipId: string) =>
+  `${SHIPS_PREFIX}${encodeURIComponent(shipId)}/abilities`;
 
 const WEAPON_DETAIL_PREFIX = "#/arsenal/weapon/";
 export function getWeaponUpgradeIdFromHash(hash:string):string|null{const path=hash.split("?")[0];if(!path.startsWith(WEAPON_DETAIL_PREFIX)||!path.endsWith("/upgrade"))return null;const raw=path.slice(WEAPON_DETAIL_PREFIX.length,-"/upgrade".length);if(!raw||raw.includes("/"))return null;try{return decodeURIComponent(raw)}catch{return null}}
@@ -367,6 +394,7 @@ export function resolveRoute(hash: string): RouteId {
   // Upgrade must be checked before Detail so Detail can never consume a
   // valid /upgrade URL.
   if (getShipStarRankIdFromHash(hash) !== null) return "ship-star-rank";
+  if (getShipAbilitiesIdFromHash(hash) !== null) return "ship-abilities";
   if (getCompanionUpgradeIdFromHash(hash) !== null) return "companion-upgrade";
   if (getModuleUpgradeIdFromHash(hash) !== null) return "module-upgrade";
   // Static table has no exact entry — try the Detail dynamic route.

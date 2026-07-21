@@ -16,7 +16,17 @@ export type CurrencyBalances = Record<CurrencyId, number>;
 // id `universalShards`) — it fills ship-fragment shortages during Star Rank
 // up, never more than the exact shortage. There is deliberately only this
 // one universal-fragment id.
-export type MaterialId = "shipAlloy" | "companionData" | "moduleParts" | "weaponParts" | "universalShards";
+// "abilityCores" is the canonical ship-ability upgrade material from the
+// economy catalog (id `abilityCores`, "Ability Cores") — used together with
+// Credits by Ship Abilities upgrades. Deliberately the only ability-upgrade
+// material id.
+export type MaterialId =
+  | "shipAlloy"
+  | "companionData"
+  | "moduleParts"
+  | "weaponParts"
+  | "universalShards"
+  | "abilityCores";
 
 export type MaterialBalances = Record<MaterialId, number>;
 
@@ -26,13 +36,15 @@ export type MaterialBalances = Record<MaterialId, number>;
 // Companion Upgrade added Companion Data and normalized companion levels,
 // and to 6 when Module Upgrade added Module Parts, and to 8 when Ship Star
 // Rank added Universal Shards (materials.universalShards) and per-ship
-// fragment balances (shipFragments).
+// fragment balances (shipFragments), and to 9 when Ship Abilities added
+// Ability Cores (materials.abilityCores) and per-ship ability levels
+// (shipAbilityLevels).
 // Each version's saves
 // are migrated forward in store/playerStore.tsx's loadPlayerState — not
 // discarded — by merging in defaults for whatever fields that version
 // introduced; only saves that are missing/unparseable/from an unrecognized
 // future version fall back to DEFAULT_PLAYER_STATE.
-export const SAVE_SCHEMA_VERSION = 8;
+export const SAVE_SCHEMA_VERSION = 9;
 
 export interface PlayerState {
   playerId: string;
@@ -55,6 +67,11 @@ export interface PlayerState {
    *  per-<shipId> record convention — one fragment pool per ship, used by
    *  Star Rank). Missing key = 0 owned. Schema v8+. */
   shipFragments: Record<string, number>;
+  /** Per-ship ability levels (signature/passive/calamity), keyed by ship id.
+   *  The ONLY persistent ability-progression store — static ability
+   *  definitions live in systems/shipAbilities.ts, never duplicated here.
+   *  Missing key = all abilities at Level 1. Schema v9+. */
+  shipAbilityLevels: Record<string, import("@/systems/shipAbilities").ShipAbilityLevels>;
 
   /** Companion + module loadout (Loadout Manager, schema v4+). The equipped
    *  ship itself is NOT duplicated here — it stays authoritative through

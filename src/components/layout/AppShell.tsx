@@ -71,6 +71,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     route !== "ship-detail-legacy-placeholder" &&
     route !== "ship-upgrade" &&
     route !== "ship-star-rank" &&
+    route !== "ship-abilities" &&
     route !== "inventory" &&
     route !== "loadout" &&
     route !== "companions" &&

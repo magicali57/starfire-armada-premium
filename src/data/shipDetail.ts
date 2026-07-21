@@ -10,6 +10,7 @@ import {
   calculateShipStatsWithRank,
   getShipFragmentsOwned,
 } from "@/systems/shipStarRank";
+import { SHIP_ABILITY_MAX_LEVEL, getShipAbilityLevel } from "@/systems/shipAbilities";
 
 // Reference-matched data for 09_Ship_Detail_Overview.png, plus a real-data
 // fallback for the other 19 ships. Same disclosed prototype-vs-real
@@ -153,7 +154,6 @@ const GENERIC_FRAGMENT_MAX: Record<string, number> = {
   mythic: 50,
 };
 
-const GENERIC_STAR_RANK_MAX = 5;
 
 /**
  * Real-data content for any ship other than the reference-matched one.
@@ -216,18 +216,21 @@ function getRealShipDetailContent(shipId: string, player: PlayerState): ShipDeta
     starRankMax: SHIP_MAX_STAR_RANK,
     coreStats: stats,
     signatureAttack,
+    // Real persistent ability levels (Ship Abilities system, schema v9) —
+    // keeps Ship Detail's ability summaries in sync with the Abilities
+    // screen immediately after an upgrade.
     passive: {
       name: ship.passiveName,
       description: ship.passiveDescription,
-      levelCurrent: Math.max(1, Math.min(progress.stars, GENERIC_STAR_RANK_MAX)),
-      levelMax: GENERIC_STAR_RANK_MAX,
+      levelCurrent: getShipAbilityLevel(player, shipId, "passive"),
+      levelMax: SHIP_ABILITY_MAX_LEVEL,
       isRealCopy: true,
     },
     calamity: {
       name: ship.calamityName,
       description: ship.calamityDescription,
-      levelCurrent: 1,
-      levelMax: GENERIC_STAR_RANK_MAX,
+      levelCurrent: getShipAbilityLevel(player, shipId, "calamity"),
+      levelMax: SHIP_ABILITY_MAX_LEVEL,
       isRealCopy: !ship.provisionalBalance,
     },
     // Real persistent fragment balance (Star Rank system, schema v8) —

@@ -463,6 +463,7 @@ export const REWARD_CHEST: Record<"basic" | "rare" | "epic" | "legendary", strin
 // ---------------------------------------------------------------------------
 
 export const MATERIAL_ICON: Record<
+  | "abilityCores"
   | "companionData"
   | "eventToken"
   | "moduleParts"
@@ -475,6 +476,11 @@ export const MATERIAL_ICON: Record<
   | "weaponCore",
   string
 > = {
+  // TEMPORARY DISCLOSED SUBSTITUTION: no dedicated Ability Cores art exists
+  // in the asset collection, so the closest approved generic ship-upgrade
+  // material icon (Ship Alloy) is reused until real art is delivered. Do
+  // not treat this as the final Ability Cores icon.
+  abilityCores: `${BASE}/materials/ship_alloy_icon.png`,
   companionData: `${BASE}/materials/companion_data_icon.png`,
   eventToken: `${BASE}/materials/event_token_icon.png`,
   moduleParts: `${BASE}/materials/module_parts_icon.png`,

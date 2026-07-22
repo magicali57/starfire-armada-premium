@@ -14,24 +14,28 @@ export interface RewardRevealOverlayProps {
   isOpen: boolean;
   items: readonly RewardRevealItem[];
   currentIndex: number;
-  /** Advances to the next queued item — never grants/re-grants anything. */
+  /** Stage / chapter context — display only, never invents values. */
+  stageName?: string | null;
+  stageIdentity?: string | null;
+  firstClear?: boolean;
   onNext: () => void;
-  /** Fully dismisses the overlay (also reachable via the modal's own
-   *  Escape/backdrop/close affordances) — the reward stays exactly as
-   *  already applied either way. */
   onClose: () => void;
 }
 
 /**
- * Reusable, informational-only Reward Reveal overlay. Every item it shows
- * was already awarded by the canonical completion transaction before this
- * component ever mounted — it never grants a reward, opens a chest,
- * resolves a drop, adds a collectible, or converts a duplicate. Supports
- * one item (single CONTINUE) or a queue (position counter + NEXT, DONE on
- * the last item). Wording never implies the button itself grants
- * anything.
+ * Informational-only Reward Reveal — composition follows
+ * 49_Rewards_Acquired.png. Never grants, opens chests, or resolves drops.
  */
-export function RewardRevealOverlay({ isOpen, items, currentIndex, onNext, onClose }: RewardRevealOverlayProps) {
+export function RewardRevealOverlay({
+  isOpen,
+  items,
+  currentIndex,
+  stageName,
+  stageIdentity,
+  firstClear = false,
+  onNext,
+  onClose,
+}: RewardRevealOverlayProps) {
   if (!isOpen || items.length === 0) return null;
 
   const safeIndex = Math.min(Math.max(currentIndex, 0), items.length - 1);
@@ -46,19 +50,28 @@ export function RewardRevealOverlay({ isOpen, items, currentIndex, onNext, onClo
   };
 
   return (
-    <ModalLayer open={isOpen} title="Reward" onClose={onClose}>
-      <div className="reward-reveal">
+    <ModalLayer open={isOpen} title="Rewards Acquired" onClose={onClose}>
+      <div className="reward-reveal" key={item.key}>
+        <header className="reward-reveal__header">
+          <span className="reward-reveal__emblem" aria-hidden="true">
+            ★
+          </span>
+          <h2 className="reward-reveal__title">Rewards Acquired</h2>
+          {stageIdentity ? <p className="reward-reveal__identity">{stageIdentity}</p> : null}
+          {stageName ? <p className="reward-reveal__stage">{stageName}</p> : null}
+          {firstClear ? (
+            <p className="reward-reveal__first-clear">
+              <span aria-hidden="true">★</span> First Clear
+            </p>
+          ) : null}
+        </header>
+
         {items.length > 1 ? (
           <p className="reward-reveal__counter">
             {safeIndex + 1} / {items.length}
           </p>
         ) : null}
 
-        {/* Restrained rarity glow — Rare/Epic/Legendary art pulses gently
-            (shared classes, see styles/motion.css); Common items stay
-            static. Only one such focal element is ever on screen at a
-            time here, so this never becomes a page full of ambient
-            animations. */}
         <div
           className={[
             "reward-reveal__art",
@@ -74,9 +87,6 @@ export function RewardRevealOverlay({ isOpen, items, currentIndex, onNext, onClo
             alt=""
             className="reward-reveal__art-image"
             onError={(event) => {
-              // Missing/broken artwork never crashes the reveal — falls
-              // back to the same safe empty-slot icon used everywhere
-              // else in the app.
               event.currentTarget.src = UTILITY_ICON.emptySlot;
             }}
           />
@@ -86,7 +96,19 @@ export function RewardRevealOverlay({ isOpen, items, currentIndex, onNext, onClo
         {item.quantity > 1 ? <p className="reward-reveal__quantity">×{item.quantity.toLocaleString()}</p> : null}
         {item.subtitle ? <p className="reward-reveal__subtitle">{item.subtitle}</p> : null}
 
-        <PrimaryButton fullWidth onClick={handlePress}>
+        {isLast && items.length > 1 ? (
+          <ul className="reward-reveal__summary" aria-label="All special rewards">
+            {items.map((summaryItem) => (
+              <li key={`summary-${summaryItem.key}`} className={`reward-reveal__summary-card reward-reveal__summary-card--${summaryItem.rarity ?? "common"}`}>
+                <img src={summaryItem.imageSrc || UTILITY_ICON.emptySlot} alt="" />
+                <span>{summaryItem.displayName}</span>
+                {summaryItem.quantity > 1 ? <strong>×{summaryItem.quantity.toLocaleString()}</strong> : null}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        <PrimaryButton fullWidth className="reward-reveal__continue" onClick={handlePress}>
           {buttonLabel}
         </PrimaryButton>
       </div>

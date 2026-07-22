@@ -7,10 +7,13 @@
 .app-shell__frame {
   width: 100%;
   max-width: var(--shell-max-width);
+  height: 100dvh;
+  max-height: 100dvh;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
   position: relative;
+  overflow: hidden;
   background: linear-gradient(180deg, rgba(18, 18, 42, 0.4), transparent 240px);
   box-shadow: var(--shadow-elevated);
 }

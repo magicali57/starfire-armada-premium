@@ -17,10 +17,10 @@ The approved UI visual-reference library is available at `STARFIRE_ARMADA_UI_HAN
 - Loadout Manager (`src/screens/loadout`)
 - Inventory Hub (`src/screens/inventory`)
 - Gameplay (placeholder canvas, requires an active battle session, dev-only debug victory/defeat trigger) (`src/screens/gameplay`)
-- Results — complete Victory/Defeat screen (hero, performance summary, grouped reward summary, actions) consuming only the canonical battle-results contract (`src/screens/results`, `src/components/results`)
+- Results — Victory/Defeat visually aligned to `47_Victory_Results.png` / `48_Defeat_Results.png` (hero wings, nebula backdrop mood, framed reward cards, gold Next Stage / red Retry hierarchy). Still consumes only `getBattleResultsView` (`src/screens/results`, `src/components/results`)
 - Player Profile + Edit Profile modal (`src/screens/profile`, `src/components/profile`)
 - Player Level-Up modal, integrated into Results on victory (`src/components/level-up`)
-- Reward Reveal overlay for special rewards (new collectibles, Rare/Epic chests, Epic/Legendary rewards), integrated into Results after Level-Up (`src/components/reward-reveal`)
+- Reward Reveal overlay visually aligned to `49_Rewards_Acquired.png` (heading, first-clear banner, rarity art, gold Continue), integrated into Results after Level-Up (`src/components/reward-reveal`)
 - Chest Vault / Chest Opening screen at `#/inventory/chests`, reachable from Inventory Hub's Chests category/section (`src/screens/chest-opening`)
 
 ## Implemented progression systems
@@ -101,9 +101,9 @@ The approved UI visual-reference library is available at `STARFIRE_ARMADA_UI_HAN
 - Real combat victory/defeat conditions are not yet integrated — the gameplay engine is still a placeholder canvas; outcomes are only triggered via a dev-only debug button (stripped from production builds).
 - No difficulty selector or loadout-validation gate exists yet in Pre-Battle — Start always uses the default `"normal"` difficulty and the player's already-owned `selectedShipId` (always valid by construction); both remain future work if/when those become real player choices.
 - The prototype Chapter Map / Stage Detail / Pre-Battle reference content (`campaignChapterMap.ts`'s "stage-N" ids, disconnected from `data/campaign.ts`'s real "ch1-stage-N" ids) is unchanged and still cosmetic-only for those ids — only real canonical stage ids get a working Start button.
-- Shop, Daily Rewards, Chest Opening, and Reward Reveal remain to be developed.
+- Shop, Daily Rewards remain to be developed (Chest Opening and Reward Reveal are implemented).
 - Battle statistics on Player Profile are limited to what the save genuinely tracks today (stages cleared, highest stage reached, derived from `highestClearedStageId`) — battles-completed/victories/bosses-defeated counters are not persisted anywhere yet, so Profile intentionally omits them rather than showing invented zeros.
 
 ## Recommended next task
 
-Player Profile (`#/profile`, schema v11), the Player Level-Up modal, the complete Battle Results screen (Victory/Defeat), the Reward Reveal overlay, and the full campaign battle navigation loop (Campaign → Stage Detail → Pre-Battle → Gameplay → Victory/Defeat → Results → Continue/Replay/Retry/Campaign) are implemented and stabilized end-to-end. Shop, Daily Rewards, and Chest Opening remain the next major screens to build. Real gameplay-engine integration (an actual wave/enemy/boss/firing/collision engine driving victory/defeat instead of the dev-only debug buttons) remains the main future work — every screen in the loop already calls the real canonical session/reward/XP pipeline and is ready for it.
+Player Profile, Player Level-Up, Battle Results (Victory/Defeat), Reward Reveal, Chest Opening, and the campaign battle navigation loop are implemented. Results and Reward Reveal visuals are aligned to Batch 5 references `47`/`48`/`49` (see handoff completion reports). Shop and Daily Rewards remain the next major screens. Real gameplay-engine integration (wave/enemy/boss driving victory/defeat instead of DEV Win/Lose) remains the main future work.

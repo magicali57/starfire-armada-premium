@@ -4,23 +4,84 @@
 }
 
 .results-screen {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-4) var(--space-8);
+  gap: 12px;
+  padding: 12px 12px calc(24px + env(safe-area-inset-bottom));
   width: 100%;
   max-width: 100%;
   min-width: 0;
   overflow-x: hidden;
+  min-height: 100%;
+}
+
+.results-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image: var(--results-backdrop);
+  background-size: cover;
+  background-position: center top;
+  opacity: 0.42;
+  pointer-events: none;
+}
+
+.results-screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.results-screen--victory::after {
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(248, 180, 0, 0.18), transparent 42%),
+    radial-gradient(ellipse at 90% 18%, rgba(95, 40, 190, 0.45), transparent 48%),
+    linear-gradient(180deg, rgba(5, 8, 20, 0.55), rgba(2, 4, 12, 0.88) 55%, rgba(6, 3, 18, 0.96));
+}
+
+.results-screen--defeat::after {
+  background:
+    radial-gradient(ellipse at 50% -5%, rgba(180, 25, 45, 0.38), transparent 40%),
+    radial-gradient(ellipse at 10% 40%, rgba(80, 15, 120, 0.3), transparent 45%),
+    linear-gradient(180deg, rgba(18, 4, 10, 0.62), rgba(5, 2, 8, 0.9) 60%, rgba(10, 4, 16, 0.97));
+}
+
+.results-screen__defeat-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 90, 90, 0.35);
+  background: rgba(40, 8, 16, 0.55);
+  text-align: center;
 }
 
 .results-screen__defeat-message {
   margin: 0;
-  padding: var(--space-4);
-  border-radius: var(--radius-lg);
-  border: var(--border-hairline);
-  background: var(--color-bg-inset);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #ffb0b0;
+}
+
+.results-screen__defeat-guidance {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #d7a0a8;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 360px) {
+  .results-screen {
+    padding-inline: 9px;
+    gap: 10px;
+  }
 }

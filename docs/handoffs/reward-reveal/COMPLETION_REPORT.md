@@ -8,24 +8,40 @@
 2. Chest entries with `chestId` in `{chestRare, chestEpic}` (Basic Chest never eligible).
 3. Any remaining non-chest entry whose `ResolvedReward.rarity` is `"epic"` or `"legendary"`.
 
-Credits/XP/Energy/common materials/ordinary fragments/duplicate conversions are never eligible under this rule (their rarity is never epic/legendary, and duplicates never appear in the generic groups). Every item is built via `toRewardDisplayRows` (the existing `rewardDisplay.ts` helper) — no second reward catalog, no hard-coded stage/reward ids. Collectible items additionally surface the item's own canonical rarity (ship/companion/module/weapon `rarity` field) for the glow treatment.
+Credits/XP/Energy/common materials/ordinary fragments/duplicate conversions are never eligible under this rule. Every item is built via `toRewardDisplayRows` (`rewardDisplay.ts`). Collectible items surface canonical rarity for glow treatment.
 
-**`src/components/reward-reveal/RewardRevealOverlay.tsx` + `.css`** — reusable, presentation-only overlay (`isOpen`, `items`, `currentIndex`, `onNext`, `onClose`). Single item → "Continue"; multi-item → `n / total` counter, "Next" until the last item, "Done" on the last. Wording never implies granting. Rarity-tinted glow border, NEW badge for collectibles, missing-artwork `onError` fallback to `UTILITY_ICON.emptySlot`.
+**`src/components/reward-reveal/RewardRevealOverlay.tsx` + `.css`** — visual redesign aligned to `49_Rewards_Acquired.png`: strong REWARDS ACQUIRED heading, stage identity, First Clear banner, large central rarity art, NEW badge for collectibles, queue counter, final summary grid for multi-item queues, gold Continue/Next/Done. Unopened Rare/Epic chests remain unopened. Presentation-only (`isOpen`, `items`, `currentIndex`, `onNext`, `onClose`).
 
-**`ResultsScreen.tsx`** — added `rewardRevealConsumedSessionId` + `rewardRevealIndex` state (in-memory only, reset per `sessionId`, mirroring the existing Level-Up marker pattern). Visibility: `showLevelUpModal = hasLevelUpToShow && levelUpConsumedSessionId !== sessionId`; `showRewardReveal = !showLevelUpModal && queue.length > 0 && rewardRevealConsumedSessionId !== sessionId`. This guarantees Level-Up always appears first when both exist, Reward Reveal opens automatically once Level-Up closes (or directly when there's no Level-Up), each overlay opens at most once per session, and an ordinary rerender never reopens either. Reward Reveal's own `onClose` (Done, Escape, backdrop, ✕) always fully dismisses it — never blocks navigation. `BattleRewardSummary` is unchanged, so revealed rewards still appear normally on Results afterward.
+**`ResultsScreen.tsx`** — `rewardRevealConsumedSessionId` + `rewardRevealIndex` (in-memory). Order: Level-Up → Reward Reveal → Results; once per session; actions disabled while overlay open.
+
+## Visual reference used
+
+- `STARFIRE_ARMADA_UI_HANDOFF/references/mobile_screens/Batch_5_Gameplay_and_Results/49_Rewards_Acquired.png`
+
+## Visual comparison
+
+### Before
+Smaller heading, weaker context/first-clear treatment, flatter art frame, secondary Continue styling.
+
+### Changes made
+Strong title + emblem, stage context, First Clear banner, larger rarity-framed art, gold primary action, multi-item summary cards, nebula-tinted overlay panel.
+
+### Intentional deviations
+- Does not force Credits / Player XP / common materials into the overlay (ineligible under `getRewardRevealQueue`).
+- Reference’s 3×2 mixed loot grid is a final multi-item summary only when the queue has multiple special rewards — not a dump of ordinary battle rewards.
+- Chests stay unopened; no contents resolution.
+
+### Screenshots
+- `docs/handoffs/reward-reveal/screenshots/reward-reveal-412x915.png`
+- `docs/handoffs/reward-reveal/screenshots/reward-reveal-360x800.png`
 
 ## What was not changed
 
-Reward resolution/application, stage rewards, XP, campaign completion, Energy spend, save schema/migrations, `battleSession.ts`'s state machine, Chest Opening/Shop/Daily Rewards, and gameplay-engine wiring.
+Eligibility/queue logic, reward grants, chest opening, Level-Up order, Results data contract.
 
 ## Verification
 
 - `npx tsc -b --noEmit` — passes.
 - `npm run build` — succeeds.
-- `scripts/verification/rewardRevealVerification.ts` — **88 assertions passed**: empty queue on an ordinary repeat clear, defeat never queues, new ship/companion/module/weapon reveal (built from real `applyRewardBundle` collectible grants), Rare + Epic chest reveal with Basic Chest omitted, Credits/XP/common-material omission, duplicate-conversion omission, collectible→chest→rare-item queue ordering (from a deliberately reversed input array), Next/Done label logic, Level-Up-before-Reward-Reveal ordering (including "no Level-Up opens Reward Reveal directly" and "fresh session re-eligible"), once-per-session + rerender-safe markers, missing-artwork fallback, and Continue/Replay/Campaign unaffected.
-- Disclosed limitation (same as every prior handoff): `RewardRevealOverlay.tsx` and the `ResultsScreen.tsx` JSX wiring cannot load under this sandbox's Node runner — verified by static code review instead.
-- Static mobile CSS review at 412×915 / 390×844 / 360×800: `box-sizing: border-box`, `overflow-wrap: anywhere` on names, artwork sized via `min(180px, 60vw)` (down to `min(140px, 55vw)` at ≤360px) so it always stays inside the viewport, internal `max-height: 70dvh; overflow-y: auto` scroll, and the action button is the last element in normal flow inside the scrollable panel (always reachable, no footer overlap since `ModalLayer` already centers/contains its own panel).
-
-## Unresolved / disclosed
-
-Real campaign stage data currently never drops a collectible or an Epic/Legendary-rarity item directly (only chestRare/chestBasic drops exist), so those two reveal paths are exercised via constructed `applyRewardBundle` fixtures (real function, fixture input) rather than live gameplay — correct behavior, just not yet reachable through real stage data. Also fixed one small pre-existing, disclosed issue from an earlier demo request: `GameplayScreen`'s debug buttons previously never started a session (dead button); now self-start one via the canonical `startBattle` action before declaring victory/defeat (see separate commit `07bdc74`, not part of this feature).
+- `scripts/verification/rewardRevealVerification.ts` — **88 assertions** passed.
+- Live first-clear Rare Chest reveal captured at 412×915 and 360×800.

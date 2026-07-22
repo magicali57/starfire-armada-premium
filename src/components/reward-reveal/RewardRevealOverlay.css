@@ -10,95 +10,212 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-3);
+  gap: 10px;
   text-align: center;
-  max-height: 70dvh;
+  max-height: 72dvh;
   overflow-y: auto;
-  animation: reward-reveal-enter var(--motion-duration-normal) var(--motion-ease-standard);
+  padding-bottom: 4px;
+  animation: reward-reveal-enter var(--motion-duration-normal) var(--motion-ease-standard) both;
+  background:
+    radial-gradient(ellipse at 70% 0%, rgba(120, 40, 200, 0.22), transparent 50%),
+    radial-gradient(ellipse at 30% 100%, rgba(248, 180, 0, 0.08), transparent 45%);
+}
+
+.reward-reveal__header {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.reward-reveal__emblem {
+  font-size: 18px;
+  color: #c9a0ff;
+  text-shadow: 0 0 12px rgba(181, 107, 255, 0.7);
+}
+
+.reward-reveal__title {
+  margin: 0;
+  font-size: clamp(20px, 6vw, 26px);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #f4f5ff;
+  text-shadow: 0 0 14px rgba(200, 160, 255, 0.45);
+  overflow-wrap: anywhere;
+}
+
+.reward-reveal__identity {
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #b9a6e0;
+}
+
+.reward-reveal__stage {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #f0f2ff;
+  overflow-wrap: anywhere;
+}
+
+.reward-reveal__first-clear {
+  margin: 4px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(248, 180, 0, 0.55);
+  background: linear-gradient(90deg, rgba(248, 180, 0, 0.18), rgba(248, 180, 0, 0.08));
+  color: #ffd56a;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .reward-reveal__counter {
   margin: 0;
-  font-size: var(--font-size-sm);
-  letter-spacing: 0.06em;
-  color: var(--color-text-secondary);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #9aa3bd;
 }
 
 .reward-reveal__art {
   position: relative;
-  width: min(180px, 60vw);
-  height: min(180px, 60vw);
+  width: min(200px, 62vw);
+  height: min(200px, 62vw);
   max-width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-lg);
-  background: var(--color-bg-inset);
-  border: 2px solid var(--color-rarity-common);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(120, 60, 200, 0.25), transparent 60%),
+    rgba(8, 10, 28, 0.9);
+  border: 2px solid var(--color-rarity-common, #5ad0e8);
   animation: reward-reveal-art-enter var(--motion-duration-slow) var(--motion-ease-enter) both;
 }
 
 .reward-reveal__art--rare {
-  border-color: var(--color-rarity-rare);
-  box-shadow: 0 0 22px rgba(79, 180, 255, 0.35);
+  border-color: rgba(79, 180, 255, 0.75);
+  box-shadow: 0 0 26px rgba(79, 180, 255, 0.4);
 }
 .reward-reveal__art--epic {
-  border-color: var(--color-rarity-epic);
-  box-shadow: 0 0 26px rgba(181, 107, 255, 0.4);
+  border-color: rgba(181, 107, 255, 0.8);
+  box-shadow: 0 0 28px rgba(181, 107, 255, 0.45);
 }
 .reward-reveal__art--legendary {
-  border-color: var(--color-rarity-legendary);
-  box-shadow: var(--shadow-panel), var(--glow-gold);
+  border-color: rgba(248, 180, 0, 0.85);
+  box-shadow: 0 0 30px rgba(248, 180, 0, 0.45);
 }
-/* The continuous pulse itself now comes from the shared `.motion-glow-*`
-   class (styles/motion.css) applied alongside this one in the component —
-   kept separate from the one-shot entrance animation above so reduced
-   motion can cleanly disable just the ambient loop (see motion.css's
-   reduced-motion block) without also cancelling the entrance. */
 
 .reward-reveal__art-image {
   width: 78%;
   height: 78%;
   object-fit: contain;
+  filter: drop-shadow(0 0 14px rgba(160, 120, 255, 0.4));
 }
 
 .reward-reveal__new-badge {
   position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-pill);
-  background: var(--color-success-500);
-  color: var(--color-bg-void);
-  font-size: var(--font-size-xs);
+  top: 10px;
+  right: 10px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #3ad07a;
+  color: #04140a;
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   opacity: 0;
   animation: reward-reveal-badge-enter var(--motion-duration-fast) var(--motion-ease-standard) var(--motion-duration-normal) both;
 }
 
 .reward-reveal__name {
   margin: 0;
-  font-size: var(--font-size-lg);
-  font-weight: 700;
-  color: var(--color-text-primary);
+  font-size: clamp(16px, 4.5vw, 20px);
+  font-weight: 800;
+  color: #f4f5ff;
   overflow-wrap: anywhere;
   max-width: 100%;
 }
 
 .reward-reveal__quantity {
   margin: 0;
-  font-size: var(--font-size-md);
+  font-size: 15px;
   font-weight: 700;
-  color: var(--color-gold-300);
+  color: #ffd56a;
 }
 
 .reward-reveal__subtitle {
   margin: 0;
-  font-size: var(--font-size-sm);
-  letter-spacing: 0.04em;
+  font-size: 11px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-text-secondary);
+  color: #9aa3bd;
+}
+
+.reward-reveal__summary {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.reward-reveal__summary-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.reward-reveal__summary-card--rare { border-color: rgba(79, 180, 255, 0.5); }
+.reward-reveal__summary-card--epic { border-color: rgba(181, 107, 255, 0.55); }
+.reward-reveal__summary-card--legendary { border-color: rgba(248, 180, 0, 0.55); }
+
+.reward-reveal__summary-card img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.reward-reveal__summary-card span {
+  font-size: 9px;
+  color: #cdd3ea;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+
+.reward-reveal__summary-card strong {
+  font-size: 11px;
+  color: #ffd56a;
+}
+
+.reward-reveal__continue {
+  margin-top: 4px;
+  border-color: rgba(248, 180, 0, 0.75) !important;
+  background: linear-gradient(180deg, #ffd56a, #e09820) !important;
+  color: #1a1000 !important;
+  box-shadow: 0 0 18px rgba(248, 180, 0, 0.4) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
 }
 
 @keyframes reward-reveal-enter {
@@ -134,11 +251,20 @@
 
 @media (max-width: 360px) {
   .reward-reveal__art {
-    width: min(140px, 55vw);
-    height: min(140px, 55vw);
+    width: min(150px, 58vw);
+    height: min(150px, 58vw);
+  }
+  .reward-reveal__summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-/* Reduced-motion: covered by the project-wide rule in styles/globals.css
-   (near-zero animation-duration on every element) — no per-component
-   override needed here. */
+@media (prefers-reduced-motion: reduce) {
+  .reward-reveal,
+  .reward-reveal__art,
+  .reward-reveal__new-badge {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

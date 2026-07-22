@@ -13,27 +13,52 @@ A duplicate-converted entry is identified by **reference equality** with `duplic
 
 **Reward icon resolution** (`src/data/rewardDisplay.ts`) — collectible entries now resolve real artwork (ship/companion/module/weapon registries, via each definition's own `artKey`) instead of a placeholder icon, since Results needs to show genuine "NEW" collectible art.
 
-**New components** (`src/components/results/`):
-- `BattleResultHero` — VICTORY (cyan/gold, restrained glow) / DEFEAT (red/purple, restrained pulse) hero with stage name, difficulty, first-clear badge, stars (only when `performance.starsEarned` exists).
-- `BattlePerformanceSummary` — renders only the `BattlePerformance` fields that are actually defined; omits every unsupported field, never fabricates a zero.
-- `BattleRewardSummary` — Player XP/Level-transition headline, then First-Clear / Battle / Player-Level reward groups (each aggregated via the existing `rewardDisplay.ts` helper), New collectibles (`CardCornerBadge` "New" tag + real art), Duplicate Conversions.
-- `BattleResultActions` — renders only the buttons `availableActions` actually offers (Continue/Replay/Campaign on victory, Retry/Campaign on defeat), disabled while a new session is starting.
+**Shared Results components** (`src/components/results/`) — visual redesign aligned to Batch 5 references:
 
-**`ResultsScreen.tsx`** — rewritten to orchestrate the above. Continue clears temp state and navigates to Stage Detail (`?id=<nextStageId>`, same convention Pre-Battle/Stage Detail already use) — no Energy spent. Replay/Retry both call the existing `retryBattle` store action (fresh sessionId, same stage/difficulty, Energy validated + spent exactly once, then navigates to `gameplay`); a local `isStartingSession` guard plus the store's own in-flight guard prevent double-taps; `insufficient-energy` shows an `InlineAlert` (no browser dialogs) and creates/spends nothing. Campaign clears temp state and returns, preserving all permanent progress. `PlayerLevelUpModal` integration preserved unchanged (same once-per-session `sessionId` marker pattern). Missing/invalid session still redirects to Campaign via the existing effect.
+- `BattleResultHero` — large gold VICTORY / red DEFEAT title with CSS wing accents, stage identity, ship art showcase, difficulty + First Clear badges; stars only when `performance.starsEarned` exists (never fabricates S grade / New Best).
+- `BattlePerformanceSummary` — Mission/Battle Summary framed panels; only defined `BattlePerformance` fields; victory cyan vs defeat red stat cards.
+- `BattleRewardSummary` — framed Rewards panel with rarity-aware reward **cards**, First Clear badges, XP progression bar; omits Level-Up reward list duplication (modal owns that).
+- `BattleResultActions` — gold Next Stage/Continue primary; Replay + Campaign secondary; defeat Retry (Energy) primary + Change Loadout + Campaign.
+
+**`ResultsScreen.tsx`** — orchestrates the above with chapter backdrop mood (`CHAPTER_BACKGROUND_IMAGE` / `HOME_SCENE.background` + CSS overlays). Continue → Stage Detail without Energy; Replay/Retry → `retryBattle`; Campaign → `resetBattle` + campaign. Modal order Level-Up → Reward Reveal → Results unchanged.
+
+**`GameplayScreen.tsx`** — transitional `victory|defeat|completing|completed|results` statuses no longer trigger the stale-session redirect/`resetBattle` (so Results can mount after Win/Lose).
+
+**`AppShell.css`** — mobile frame bounded to `100dvh` so Results content scrolls above the bottom nav.
+
+## Visual references used
+
+- `STARFIRE_ARMADA_UI_HANDOFF/references/mobile_screens/Batch_5_Gameplay_and_Results/47_Victory_Results.png`
+- `STARFIRE_ARMADA_UI_HANDOFF/references/mobile_screens/Batch_5_Gameplay_and_Results/48_Defeat_Results.png`
+
+## Visual comparison
+
+### Before
+Sparse dark panels, smaller title treatment, list-like rewards, weak action hierarchy, flat backgrounds, no wing accents.
+
+### Changes made
+Gold/red hero titles + CSS wings; nebula backdrop mood from existing chapter/home art; framed Mission/Rewards sections; rarity card grid; gold Next Stage / red Retry; denser mobile spacing; restrained motion (title glow/pulse, card stagger, XP fill).
+
+### Intentional deviations (canonical / unsupported)
+- No fabricated S grade, “New Best”, boss name, or fake objectives.
+- Performance summary omitted when `session.performance` is empty (placeholder engine).
+- Defeat shows “No completion rewards” — never the reference’s fake defeat loot.
+- Next Stage only when `availableActions` includes `continue` (first-clear unlock path).
+- Level-Up detailed rewards stay in `PlayerLevelUpModal`, not duplicated on Results cards.
+
+### Screenshots
+- `docs/handoffs/battle-results/screenshots/victory-412x915.png`
+- `docs/handoffs/battle-results/screenshots/victory-360x800.png`
+- `docs/handoffs/battle-results/screenshots/defeat-412x915.png`
+- `docs/handoffs/battle-results/screenshots/defeat-360x800.png`
 
 ## What was not changed
 
-Reward resolution/application, Player XP/level math, campaign progression, Energy-spend logic, save schema/migrations, `battleSession.ts`'s state machine, `PlayerLevelUpModal`'s own content/behavior, and gameplay-engine wiring (Pre-Battle's Start button still intentionally does not call `startBattle` — real launch integration is disclosed future work, unchanged by this task).
+Reward resolution/application, Player XP/level math, campaign progression, Energy-spend logic, save schema/migrations, `battleSession` state machine, Level-Up modal content, Reward Reveal eligibility.
 
 ## Verification
 
 - `npx tsc -b --noEmit` — passes.
-- `npm run build` — succeeds.
-- `scripts/verification/battleResultsVerification.ts` (run via the existing `ts-alias-hooks.mjs` Node loader) — **83 assertions passed**, covering: valid Victory/Defeat, first-clear vs. repeat-clear grouping (mutually exclusive, never duplicated), reward aggregation within a group, unopened-chest display, duplicate-collectible-conversion + new-collectible grouping (built from a real `applyRewardBundle` result fed through the real `getBattleResultsView`), Replay/Retry fresh-session + single-Energy-spend, insufficient-Energy rejection (no mutation), Campaign return / missing-session / non-completed-session → null view, and read-twice idempotency (no mutation on rerender).
-- Disclosed limitation (same as prior handoffs): the four new components and `ResultsScreen.tsx` are `.tsx`/JSX and cannot load under this sandbox's plain `node --experimental-strip-types` runner — verified by static code review instead.
-- Static mobile CSS review at 412×915 / 390×844 / 360×800: all new component CSS uses `box-sizing: border-box`, `min-width: 0` + `overflow-wrap: anywhere` on text/name cells, responsive grids (performance stats 2→1 columns, collectible grid 3→2 columns at ≤360px), and `flex-wrap` on hero badges — no fixed pixel widths beyond icon sizes. Results keeps the shared bottom nav (unchanged), which already reserves `padding-bottom` for it, so content is never hidden behind the footer. `PlayerLevelUpModal` unchanged and still fits.
-
-## Unresolved / disclosed
-
-- No real campaign stage currently rolls a `collectible` drop, so duplicate-conversion/new-collectible display is exercised only via the fixture in step 6 of the verification script (and static review) — genuinely correct, just not yet reachable through real gameplay data.
-- `BattlePerformance` is never populated by the current placeholder gameplay canvas, so `BattlePerformanceSummary` currently renders nothing in the live app (correct behavior — no unsupported stat is fabricated) until a real engine starts passing performance data.
+- `npm run build` — succeeds; production bundle has **0** matches for “Win Stage” / “Lose Stage”.
+- `scripts/verification/battleResultsVerification.ts` — **83 assertions** passed.
+- Live capture via DEV Win/Lose at 412×915 and 360×800 (see screenshot paths above).

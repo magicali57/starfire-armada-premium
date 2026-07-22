@@ -24,13 +24,25 @@ export function GameplayScreen() {
   // never fabricates a result.
   const hasActiveSession = battleSession?.status === "active";
   useEffect(() => {
-    if (!hasActiveSession) {
-      if (battleSession) resetBattle();
-      navigate("campaign");
+    if (hasActiveSession) return;
+    // A just-finished attempt is handed to Results via navigate("results")
+    // in the same turn — do not clear or redirect those transitional
+    // statuses here, or Results never gets to mount.
+    const status = battleSession?.status;
+    if (
+      status === "victory" ||
+      status === "defeat" ||
+      status === "completing" ||
+      status === "completed" ||
+      status === "results"
+    ) {
+      return;
     }
+    if (battleSession) resetBattle();
+    navigate("campaign");
     // Only re-run when the session identity/status actually changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasActiveSession, battleSession?.sessionId]);
+  }, [hasActiveSession, battleSession?.sessionId, battleSession?.status]);
 
   // Identity, difficulty, and loadout for this attempt come from the
   // active session itself (the canonical, immutable-per-attempt record),

@@ -7,46 +7,46 @@ import { InlineAlert } from "@/components/feedback/InlineAlert";
 import { PlayerLevelUpModal } from "@/components/level-up/PlayerLevelUpModal";
 import { RewardRevealOverlay } from "@/components/reward-reveal/RewardRevealOverlay";
 import { usePlayerStore } from "@/store/playerStore";
-import { getBattleResultsView } from "@/systems/battleSession";
-import { isPlayerMaxLevel } from "@/systems/playerProgression";
+import { getBattleEnergyCost, getBattleResultsView } from "@/systems/battleSession";
+import { getXpProgressWithinLevel, isPlayerMaxLevel } from "@/systems/playerProgression";
 import { getRewardRevealQueue } from "@/data/rewardReveal";
+import { getChapterById, getStageById } from "@/data/campaign";
+import { CHAPTER_BACKGROUND_IMAGE, getShipMasterArt, HOME_SCENE, HOME_TOPBAR_FINAL } from "@/data/assetRegistry";
 import { navigate, pathFor } from "@/app/routes";
 import "./ResultsScreen.css";
 
+function formatStageIdentity(stageId: string): string | null {
+  const stage = getStageById(stageId);
+  if (!stage) return null;
+  const chapter = getChapterById(stage.chapterId);
+  const chapterLabel = chapter ? `Chapter ${chapter.index}` : "Chapter";
+  return `${chapterLabel} • Stage ${stage.index}`;
+}
+
+function resultsBackdropForStage(stageId: string): string {
+  const stage = getStageById(stageId);
+  if (stage?.chapterId && CHAPTER_BACKGROUND_IMAGE[stage.chapterId]) {
+    return CHAPTER_BACKGROUND_IMAGE[stage.chapterId];
+  }
+  return HOME_SCENE.background;
+}
+
 /**
- * The complete, canonical-contract-only Results screen. Reads ONLY
- * getBattleResultsView(battleSession) — never resolves rewards, grants XP,
- * changes Player Level, deducts Energy, marks campaign progress, or
- * repeats a completion transaction. All of that already happened before
- * this screen ever renders (see battleSession.completeBattleSession /
- * systems/rewards/completeCampaignStage.ts). With no completed session to
- * show (direct navigation, reload, stale/mismatched session) it redirects
- * safely to Campaign without touching state.
+ * Canonical-contract-only Results screen. Visual composition follows
+ * 47_Victory_Results.png / 48_Defeat_Results.png. Reads ONLY
+ * getBattleResultsView(battleSession) — never grants rewards or XP.
  */
 export function ResultsScreen() {
-  const { battleSession, resetBattle, retryBattle } = usePlayerStore();
+  const { player, battleSession, resetBattle, retryBattle } = usePlayerStore();
   const view = getBattleResultsView(battleSession);
 
   useEffect(() => {
     if (!view) navigate("campaign");
   }, [view]);
 
-  // In-memory presentation marker only (never written to PlayerState/save):
-  // tracks which sessionId's Level-Up modal has already been shown/closed
-  // this Results visit, so a rerender (or a duplicate completion callback,
-  // which the battle-session transaction already ignores) never reopens
-  // it. A genuinely new session (Replay/Retry) gets a new sessionId and is
-  // free to show its own Level-Up modal again.
   const [levelUpConsumedSessionId, setLevelUpConsumedSessionId] = useState<string | null>(null);
-  // Same in-memory, never-persisted, once-per-session pattern as the
-  // Level-Up marker above, plus a local queue position — reset whenever a
-  // new session's view appears (see the effect below) so a Replay/Retry's
-  // fresh queue always starts at its own first item.
   const [rewardRevealConsumedSessionId, setRewardRevealConsumedSessionId] = useState<string | null>(null);
   const [rewardRevealIndex, setRewardRevealIndex] = useState(0);
-  // Navigation-safety guard: true while Replay/Retry is creating a fresh
-  // session, so a double tap (or tapping while the store's own in-flight
-  // guard is active) can never fire a second startBattle/Energy spend.
   const [isStartingSession, setIsStartingSession] = useState(false);
   const [energyAlert, setEnergyAlert] = useState<string | null>(null);
 
@@ -58,44 +58,43 @@ export function ResultsScreen() {
 
   const rewardRevealQueue = view.outcome === "victory" ? getRewardRevealQueue(view) : [];
   const hasLevelUpToShow = view.outcome === "victory" && view.playerLevelsGained > 0;
-  // Required order: Level-Up first (when it exists), Reward Reveal next
-  // (only once Level-Up is absent or already closed), then the normal
-  // interactive Results screen. Never both stacked at once.
   const showLevelUpModal = hasLevelUpToShow && levelUpConsumedSessionId !== view.sessionId;
   const showRewardReveal =
     !showLevelUpModal && rewardRevealQueue.length > 0 && rewardRevealConsumedSessionId !== view.sessionId;
-  // Neither overlay's own close button reaches these handlers (they only
-  // ever call the marker setters above), but every Results action handler
-  // still guards on overlay-active too — belt-and-suspenders so an overlay
-  // can never be bypassed by, e.g., a stray click landing on the
-  // interactive screen underneath before a re-render commits.
   const overlayActive = showLevelUpModal || showRewardReveal;
+
+  const stageIdentity = formatStageIdentity(view.stageId);
+  const shipArtSrc = battleSession?.shipId ? getShipMasterArt(battleSession.shipId) : undefined;
+  const nextStage = view.nextStageId ? getStageById(view.nextStageId) : undefined;
+  const nextStageLabel = nextStage
+    ? formatStageIdentity(nextStage.id) ?? nextStage.name
+    : null;
+  const energyCost = getBattleEnergyCost(view.stageId);
+  const xpProgress = getXpProgressWithinLevel(player);
+  const victory = view.outcome === "victory";
 
   const handleCampaign = () => {
     if (overlayActive) return;
-    // Clears TEMPORARY session state only — awarded progression persists.
     resetBattle();
     navigate("campaign");
   };
 
   const handleContinue = () => {
     if (overlayActive || !view.nextStageId) return;
-    // Continue never spends Energy or creates a session — it only clears
-    // the finished session's temporary state and hands off to the
-    // existing Stage Detail flow (same "?id=" convention Pre-Battle/Stage
-    // Detail already use) for the next unlocked stage.
     resetBattle();
     window.location.hash = `${pathFor("stage-detail")}?id=${view.nextStageId}`;
+  };
+
+  const handleChangeLoadout = () => {
+    if (overlayActive) return;
+    resetBattle();
+    navigate("loadout");
   };
 
   const handleReplayOrRetry = () => {
     if (overlayActive || isStartingSession) return;
     setIsStartingSession(true);
     setEnergyAlert(null);
-    // retryBattle (store/playerStore.tsx) creates a fresh sessionId for
-    // the SAME stage/difficulty and validates + spends Energy exactly
-    // once through the canonical session-start action — never reusing
-    // the completed sessionId, never re-running any reward transaction.
     const result = retryBattle();
     if (result.ok) {
       navigate("gameplay");
@@ -106,39 +105,51 @@ export function ResultsScreen() {
       setEnergyAlert("Not enough Energy to start a new battle. Come back once you've recovered enough.");
       return;
     }
-    // "busy" (already starting) or any other transient rejection: stay on
-    // Results, nothing was created or spent.
     setEnergyAlert("Couldn't start a new battle. Please try again.");
   };
 
-  const victory = view.outcome === "victory";
+  const backdropSrc = resultsBackdropForStage(view.stageId);
 
   return (
-    <div className="results-screen">
+    <div
+      className={`results-screen results-screen--${victory ? "victory" : "defeat"}`}
+      style={{ ["--results-backdrop" as string]: `url(${backdropSrc})` }}
+    >
       <BattleResultHero
         outcome={view.outcome}
         stageName={view.stageName}
+        stageIdentity={stageIdentity}
         difficulty={view.difficulty}
         firstClear={view.firstClear}
+        shipArtSrc={shipArtSrc}
         starsEarned={view.performance?.starsEarned}
       />
 
-      <BattlePerformanceSummary performance={view.performance} />
+      <BattlePerformanceSummary performance={view.performance} outcome={view.outcome} />
 
       {victory ? (
         <BattleRewardSummary
           playerXpGained={view.playerXpGained}
           firstClearRewards={view.firstClearRewards}
           baseRewards={view.baseRewards}
-          levelUpRewards={view.levelUpRewards}
           newCollectibles={view.newCollectibles}
           duplicateConversions={view.duplicateConversions}
           previousPlayerLevel={view.previousPlayerLevel}
           newPlayerLevel={view.newPlayerLevel}
           playerLevelsGained={view.playerLevelsGained}
+          xpProgressPercent={xpProgress.progressPercent}
+          xpWithinLevel={xpProgress.xpWithinLevel}
+          xpToNextLevel={xpProgress.xpRequiredWithinLevel}
+          displayName={player.displayName}
+          avatarSrc={HOME_TOPBAR_FINAL.avatar}
         />
       ) : (
-        <p className="results-screen__defeat-message">Defeat grants no rewards. Regroup and try again.</p>
+        <div className="results-screen__defeat-panel">
+          <p className="results-screen__defeat-message">No completion rewards.</p>
+          <p className="results-screen__defeat-guidance">
+            Upgrade your ship, review abilities, or change loadout before retrying.
+          </p>
+        </div>
       )}
 
       {energyAlert ? (
@@ -146,12 +157,16 @@ export function ResultsScreen() {
       ) : null}
 
       <BattleResultActions
+        outcome={view.outcome}
         availableActions={view.availableActions}
         busy={isStartingSession || overlayActive}
+        nextStageLabel={nextStageLabel}
+        energyCost={energyCost}
         onContinue={handleContinue}
         onReplay={handleReplayOrRetry}
         onRetry={handleReplayOrRetry}
         onCampaign={handleCampaign}
+        onChangeLoadout={victory ? undefined : handleChangeLoadout}
       />
 
       <PlayerLevelUpModal
@@ -169,6 +184,9 @@ export function ResultsScreen() {
         isOpen={showRewardReveal}
         items={rewardRevealQueue}
         currentIndex={rewardRevealIndex}
+        stageName={view.stageName}
+        stageIdentity={stageIdentity}
+        firstClear={view.firstClear}
         onNext={() => setRewardRevealIndex((index) => index + 1)}
         onClose={() => setRewardRevealConsumedSessionId(view.sessionId)}
       />

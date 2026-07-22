@@ -12,7 +12,7 @@
   gap: var(--space-4);
   /* ModalLayer's own panel already scrolls the whole dialog; this
      wrapper adds its own restrained entrance animation on mount. */
-  animation: level-up-modal-enter 0.28s ease-out;
+  animation: level-up-modal-enter var(--motion-duration-slow) var(--motion-ease-enter);
 }
 
 .level-up-modal__scroll {
@@ -57,7 +57,7 @@
 .level-up-modal__level--to {
   color: var(--color-text-primary);
   text-shadow: var(--glow-gold);
-  animation: level-up-modal-emphasis 0.5s ease-out 0.15s both;
+  animation: level-up-modal-emphasis var(--motion-duration-reveal) var(--motion-ease-spring) var(--motion-duration-fast) both;
 }
 
 .level-up-modal__arrow {
@@ -112,8 +112,8 @@
   border-left: 3px solid var(--color-rarity-common);
   background: var(--color-bg-inset);
   opacity: 0;
-  animation: level-up-modal-reveal 0.3s ease-out both;
-  animation-delay: calc(var(--reveal-index, 0) * 60ms);
+  animation: level-up-modal-reveal var(--motion-duration-reveal) var(--motion-ease-standard) both;
+  animation-delay: calc(min(var(--reveal-index, 0), 8) * var(--motion-stagger-step));
 }
 
 .level-up-modal__reward--rare {
@@ -157,8 +157,8 @@
   color: var(--color-text-primary);
   overflow-wrap: anywhere;
   opacity: 0;
-  animation: level-up-modal-reveal 0.3s ease-out both;
-  animation-delay: calc(var(--reveal-index, 0) * 60ms);
+  animation: level-up-modal-reveal var(--motion-duration-reveal) var(--motion-ease-standard) both;
+  animation-delay: calc(min(var(--reveal-index, 0), 8) * var(--motion-stagger-step));
 }
 
 .level-up-modal__actions {

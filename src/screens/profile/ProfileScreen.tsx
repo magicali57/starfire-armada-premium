@@ -8,6 +8,9 @@ import { NeonPanel } from "@/components/cards/NeonPanel";
 import { PrimaryButton } from "@/components/controls/PrimaryButton";
 import { SecondaryButton } from "@/components/controls/SecondaryButton";
 import { EditProfileModal } from "@/components/profile/EditProfileModal";
+import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
+import { ProgressFill } from "@/components/motion/ProgressFill";
+import { MotionStaggerGroup } from "@/components/motion/MotionStaggerGroup";
 import { formatRewardEntry, getPlayerProfileSummary, getProfileAvatar } from "@/data/playerProfile";
 import { usePlayerStore } from "@/store/playerStore";
 import "./ProfileScreen.css";
@@ -43,6 +46,7 @@ export function ProfileScreen() {
             <SecondaryButton onClick={() => navigate("home")}>Back to Home</SecondaryButton>
           </div>
 
+          <MotionStaggerGroup>
           <section className="player-profile__hero glass-panel">
             <span className={`player-profile__avatar player-profile__avatar--${avatar.accent}`} aria-hidden="true">
               {avatar.glyph}
@@ -59,9 +63,7 @@ export function ProfileScreen() {
                 </div>
               ) : (
                 <div className="player-profile__xp">
-                  <div className="player-profile__xp-track">
-                    <i style={{ width: `${summary.progressPercent}%` }} />
-                  </div>
+                  <ProgressFill percent={summary.progressPercent} tone="secondary" className="player-profile__xp-fill" />
                   <small>
                     {summary.xpWithinCurrentLevel.toLocaleString()} / {summary.xpRequiredWithinCurrentLevel.toLocaleString()} XP
                   </small>
@@ -113,7 +115,9 @@ export function ProfileScreen() {
             <div className="player-profile__overview-grid">
               <div>
                 <small>Total Power</small>
-                <strong>{summary.totalFleetPower.toLocaleString()}</strong>
+                <strong>
+                  <AnimatedNumber value={summary.totalFleetPower} />
+                </strong>
               </div>
               <div>
                 <small>Campaign</small>
@@ -179,6 +183,7 @@ export function ProfileScreen() {
               )}
             </ul>
           </NeonPanel>
+          </MotionStaggerGroup>
         </main>
       </HubScreenShell>
 

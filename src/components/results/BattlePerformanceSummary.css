@@ -29,8 +29,10 @@
   background: var(--color-bg-inset);
   color: var(--color-secondary-300);
   opacity: 0;
-  animation: battle-performance-stat-reveal 0.28s ease-out both;
-  animation-delay: calc(var(--reveal-index, 0) * 50ms);
+  animation: battle-performance-stat-reveal var(--motion-duration-reveal) var(--motion-ease-standard) both;
+  /* Bounded stagger — even a long stat list's total wait is capped at 8
+     steps (see styles/motion.css). */
+  animation-delay: calc(min(var(--reveal-index, 0), 8) * var(--motion-stagger-step));
 }
 
 .battle-performance-summary__value {

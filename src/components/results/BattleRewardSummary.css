@@ -64,8 +64,10 @@
   border-left: 3px solid var(--color-rarity-common);
   background: var(--color-bg-inset);
   opacity: 0;
-  animation: battle-reward-row-reveal 0.28s ease-out both;
-  animation-delay: calc(var(--reveal-index, 0) * 55ms);
+  animation: battle-reward-row-reveal var(--motion-duration-reveal) var(--motion-ease-standard) both;
+  /* Bounded stagger — a long reward list's total wait is capped at 8
+     steps (see styles/motion.css). */
+  animation-delay: calc(min(var(--reveal-index, 0), 8) * var(--motion-stagger-step));
 }
 
 .battle-reward-summary__row--rare {
@@ -119,8 +121,8 @@
   background: var(--color-bg-inset);
   text-align: center;
   opacity: 0;
-  animation: battle-reward-row-reveal 0.28s ease-out both;
-  animation-delay: calc(var(--reveal-index, 0) * 55ms);
+  animation: battle-reward-row-reveal var(--motion-duration-reveal) var(--motion-ease-standard) both;
+  animation-delay: calc(min(var(--reveal-index, 0), 8) * var(--motion-stagger-step));
 }
 
 .battle-reward-summary__collectible img {
@@ -145,8 +147,8 @@
   border: var(--border-hairline);
   background: var(--color-bg-inset);
   opacity: 0;
-  animation: battle-reward-row-reveal 0.28s ease-out both;
-  animation-delay: calc(var(--reveal-index, 0) * 55ms);
+  animation: battle-reward-row-reveal var(--motion-duration-reveal) var(--motion-ease-standard) both;
+  animation-delay: calc(min(var(--reveal-index, 0), 8) * var(--motion-stagger-step));
 }
 
 .battle-reward-summary__conversion-text {

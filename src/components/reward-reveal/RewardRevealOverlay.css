@@ -14,7 +14,7 @@
   text-align: center;
   max-height: 70dvh;
   overflow-y: auto;
-  animation: reward-reveal-enter 0.3s ease-out;
+  animation: reward-reveal-enter var(--motion-duration-normal) var(--motion-ease-standard);
 }
 
 .reward-reveal__counter {
@@ -35,7 +35,7 @@
   border-radius: var(--radius-lg);
   background: var(--color-bg-inset);
   border: 2px solid var(--color-rarity-common);
-  animation: reward-reveal-art-enter 0.36s var(--ease-standard) both;
+  animation: reward-reveal-art-enter var(--motion-duration-slow) var(--motion-ease-enter) both;
 }
 
 .reward-reveal__art--rare {
@@ -49,8 +49,12 @@
 .reward-reveal__art--legendary {
   border-color: var(--color-rarity-legendary);
   box-shadow: var(--shadow-panel), var(--glow-gold);
-  animation: reward-reveal-art-enter 0.36s var(--ease-standard) both, reward-reveal-legendary-glow 2.2s ease-in-out 0.4s infinite;
 }
+/* The continuous pulse itself now comes from the shared `.motion-glow-*`
+   class (styles/motion.css) applied alongside this one in the component —
+   kept separate from the one-shot entrance animation above so reduced
+   motion can cleanly disable just the ambient loop (see motion.css's
+   reduced-motion block) without also cancelling the entrance. */
 
 .reward-reveal__art-image {
   width: 78%;
@@ -70,7 +74,7 @@
   font-weight: 800;
   letter-spacing: 0.05em;
   opacity: 0;
-  animation: reward-reveal-badge-enter 0.24s ease-out 0.3s both;
+  animation: reward-reveal-badge-enter var(--motion-duration-fast) var(--motion-ease-standard) var(--motion-duration-normal) both;
 }
 
 .reward-reveal__name {
@@ -125,16 +129,6 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes reward-reveal-legendary-glow {
-  0%,
-  100% {
-    filter: brightness(1);
-  }
-  50% {
-    filter: brightness(1.18);
   }
 }
 

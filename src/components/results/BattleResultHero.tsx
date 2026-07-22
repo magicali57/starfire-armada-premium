@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { BattleModeIcon } from "@/components/icons/BattleModeIcon";
 import type { BattleOutcome } from "@/systems/battleSession";
 import type { RewardDifficulty } from "@/types";
@@ -36,8 +37,18 @@ export function BattleResultHero({ outcome, stageName, difficulty, firstClear, s
         ) : null}
         {victory && typeof starsEarned === "number" ? (
           <span className="battle-result-hero__stars" aria-label={`${starsEarned} stars earned`}>
+            {/* Sequential reveal only ever runs for genuinely-earned stars
+                (never fabricated — `starsEarned` is only rendered at all
+                when the canonical performance data supplies it). Bounded:
+                at most 3 stars, so the stagger can never run long. */}
             {Array.from({ length: Math.max(0, Math.min(3, starsEarned)) }, (_, index) => (
-              <BattleModeIcon key={index} variant="star" size={16} />
+              <BattleModeIcon
+                key={index}
+                variant="star"
+                size={16}
+                className="motion-stagger-item"
+                style={{ "--motion-index": index } as CSSProperties}
+              />
             ))}
           </span>
         ) : null}

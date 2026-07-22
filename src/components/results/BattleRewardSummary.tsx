@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { NeonPanel } from "@/components/cards/NeonPanel";
 import { CardCornerBadge } from "@/components/feedback/CardCornerBadge";
 import { BattleModeIcon } from "@/components/icons/BattleModeIcon";
+import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 import { toRewardDisplayRows, type RewardDisplayRow } from "@/data/rewardDisplay";
 import type { DuplicateConversion, ResolvedReward } from "@/types";
 import "./BattleRewardSummary.css";
@@ -27,7 +28,9 @@ function RewardRow({ row, index }: { row: RewardDisplayRow; index: number }) {
       <img src={row.icon} alt="" />
       <span className="battle-reward-summary__row-name">{row.displayName}</span>
       {row.amount !== null ? (
-        <span className="battle-reward-summary__row-amount">×{row.amount.toLocaleString()}</span>
+        <span className="battle-reward-summary__row-amount">
+          ×{row.kind === "currency" ? <AnimatedNumber value={row.amount} /> : row.amount.toLocaleString()}
+        </span>
       ) : null}
     </li>
   );
@@ -85,7 +88,7 @@ export function BattleRewardSummary({
       {playerXpGained > 0 ? (
         <p className="battle-reward-summary__xp">
           <BattleModeIcon variant="star" size={16} />
-          {playerXpGained.toLocaleString()} Player XP
+          <AnimatedNumber value={playerXpGained} suffix=" Player XP" />
         </p>
       ) : null}
 

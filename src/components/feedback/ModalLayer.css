@@ -11,6 +11,12 @@
   position: absolute;
   inset: 0;
   background: rgba(5, 5, 13, 0.7);
+  /* Shared modal entrance/exit foundation — every ModalLayer consumer
+     (Level-Up, Reward Reveal, Locked Content, Edit Profile, and any
+     future one) gets this backdrop fade for free, consolidated in the
+     ONE place that owns modal chrome. Individual modals may still add
+     their own extra entrance animation to their inner content. */
+  animation: motion-fade-in var(--motion-duration-normal) var(--motion-ease-standard);
 }
 
 .modal-layer__panel {
@@ -22,6 +28,7 @@
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   border: var(--border-hairline);
   padding: var(--space-5);
+  animation: motion-rise-in var(--motion-duration-slow) var(--motion-ease-enter);
 }
 
 @media (min-width: 900px) {

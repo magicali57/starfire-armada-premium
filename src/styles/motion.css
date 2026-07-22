@@ -1,0 +1,161 @@
+/* Shared UI motion foundation — consolidated timing/easing/reduced-motion
+ * rules and a small set of reusable animation primitives (CSS classes,
+ * not components) for entrances, stagger reveals, and restrained rarity
+ * glow. This does NOT replace `tokens.css`'s existing `--duration-*`/
+ * `--ease-standard` (still used by `.press-scale`/`Buttons.css`/
+ * `ProgressBar.css` and left untouched) — it adds a second, purpose-named
+ * scale for the newer entrance/reveal/reward-adjacent animations so this
+ * task's screens can consolidate onto one vocabulary without touching
+ * those already-working, unrelated components.
+ *
+ * Performance: every rule below only ever animates `transform`, `opacity`,
+ * or (briefly, for restrained rarity pulses) `filter` — never `width`,
+ * `height`, `top`/`left`, or box-shadow across a large surface. Continuous
+ * (`infinite`) animations are limited to small, single focal elements
+ * (e.g. one hero heading, one Reward Reveal art piece at a time) — never a
+ * whole list or a large background.
+ */
+
+:root {
+  /* Durations */
+  --motion-duration-instant: 90ms;
+  --motion-duration-fast: 160ms;
+  --motion-duration-normal: 260ms;
+  --motion-duration-slow: 380ms;
+  --motion-duration-reveal: 480ms;
+
+  /* Easing */
+  --motion-ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --motion-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Stagger — the per-item delay step; consumers set `--motion-index`
+     (inline style, one integer per item) and use
+     `calc(min(var(--motion-index, 0), 8) * var(--motion-stagger-step))`
+     so even a long list's total wait is bounded at 8 steps. */
+  --motion-stagger-step: 55ms;
+}
+
+/* ---------------------------------------------------------------------
+ * Entrance primitives — apply directly as a class, or reference the
+ * keyframes from a component's own animation shorthand (several existing
+ * components already do the latter; both are supported).
+ * --------------------------------------------------------------------- */
+
+.motion-fade-in {
+  animation: motion-fade-in var(--motion-duration-normal) var(--motion-ease-standard) both;
+}
+
+.motion-scale-in {
+  animation: motion-scale-in var(--motion-duration-slow) var(--motion-ease-enter) both;
+}
+
+.motion-rise-in {
+  animation: motion-rise-in var(--motion-duration-normal) var(--motion-ease-enter) both;
+}
+
+/* Bounded stagger reveal — pair with an inline `--motion-index` per item. */
+.motion-stagger-item {
+  opacity: 0;
+  animation: motion-rise-in var(--motion-duration-reveal) var(--motion-ease-standard) both;
+  animation-delay: calc(min(var(--motion-index, 0), 8) * var(--motion-stagger-step));
+}
+
+/* Restrained, single-focal-element rarity glow — small `filter: brightness`
+   pulses only (never an animated box-shadow across a large surface). */
+.motion-glow-rare {
+  animation: motion-glow-rare 2.6s ease-in-out infinite;
+}
+.motion-glow-epic {
+  animation: motion-glow-epic 2.3s ease-in-out infinite;
+}
+.motion-glow-legendary {
+  animation: motion-glow-legendary 2s ease-in-out infinite;
+}
+
+@keyframes motion-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes motion-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes motion-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes motion-glow-rare {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.1);
+  }
+}
+
+@keyframes motion-glow-epic {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.16);
+  }
+}
+
+@keyframes motion-glow-legendary {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.22);
+  }
+}
+
+/* ---------------------------------------------------------------------
+ * Reduced motion. `styles/globals.css` already forces every
+ * animation/transition duration to ~0 globally (kept, unchanged) — the
+ * rules below additionally zero stagger/emphasis DELAYS (a duration-only
+ * rule does not stop a delayed animation from still waiting to start)
+ * and disable the continuous rarity/glow/pulse loops entirely, so nothing
+ * ambient keeps re-triggering under reduced motion. Content/functionality
+ * is never hidden — only the motion is removed.
+ * --------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-delay: 0ms !important;
+    transition-delay: 0ms !important;
+  }
+
+  .motion-glow-rare,
+  .motion-glow-epic,
+  .motion-glow-legendary {
+    animation: none !important;
+    filter: none !important;
+  }
+}

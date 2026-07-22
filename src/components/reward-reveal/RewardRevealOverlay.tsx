@@ -4,6 +4,12 @@ import { UTILITY_ICON } from "@/data/assetRegistry";
 import type { RewardRevealItem } from "@/data/rewardReveal";
 import "./RewardRevealOverlay.css";
 
+const RARITY_GLOW_CLASS: Partial<Record<string, string>> = {
+  rare: "motion-glow-rare",
+  epic: "motion-glow-epic",
+  legendary: "motion-glow-legendary",
+};
+
 export interface RewardRevealOverlayProps {
   isOpen: boolean;
   items: readonly RewardRevealItem[];
@@ -48,7 +54,20 @@ export function RewardRevealOverlay({ isOpen, items, currentIndex, onNext, onClo
           </p>
         ) : null}
 
-        <div className={`reward-reveal__art reward-reveal__art--${item.rarity ?? "common"}`}>
+        {/* Restrained rarity glow — Rare/Epic/Legendary art pulses gently
+            (shared classes, see styles/motion.css); Common items stay
+            static. Only one such focal element is ever on screen at a
+            time here, so this never becomes a page full of ambient
+            animations. */}
+        <div
+          className={[
+            "reward-reveal__art",
+            `reward-reveal__art--${item.rarity ?? "common"}`,
+            item.rarity ? RARITY_GLOW_CLASS[item.rarity] : undefined,
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
           {item.isNew ? <span className="reward-reveal__new-badge">NEW</span> : null}
           <img
             src={item.imageSrc || UTILITY_ICON.emptySlot}

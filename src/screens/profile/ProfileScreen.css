@@ -37,8 +37,8 @@
 .player-profile__max-badge { padding: 2px 7px; border-radius: var(--radius-pill); background: var(--color-gold-500); color: var(--color-text-on-gold); font-size: 9px; font-weight: 700; }
 
 .player-profile__xp { min-width: 0; display: grid; gap: 4px; }
-.player-profile__xp-track { width: 100%; min-width: 0; height: 8px; border-radius: var(--radius-pill); background: rgba(255,255,255,.08); overflow: hidden; }
-.player-profile__xp-track i { display: block; height: 100%; background: linear-gradient(90deg, var(--color-secondary-500), var(--color-primary-500)); }
+.player-profile__xp-fill .progress-fill__track { height: 8px; background: rgba(255,255,255,.08); border: none; }
+.player-profile__xp-fill .progress-fill__bar--secondary { background: linear-gradient(90deg, var(--color-secondary-500), var(--color-primary-500)); box-shadow: none; }
 .player-profile__xp small { color: #b6b3d6; font-size: 10px; }
 .player-profile__xp--max small { color: var(--color-gold-300); }
 

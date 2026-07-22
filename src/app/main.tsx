@@ -5,6 +5,7 @@ import "@/styles/reset.css";
 import "@/styles/tokens.css";
 import "@/styles/globals.css";
 import "@/styles/effects.css";
+import "@/styles/motion.css";
 
 const container = document.getElementById("root");
 if (!container) {

@@ -3,6 +3,7 @@ import type { ResolvedReward } from "@/types";
 import type { PlayerUnlockDefinition } from "@/systems/playerProgression";
 import { ModalLayer } from "@/components/feedback/ModalLayer";
 import { PrimaryButton } from "@/components/controls/PrimaryButton";
+import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 import { toRewardDisplayRows } from "@/data/rewardDisplay";
 import "./PlayerLevelUpModal.css";
 
@@ -30,6 +31,15 @@ export interface PlayerLevelUpModalProps {
  * the full transition and one combined, aggregated reward/unlock
  * presentation rather than one modal per level.
  */
+/** Restrained milestone glow — only Rare/Epic/Legendary rows pulse at all
+ *  (see styles/motion.css); Common rewards stay static, matching the
+ *  "never apply strong animated effects to common items" rule. */
+const RARITY_GLOW_CLASS: Partial<Record<string, string>> = {
+  rare: "motion-glow-rare",
+  epic: "motion-glow-epic",
+  legendary: "motion-glow-legendary",
+};
+
 export function PlayerLevelUpModal({
   isOpen,
   previousLevel,
@@ -69,13 +79,21 @@ export function PlayerLevelUpModal({
                 {rewardRows.map((row, index) => (
                   <li
                     key={row.key}
-                    className={`level-up-modal__reward level-up-modal__reward--${row.rarity}`}
+                    className={[
+                      "level-up-modal__reward",
+                      `level-up-modal__reward--${row.rarity}`,
+                      RARITY_GLOW_CLASS[row.rarity],
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
                     style={{ "--reveal-index": index } as CSSProperties}
                   >
                     <img src={row.icon} alt="" />
                     <span className="level-up-modal__reward-name">{row.displayName}</span>
                     {row.amount !== null ? (
-                      <span className="level-up-modal__reward-amount">×{row.amount.toLocaleString()}</span>
+                      <span className="level-up-modal__reward-amount">
+                        ×{row.kind === "currency" ? <AnimatedNumber value={row.amount} /> : row.amount.toLocaleString()}
+                      </span>
                     ) : null}
                   </li>
                 ))}

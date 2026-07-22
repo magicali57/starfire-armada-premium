@@ -64,15 +64,22 @@ export function ResultsScreen() {
   const showLevelUpModal = hasLevelUpToShow && levelUpConsumedSessionId !== view.sessionId;
   const showRewardReveal =
     !showLevelUpModal && rewardRevealQueue.length > 0 && rewardRevealConsumedSessionId !== view.sessionId;
+  // Neither overlay's own close button reaches these handlers (they only
+  // ever call the marker setters above), but every Results action handler
+  // still guards on overlay-active too — belt-and-suspenders so an overlay
+  // can never be bypassed by, e.g., a stray click landing on the
+  // interactive screen underneath before a re-render commits.
+  const overlayActive = showLevelUpModal || showRewardReveal;
 
   const handleCampaign = () => {
+    if (overlayActive) return;
     // Clears TEMPORARY session state only — awarded progression persists.
     resetBattle();
     navigate("campaign");
   };
 
   const handleContinue = () => {
-    if (!view.nextStageId) return;
+    if (overlayActive || !view.nextStageId) return;
     // Continue never spends Energy or creates a session — it only clears
     // the finished session's temporary state and hands off to the
     // existing Stage Detail flow (same "?id=" convention Pre-Battle/Stage
@@ -82,7 +89,7 @@ export function ResultsScreen() {
   };
 
   const handleReplayOrRetry = () => {
-    if (isStartingSession) return;
+    if (overlayActive || isStartingSession) return;
     setIsStartingSession(true);
     setEnergyAlert(null);
     // retryBattle (store/playerStore.tsx) creates a fresh sessionId for
@@ -140,7 +147,7 @@ export function ResultsScreen() {
 
       <BattleResultActions
         availableActions={view.availableActions}
-        busy={isStartingSession}
+        busy={isStartingSession || overlayActive}
         onContinue={handleContinue}
         onReplay={handleReplayOrRetry}
         onRetry={handleReplayOrRetry}

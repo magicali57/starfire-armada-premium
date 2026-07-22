@@ -15,6 +15,7 @@ import { StageLoadoutPanel } from "@/components/stage-detail/StageLoadoutPanel";
 import { LockedContentModal } from "@/components/feedback/LockedContentModal";
 import { getStageMapNodeById } from "@/data/campaignChapterMap";
 import { getStageDetailContent, type StageRewardItem } from "@/data/campaignStageDetail";
+import { getStageById, getChapterById, isStageAccessible } from "@/data/campaign";
 import { SHIP_ROSTER_ART, COMPANION_ART } from "@/data/assetRegistry";
 import { navigate, pathFor } from "@/app/routes";
 import "./CampaignStageDetailScreen.css";
@@ -47,8 +48,21 @@ export function CampaignStageDetailScreen() {
     return new URLSearchParams(hash.slice(queryIndex + 1)).get("id") ?? undefined;
   }, []);
 
+  // Real canonical stage (data/campaign.ts) takes priority over the
+  // prototype reference-map node (campaignChapterMap.ts) — same
+  // "real id wins, prototype id keeps its existing behavior" convention
+  // used by Pre-Battle. Either way the same presentational content
+  // generator renders the screen; only the source of the index/chapter
+  // numbers (and, below, the Prepare destination + accessibility check)
+  // differs.
+  const realStage = stageId ? getStageById(stageId) : undefined;
   const stageNode = stageId ? getStageMapNodeById(stageId) : undefined;
-  const content = stageNode ? getStageDetailContent(stageNode.id, stageNode.index, 2) : undefined;
+  const content = realStage
+    ? getStageDetailContent(realStage.id, realStage.index, getChapterById(realStage.chapterId)?.index ?? 1)
+    : stageNode
+      ? getStageDetailContent(stageNode.id, stageNode.index, 2)
+      : undefined;
+  const isLocked = realStage ? !isStageAccessible(player, realStage.id) : false;
 
   const handleSelectReward = (reward: StageRewardItem) => {
     openModal(`${reward.amount} Reward`, "Reward details aren't wired up yet — coming soon.");
@@ -56,6 +70,14 @@ export function CampaignStageDetailScreen() {
 
   const handlePrepare = () => {
     if (!stageId) return;
+    if (isLocked) {
+      openModal("Stage Locked", "Clear the previous stage first to unlock this one.");
+      return;
+    }
+    // Route id "pre-battle-placeholder" is the real Pre-Battle screen
+    // (PreBattleScreen.tsx) — see routes.tsx's own note on the naming.
+    // Real and prototype-only stage ids both land here; the screen itself
+    // resolves which is which (same pattern as this screen).
     window.location.hash = `${pathFor("pre-battle-placeholder")}?id=${stageId}`;
   };
 

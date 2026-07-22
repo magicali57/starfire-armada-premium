@@ -1,4 +1,4 @@
-import type { CampaignChapter, CampaignStage } from "@/types";
+import type { CampaignChapter, CampaignStage, PlayerState } from "@/types";
 
 export const CAMPAIGN_STAGES: CampaignStage[] = [
   {
@@ -73,3 +73,28 @@ export const getChapterById = (chapterId: string): CampaignChapter | undefined =
 
 export const getStageById = (stageId: string): CampaignStage | undefined =>
   CAMPAIGN_STAGES.find((stage) => stage.id === stageId);
+
+/** Every stage in the same chapter, in canonical (linear) order. */
+export const getStagesInChapter = (chapterId: string): CampaignStage[] =>
+  CAMPAIGN_STAGES.filter((stage) => stage.chapterId === chapterId);
+
+/**
+ * The ONE canonical stage-accessibility rule (linear per-chapter
+ * progression via `highestClearedStageId`) — reused by Stage
+ * Detail/Pre-Battle validation and by any stage-list screen, instead of
+ * each re-deriving its own "highestClearedIndex" calculation. A stage is
+ * accessible when it has already been cleared (repeat-clear/Replay is
+ * always allowed) OR it is exactly the next stage after the chapter's
+ * highest-cleared stage (including the very first stage of a chapter with
+ * nothing cleared yet). Unknown stage ids are never accessible.
+ */
+export function isStageAccessible(player: PlayerState, stageId: string): boolean {
+  const stage = getStageById(stageId);
+  if (!stage) return false;
+  const chapterStages = getStagesInChapter(stage.chapterId);
+  const stageIndex = chapterStages.findIndex((s) => s.id === stageId);
+  const highestClearedIndex = player.highestClearedStageId
+    ? chapterStages.findIndex((s) => s.id === player.highestClearedStageId)
+    : -1;
+  return stageIndex <= highestClearedIndex + 1;
+}

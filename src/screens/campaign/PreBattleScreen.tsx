@@ -10,6 +10,8 @@ import { LockedContentModal } from "@/components/feedback/LockedContentModal";
 import { BattleModeIcon } from "@/components/icons/BattleModeIcon";
 import { getStageMapNodeById } from "@/data/campaignChapterMap";
 import { getPreBattleContent } from "@/data/preBattle";
+import { getStageById, getChapterById, isStageAccessible } from "@/data/campaign";
+import { getBattleEnergyCost } from "@/systems/battleSession";
 import { SHIP_ROSTER_ART, COMPANION_ART, MODULE_ART } from "@/data/assetRegistry";
 import { navigate, pathFor } from "@/app/routes";
 import "./PreBattleScreen.css";
@@ -37,8 +39,9 @@ const MODULE_ART_BY_SLOT = {
 } as const;
 
 export function PreBattleScreen() {
-  const { player } = usePlayerStore();
+  const { player, startBattle } = usePlayerStore();
   const [modal, setModal] = useState<ModalState | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
   const openModal = (title: string, message: string) => setModal({ title, message });
 
   const stageId = useMemo(() => {
@@ -48,8 +51,20 @@ export function PreBattleScreen() {
     return new URLSearchParams(hash.slice(queryIndex + 1)).get("id") ?? undefined;
   }, []);
 
+  // Real canonical stage (data/campaign.ts, the same ids the battle-session
+  // pipeline/rewards use) takes priority over the prototype reference-map
+  // node (campaignChapterMap.ts's disconnected "stage-N" ids) — a real
+  // stage id gets real mission fields (index/chapter) fed into the same
+  // presentational content generator; a prototype-only id keeps the exact
+  // previous behavior. `content` is never undefined for either case, only
+  // when the id matches neither.
+  const realStage = stageId ? getStageById(stageId) : undefined;
   const stageNode = stageId ? getStageMapNodeById(stageId) : undefined;
-  const content = stageNode ? getPreBattleContent(stageNode.id, stageNode.index, 2) : undefined;
+  const content = realStage
+    ? getPreBattleContent(realStage.id, realStage.index, getChapterById(realStage.chapterId)?.index ?? 1)
+    : stageNode
+      ? getPreBattleContent(stageNode.id, stageNode.index, 2)
+      : undefined;
 
   const backToStageDetail = () => {
     if (!stageId) {
@@ -59,31 +74,54 @@ export function PreBattleScreen() {
     window.location.hash = `${pathFor("stage-detail")}?id=${stageId}`;
   };
 
-  // Eligibility is read-only — `player.currencies.energy` is never written
-  // here. See handleStart below for why: the governing rule
-  // (SCREEN_NAVIGATION_MAP.md B-15) states Energy is consumed only once a
-  // battle session is *successfully created*, and the Battle Launch
-  // destination this screen currently has available is a disclosed
-  // placeholder, not a real session — so no deduction happens yet.
-  const hasSufficientEnergy = content ? player.currencies.energy >= content.energyCost : false;
+  // Real Energy cost (the same flat canonical value the battle-session
+  // pipeline itself will charge) once this is a real stage; the prototype
+  // content's own made-up cost only remains for prototype-only ids that
+  // have no real economy backing at all.
+  const energyCost = realStage ? getBattleEnergyCost(realStage.id) : content?.energyCost ?? 0;
+  const hasSufficientEnergy = content ? player.currencies.energy >= energyCost : false;
+  const isLocked = realStage ? !isStageAccessible(player, realStage.id) : false;
 
+  // ENERGY DEDUCTION BOUNDARY: Energy is never spent in this component.
+  // `startBattle` (the store action wrapping the canonical
+  // prepareBattleSession → startBattleSession transition) is the ONLY
+  // place Energy is deducted, atomically, exactly once, only after every
+  // other validation (stage exists, accessible, Energy available) passes.
+  // Navigation to Gameplay only happens after that call reports success.
   const handleStart = () => {
-    if (!content || !stageId) return;
+    if (!content || !stageId || isStarting) return;
 
+    if (!realStage) {
+      openModal("Stage Unavailable", "This stage isn't connected to the battle system yet.");
+      return;
+    }
+    if (isLocked) {
+      openModal("Stage Locked", "Clear the previous stage first to unlock this one.");
+      return;
+    }
     if (!hasSufficientEnergy) {
-      openModal("Not Enough Energy", `This stage costs ${content.energyCost} Energy. Come back once you've recovered enough.`);
+      openModal("Not Enough Energy", `This stage costs ${energyCost} Energy. Come back once you've recovered enough.`);
       return;
     }
 
-    // Intentionally NOT calling spendCurrency("energy", ...) here.
-    // ENERGY DEDUCTION BOUNDARY: real Energy spend must be wired at the
-    // point a real battle session is actually created (i.e. inside the
-    // future real gameplay-launch flow, after GameplayScreen/data/campaign.ts
-    // are connected to this prototype stage id space) — not here, and not
-    // inside GameplayLaunchPlaceholderScreen, since neither creates a real
-    // session yet. Navigating to the placeholder must never mutate the
-    // player's real Energy balance.
-    window.location.hash = `${pathFor("battle-launch")}?id=${stageId}`;
+    setIsStarting(true);
+    const result = startBattle({ stageId: realStage.id });
+    setIsStarting(false);
+
+    if (!result.ok) {
+      if (result.error === "insufficient-energy") {
+        openModal("Not Enough Energy", `This stage costs ${energyCost} Energy. Come back once you've recovered enough.`);
+      } else if (result.error === "unknown-stage") {
+        openModal("Stage Unavailable", "This stage isn't connected to the battle system yet.");
+      } else {
+        // "busy"/"invalid-transition" — an in-flight/duplicate start; the
+        // store already rejected the second attempt, so no state changed.
+        openModal("Please Wait", "A battle is already starting. Please try again in a moment.");
+      }
+      return;
+    }
+
+    navigate("gameplay");
   };
 
   return (

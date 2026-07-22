@@ -5,7 +5,7 @@ import { ProgressBar } from "@/components/controls/ProgressBar";
 import { CAMPAIGN_CHAPTERS, CAMPAIGN_STAGES } from "@/data";
 import { CHAPTER_BACKGROUND_IMAGE } from "@/data/assetRegistry";
 import { usePlayerStore } from "@/store/playerStore";
-import { navigate } from "@/app/routes";
+import { navigate, pathFor } from "@/app/routes";
 import type { StageKind } from "@/types";
 import "./CampaignScreen.css";
 
@@ -18,7 +18,7 @@ const STAGE_KIND_META: Record<StageKind, { label: string; icon: string; accent: 
 };
 
 export function CampaignScreen() {
-  const { player, setCurrentStage } = usePlayerStore();
+  const { player } = usePlayerStore();
   const chapter = CAMPAIGN_CHAPTERS[0];
   const stages = CAMPAIGN_STAGES.filter((s) => s.chapterId === chapter.id);
 
@@ -121,8 +121,13 @@ export function CampaignScreen() {
               <PrimaryButton
                 className="campaign-screen__stage-button"
                 onClick={() => {
-                  setCurrentStage(chapter.id, stage.id);
-                  navigate("gameplay");
+                  // Route through the real Stage Detail → Pre-Battle flow
+                  // (same "?id=" convention the rest of the loop uses)
+                  // instead of jumping straight to Gameplay — Gameplay now
+                  // requires an active battle session, which only
+                  // Pre-Battle's Start action (validated Energy spend)
+                  // creates.
+                  window.location.hash = `${pathFor("stage-detail")}?id=${stage.id}`;
                 }}
                 aria-label={`${isCurrent ? "Continue" : "Play"} stage ${stage.index}: ${stage.name}`}
               >

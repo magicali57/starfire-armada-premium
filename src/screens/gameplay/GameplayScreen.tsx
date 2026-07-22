@@ -8,11 +8,47 @@ import "./GameplayScreen.css";
 // (translated from legacy/current-prototype) will mount here in a later
 // batch; this batch only proves the route and layout.
 export function GameplayScreen() {
-  const { player, battleSession, declareBattleVictory, completeBattle, enterBattleResults } =
-    usePlayerStore();
+  const {
+    player,
+    battleSession,
+    startBattle,
+    declareBattleVictory,
+    declareBattleDefeat,
+    completeBattle,
+    enterBattleResults,
+  } = usePlayerStore();
   const ship = getShipById(player.selectedShipId);
   const stage = getStageById(player.currentStageId);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Debug-only helper: the real gameplay engine will one day create the
+  // session itself (Pre-Battle → Battle Launch → real combat). Until then,
+  // this screen is the only way to exercise the canonical battle-session
+  // pipeline end-to-end, so the debug buttons below self-start a session
+  // for the player's current stage when none is already active, instead
+  // of silently no-op'ing (the previous behavior when reached with no
+  // active session). Still never fabricates a result — it runs the exact
+  // same startBattle/declare/complete/enterResults sequence a real engine
+  // would.
+  const ensureActiveSession = () => {
+    if (battleSession?.status === "active") return battleSession;
+    const started = startBattle({ stageId: player.currentStageId });
+    return started.ok ? started.session : null;
+  };
+
+  const endStage = (outcome: "victory" | "defeat") => {
+    const active = ensureActiveSession();
+    if (active) {
+      const declared = outcome === "victory" ? declareBattleVictory() : declareBattleDefeat();
+      if (declared.ok && declared.session) {
+        const completed = completeBattle(declared.session.sessionId);
+        if (completed.ok && completed.session) {
+          enterBattleResults(completed.session.sessionId);
+        }
+      }
+    }
+    navigate("results");
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -34,29 +70,14 @@ export function GameplayScreen() {
         <span>{stage?.name ?? "No stage"}</span>
       </div>
       <canvas ref={canvasRef} width={390} height={600} className="gameplay-screen__canvas" />
-      <button
-        type="button"
-        className="gameplay-screen__end press-scale"
-        onClick={() => {
-          // Debug path only — the future real engine will declare victory/
-          // defeat from actual combat conditions. When a canonical battle
-          // session is active this flows through the exactly-once
-          // completion pipeline; without one, Results redirects safely and
-          // grants nothing (the old direct-to-results prototype behavior).
-          if (battleSession?.status === "active") {
-            const declared = declareBattleVictory();
-            if (declared.ok && declared.session) {
-              const completed = completeBattle(declared.session.sessionId);
-              if (completed.ok && completed.session) {
-                enterBattleResults(completed.session.sessionId);
-              }
-            }
-          }
-          navigate("results");
-        }}
-      >
-        End Stage (debug)
-      </button>
+      <div className="gameplay-screen__debug-actions">
+        <button type="button" className="gameplay-screen__end press-scale" onClick={() => endStage("victory")}>
+          Win Stage (debug)
+        </button>
+        <button type="button" className="gameplay-screen__end press-scale" onClick={() => endStage("defeat")}>
+          Lose Stage (debug)
+        </button>
+      </div>
     </div>
   );
 }

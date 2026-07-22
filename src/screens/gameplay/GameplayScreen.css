@@ -22,6 +22,11 @@
   border: var(--border-neon-secondary);
 }
 
+.gameplay-screen__debug-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
 .gameplay-screen__end {
   padding: var(--space-2) var(--space-5);
   border-radius: var(--radius-pill);

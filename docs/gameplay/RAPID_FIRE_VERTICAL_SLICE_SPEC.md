@@ -305,6 +305,18 @@ Pass performance into `declareBattleVictory` / `declareBattleDefeat` — never f
 
 **Reuse policy:** one primary bolt + one heavy tint/scale; do not request ten projectile PNGs.
 
+### Core slice asset install (implemented)
+
+Installed under `public/assets/ui-v2/gameplay/rapid-fire/` (filenames unchanged):
+
+- `rapid_fire_primary_bolt.png`
+- `fire_up_pickup.png`
+- `enemy_basic_fighter.png`
+- `enemy_shooter.png`
+- `enemy_power_carrier.png`
+
+Registered via `RAPID_FIRE_GAMEPLAY_ASSETS` / `RAPID_FIRE_SLICE_ASSETS`. Renderer: Canvas 2D `RapidFireEngine` (`src/gameplay/rapidFire/`). First coding pass implements Firepower/Fire-Up/enemies/waves/Hull/pause/Results only — Signature / Passive / Calamity remain deferred.
+
 ---
 
 ## 17. Implementation boundaries
@@ -323,6 +335,7 @@ Boss · companion combat · module combat procs · Arsenal secondary fire · rev
 - Outcomes still go through `declareBattle*` → `completeBattle` → `enterBattleResults`.
 - Do not add a second weapon-upgrade system.
 - Do not rename abilities in data without a dedicated rename task.
+- Gameplay session UI must treat `battleSession.status === "paused"` as a valid play surface (not redirect to Campaign).
 
 ---
 

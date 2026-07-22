@@ -92,7 +92,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     // Chest Vault (#/inventory/chests) owns HubScreenShell + HubBottomNav.
     route !== "chest-opening" &&
     // Daily Missions (#/missions/daily) owns HubScreenShell + HubBottomNav.
-    route !== "daily-missions";
+    route !== "daily-missions" &&
+    // Combat and Results are full-bleed play surfaces — no hub footer.
+    route !== "gameplay" &&
+    route !== "results";
   const isHome = route === "home";
 
   return (

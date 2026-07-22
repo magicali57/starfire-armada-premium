@@ -582,3 +582,16 @@ export const MODULE_ART: Record<
   reactiveArmor: `${BASE}/modules/reactive_armor_module.png`,
   targetingArray: `${BASE}/modules/targeting_array_module.png`,
 };
+
+// ---------------------------------------------------------------------------
+// Rapid-Fire vertical-slice combat art (installed from
+// rapid_fire_cursor_ready_assets.zip — filenames preserved).
+// ---------------------------------------------------------------------------
+
+export const RAPID_FIRE_GAMEPLAY_ASSETS = {
+  primaryBolt: `${BASE}/gameplay/rapid-fire/rapid_fire_primary_bolt.png`,
+  fireUpPickup: `${BASE}/gameplay/rapid-fire/fire_up_pickup.png`,
+  enemyBasic: `${BASE}/gameplay/rapid-fire/enemy_basic_fighter.png`,
+  enemyShooter: `${BASE}/gameplay/rapid-fire/enemy_shooter.png`,
+  enemyPowerCarrier: `${BASE}/gameplay/rapid-fire/enemy_power_carrier.png`,
+} as const;

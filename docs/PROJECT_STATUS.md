@@ -16,7 +16,7 @@ The approved UI visual-reference library is available at `STARFIRE_ARMADA_UI_HAN
 - Modules Inventory, Module Detail, Module Upgrade (`src/screens/modules`, `module-detail`, `module-upgrade`)
 - Loadout Manager (`src/screens/loadout`)
 - Inventory Hub (`src/screens/inventory`)
-- Gameplay (placeholder canvas, requires an active battle session, dev-only debug victory/defeat trigger) (`src/screens/gameplay`)
+- Gameplay — Rapid-Fire canvas combat core on `ch1-stage-1` (`src/screens/gameplay`, `src/gameplay/rapidFire/`). Requires an active/paused battle session; non–Rapid-Fire ships redirect. DEV-only Win/Lose debug controls remain gated by `import.meta.env.DEV`.
 - Results — Victory/Defeat visually aligned to `47_Victory_Results.png` / `48_Defeat_Results.png` (hero wings, nebula backdrop mood, framed reward cards, gold Next Stage / red Retry hierarchy). Still consumes only `getBattleResultsView` (`src/screens/results`, `src/components/results`)
 - Player Profile + Edit Profile modal (`src/screens/profile`, `src/components/profile`)
 - Player Level-Up modal, integrated into Results on victory (`src/components/level-up`)
@@ -25,9 +25,11 @@ The approved UI visual-reference library is available at `STARFIRE_ARMADA_UI_HAN
 - Shop Hub at `#/shop` — Featured hero (Commander Supply Bundle), Resources/Energy/Chests categories, confirmation + success modals, canonical `purchaseShopOffer` transaction (`src/screens/shop`, `src/data/shopOffers.ts`, `src/systems/rewards/purchaseShopOffer.ts`)
 - Daily Missions at `#/missions/daily` — 8 trackable missions, activity milestones 20–100, local-day reset, atomic claims (`src/screens/missions`, `src/data/dailyMissions.ts`, `src/systems/dailyMissions/`)
 
-## Gameplay vertical slice (planned)
+## Gameplay vertical slice (implemented — Rapid-Fire core)
 
-- **Rapid-Fire** (`ship-01-rapid-fire`) is the approved **first playable gameplay vertical slice**. Spec: `docs/gameplay/RAPID_FIRE_VERTICAL_SLICE_SPEC.md`. Audit: `docs/handoffs/rapid-fire-audit/REPORT.md`. Engine not implemented yet (placeholder `GameplayScreen`).
+- **Rapid-Fire** (`ship-01-rapid-fire`) first playable combat core on **`ch1-stage-1`**.
+- Spec: `docs/gameplay/RAPID_FIRE_VERTICAL_SLICE_SPEC.md`. Audit: `docs/handoffs/rapid-fire-audit/REPORT.md`. Completion: `docs/handoffs/rapid-fire-gameplay-core/COMPLETION_REPORT.md`.
+- Canvas engine: Firepower 0–10, Fire-Up, Max Firepower, three enemy types, five waves, Hull, pause, real `BattlePerformance`, session→Results. Signature / Passive / Calamity / Arsenal secondary / companions / modules / boss still deferred.
 
 ## Implemented progression systems
 
@@ -106,7 +108,7 @@ The approved UI visual-reference library is available at `STARFIRE_ARMADA_UI_HAN
 
 ## Known current limitations
 
-- Real combat victory/defeat conditions are not yet integrated — the gameplay engine is still a placeholder canvas; outcomes are only triggered via a dev-only debug button (stripped from production builds).
+- Rapid-Fire combat core is playable on `ch1-stage-1` only; Signature / Passive / Calamity / Arsenal secondary / companion & module combat / bosses are not implemented yet.
 - No difficulty selector or loadout-validation gate exists yet in Pre-Battle — Start always uses the default `"normal"` difficulty and the player's already-owned `selectedShipId` (always valid by construction); both remain future work if/when those become real player choices.
 - The prototype Chapter Map / Stage Detail / Pre-Battle reference content (`campaignChapterMap.ts`'s "stage-N" ids, disconnected from `data/campaign.ts`'s real "ch1-stage-N" ids) is unchanged and still cosmetic-only for those ids — only real canonical stage ids get a working Start button.
 - Daily Login Rewards (calendar/streak) remain to be developed. Daily Missions (task board + activity milestones) are implemented.
@@ -114,4 +116,4 @@ The approved UI visual-reference library is available at `STARFIRE_ARMADA_UI_HAN
 
 ## Recommended next task
 
-Implement the Rapid-Fire first playable vertical slice per `docs/gameplay/RAPID_FIRE_VERTICAL_SLICE_SPEC.md` (Firepower 0–10, Fire-Up, enemies, Hull, session→Results). Daily Login Rewards remain separate and postponed.
+Playtest and tune Rapid-Fire prototype combat values (Firepower intervals, enemy pacing, Hull feel), then expand deferred combat systems (Signature / Passive / Calamity) or additional ships only when scheduled. Daily Login Rewards remain separate and postponed.

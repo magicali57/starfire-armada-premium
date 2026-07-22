@@ -30,6 +30,7 @@ The approved UI visual-reference library is available at `STARFIRE_ARMADA_UI_HAN
 - **Rapid-Fire** (`ship-01-rapid-fire`) first playable combat core on **`ch1-stage-1`**.
 - Spec: `docs/gameplay/RAPID_FIRE_VERTICAL_SLICE_SPEC.md`. Audit: `docs/handoffs/rapid-fire-audit/REPORT.md`. Completion: `docs/handoffs/rapid-fire-gameplay-core/COMPLETION_REPORT.md`.
 - Canvas engine: Firepower 0–10, Fire-Up, Max Firepower, three enemy types, five waves, Hull, pause, real `BattlePerformance`, session→Results. Signature / Passive / Calamity / Arsenal secondary / companions / modules / boss still deferred.
+- **Playability navigation** (Campaign chapter routing, Chapter 1 → `ch1-stage-1`, Fleet Equip + Pre-Battle Rapid-Fire gate): `docs/handoffs/rapid-fire-playability-fix/COMPLETION_REPORT.md`.
 
 ## Implemented progression systems
 
@@ -116,4 +117,4 @@ The approved UI visual-reference library is available at `STARFIRE_ARMADA_UI_HAN
 
 ## Recommended next task
 
-Playtest and tune Rapid-Fire prototype combat values (Firepower intervals, enemy pacing, Hull feel), then expand deferred combat systems (Signature / Passive / Calamity) or additional ships only when scheduled. Daily Login Rewards remain separate and postponed.
+Playtest and tune Rapid-Fire prototype combat values (Firepower intervals, enemy pacing, Hull feel), then expand deferred combat systems (Signature / Passive / Calamity) or additional ships only when scheduled. Daily Login Rewards remain separate and postponed. Chapter 2+ map stages still use prototype `stage-N` ids until connected.

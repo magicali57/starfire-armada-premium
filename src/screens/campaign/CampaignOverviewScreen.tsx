@@ -23,7 +23,7 @@ import {
   type ChapterOverviewCard,
 } from "@/data/campaignOverview";
 import { CHAPTER_BACKGROUND_IMAGE, MODE_ILLUSTRATION } from "@/data/assetRegistry";
-import { navigate } from "@/app/routes";
+import { pathFor } from "@/app/routes";
 import "./CampaignOverviewScreen.css";
 
 interface ComingSoonState {
@@ -48,16 +48,27 @@ const CHAPTER_ART: Record<string, { art: string; filter?: string }> = {
 export function CampaignOverviewScreen() {
   const { player } = usePlayerStore();
   const [comingSoon, setComingSoon] = useState<ComingSoonState | null>(null);
-  const [selectedChapterId, setSelectedChapterId] = useState("chapter-02");
+  // Selection is local UI state keyed by stable chapter id — never an array index.
+  const [selectedChapterId, setSelectedChapterId] = useState("chapter-01");
   const openComingSoon = (title: string, message: string) => setComingSoon({ title, message });
 
   const xpPct =
     player.xpToNextLevel > 0 ? Math.min(100, Math.round((player.xp / player.xpToNextLevel) * 100)) : 0;
 
-  // Chapter Map / Open Chapter both route to the existing stage-list screen
-  // (relocated to #/campaign/chapter-map), the temporary stand-in for the
-  // not-yet-built Chapter Map screen — per the approved plan.
-  const goToChapterMap = () => navigate("campaign-chapter-map");
+  const goToChapterMap = (chapterId: string) => {
+    const chapter = CAMPAIGN_OVERVIEW_CHAPTERS.find((c) => c.id === chapterId);
+    if (!chapter || chapter.status === "locked") {
+      openComingSoon(
+        chapter ? `Chapter ${chapter.chapterIndex}` : "Chapter Unavailable",
+        chapter
+          ? `Chapter ${chapter.chapterIndex} unlocks after clearing the previous chapter.`
+          : "That chapter isn't available.",
+      );
+      return;
+    }
+    // Route is built from the resolved chapter id, not a hard-coded Chapter 2 path.
+    window.location.hash = `${pathFor("campaign-chapter-map")}?chapter=${encodeURIComponent(chapter.id)}`;
+  };
 
   const carouselItems: ChapterCarouselItem[] = useMemo(
     () =>
@@ -78,7 +89,7 @@ export function CampaignOverviewScreen() {
   };
 
   const selectedDetail =
-    CAMPAIGN_OVERVIEW_CHAPTER_DETAILS[selectedChapterId] ?? CAMPAIGN_OVERVIEW_CHAPTER_DETAILS["chapter-02"];
+    CAMPAIGN_OVERVIEW_CHAPTER_DETAILS[selectedChapterId] ?? CAMPAIGN_OVERVIEW_CHAPTER_DETAILS["chapter-01"];
   const selectedArt = CHAPTER_ART[selectedChapterId]?.art ?? MODE_ILLUSTRATION.campaign;
 
   return (
@@ -92,17 +103,28 @@ export function CampaignOverviewScreen() {
             title="CAMPAIGN"
             subtitle="Explore the war sectors"
             trailing={
-              <SecondaryButton onClick={goToChapterMap} className="campaign-overview__chapter-map-btn">
+              <SecondaryButton
+                onClick={() => goToChapterMap(selectedChapterId)}
+                className="campaign-overview__chapter-map-btn"
+              >
                 <BattleModeIcon variant="mapPin" size={15} />
                 Chapter Map
               </SecondaryButton>
             }
           />
 
-          <ChapterCarousel items={carouselItems} onCardSelect={handleCardSelect} />
+          <ChapterCarousel
+            items={carouselItems}
+            selectedChapterId={selectedChapterId}
+            onCardSelect={handleCardSelect}
+          />
           <ChapterProgressRail chapters={CAMPAIGN_OVERVIEW_CHAPTERS} />
 
-          <ChapterDetailPanel detail={selectedDetail} art={selectedArt} onOpenChapter={goToChapterMap} />
+          <ChapterDetailPanel
+            detail={selectedDetail}
+            art={selectedArt}
+            onOpenChapter={() => goToChapterMap(selectedChapterId)}
+          />
 
           <div className="campaign-overview__rewards-row">
             <ChapterStarRewardsTrack

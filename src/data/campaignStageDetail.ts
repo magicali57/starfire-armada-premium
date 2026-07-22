@@ -147,6 +147,7 @@ export function getStageDetailContent(stageId: string, stageIndex: number, chapt
     stageId,
     stageIndex,
     chapterIndex,
+    chapterLabel: `Chapter ${chapterIndex}`,
     stageName: `Stage ${stageIndex}`,
     description:
       "Stage-specific mission briefing isn't written yet — this reuses Stage 7's reference layout with placeholder copy.",

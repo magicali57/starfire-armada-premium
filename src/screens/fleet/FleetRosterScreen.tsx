@@ -51,7 +51,9 @@ interface FleetCardEntry {
 export function FleetRosterScreen() {
   const { player, selectOwnedShip } = usePlayerStore();
   const [roleFilter, setRoleFilter] = useState<FleetRoleFilter>("All");
-  const [previewedShipId, setPreviewedShipId] = useState(FLEET_FEATURED_DEFAULT.shipId);
+  const [previewedShipId, setPreviewedShipId] = useState(
+    () => player.selectedShipId || FLEET_FEATURED_DEFAULT.shipId,
+  );
   const [comingSoon, setComingSoon] = useState<ComingSoonState | null>(null);
   const [lockedInfo, setLockedInfo] = useState<{ name: string; requirement: string } | null>(null);
 
@@ -63,14 +65,7 @@ export function FleetRosterScreen() {
   const orderedShipIds = useMemo(() => getFleetRosterOrder(SHIPS.map((s) => s.id)), []);
 
   // Real, data-driven acquired count for the header text — counts every
-  // ship whose resolved card data (the same getFleetRosterEntry the grid
-  // itself renders from, covering both the 8 reference-fixture ships and
-  // the other 12 real-data ships) reports `owned: true`. Deliberately
-  // computed from the full unfiltered `orderedShipIds` list, not the
-  // below `cards` array (which is role-filtered), so the count doesn't
-  // change when the player picks a role filter. Replaces the previous
-  // hard-coded "8 of 20 ships acquired" string — see
-  // FLEET_COMPANIONS_ALIGNMENT_FIX_REPORT.md.
+  // ship whose resolved card data reports `owned: true`.
   const ownedShipCount = useMemo(
     () => orderedShipIds.filter((shipId) => getFleetRosterEntry(shipId, player)?.owned).length,
     [orderedShipIds, player],
@@ -87,8 +82,11 @@ export function FleetRosterScreen() {
   }, [orderedShipIds, player, roleFilter]);
 
   const featuredShip: ShipDefinition =
-    getShipById(previewedShipId) ?? getShipById(FLEET_FEATURED_DEFAULT.shipId) ?? SHIPS[0];
+    getShipById(previewedShipId) ?? getShipById(player.selectedShipId) ?? getShipById(FLEET_FEATURED_DEFAULT.shipId) ?? SHIPS[0];
   const featuredStats = getFleetFeaturedStats(featuredShip.id, player);
+  const featuredEntry = getFleetRosterEntry(featuredShip.id, player);
+  const featuredOwned = featuredEntry?.owned ?? player.ownedShipIds.includes(featuredShip.id);
+  const featuredEquipped = player.selectedShipId === featuredShip.id;
 
   const handleCardSelect = (shipId: string, locked: boolean, name: string, requirement?: string) => {
     if (locked) {
@@ -102,12 +100,6 @@ export function FleetRosterScreen() {
     window.location.hash = `${pathFor("ship-detail-placeholder")}?id=${featuredShip.id}`;
   };
 
-  // Fleet-level category switch (Ships/Companions) — Fleet Roster IS the
-  // Ships branch, so "Ships" is always the active tab here and selecting it
-  // again is a no-op (avoids a redundant hash write to the URL it's already
-  // on). "Companions" navigates to the existing Companions Roster route,
-  // carrying `?return=fleet` so its own Back button returns here. Uses the
-  // existing `pathFor`/route id — no new route was created.
   const handleSelectCompanions = () => {
     window.location.hash = `${pathFor("companions")}?return=fleet`;
   };
@@ -116,25 +108,33 @@ export function FleetRosterScreen() {
     window.location.hash = pathFor("modules");
   };
 
-  // Parsed once on mount, same convention as PreBattleScreen/
-  // CampaignStageDetailScreen's own stageId — reads window.location.hash
-  // directly so it works on a direct route entry, not just client-side
-  // navigation. Normal Fleet behavior (no redirect after Equip) is
-  // preserved whenever this screen is opened without `return=loadout`.
-  const cameFromLoadout = useMemo(() => {
+  // `return=loadout` or `return=pre-battle&stage=<id>` — Equip returns the
+  // player to the caller without spending Energy.
+  const returnTarget = useMemo(() => {
     const hash = window.location.hash;
     const queryIndex = hash.indexOf("?");
-    if (queryIndex === -1) return false;
-    return new URLSearchParams(hash.slice(queryIndex + 1)).get("return") === "loadout";
+    if (queryIndex === -1) return null;
+    const params = new URLSearchParams(hash.slice(queryIndex + 1));
+    const ret = params.get("return");
+    if (ret === "loadout") return { kind: "loadout" as const };
+    if (ret === "pre-battle") {
+      const stage = params.get("stage");
+      if (stage) return { kind: "pre-battle" as const, stageId: stage };
+    }
+    return null;
   }, []);
 
   const handleEquip = () => {
-    // Safely no-ops for any ship not genuinely in player.ownedShipIds (see
-    // fleetRoster.ts's prototype-vs-real note) — never mutates progression
-    // beyond the existing, already-approved selectOwnedShip action.
-    selectOwnedShip(featuredShip.id);
-    if (cameFromLoadout) {
+    if (!featuredOwned) return;
+    if (!featuredEquipped) {
+      selectOwnedShip(featuredShip.id);
+    }
+    if (returnTarget?.kind === "loadout") {
       window.location.hash = pathFor("loadout");
+      return;
+    }
+    if (returnTarget?.kind === "pre-battle") {
+      window.location.hash = `${pathFor("pre-battle-placeholder")}?id=${encodeURIComponent(returnTarget.stageId)}`;
     }
   };
 
@@ -157,6 +157,15 @@ export function FleetRosterScreen() {
           <FleetFeaturedPanel
             ship={featuredShip}
             stats={featuredStats}
+            equipped={featuredEquipped}
+            canEquip={featuredOwned}
+            equipLabel={
+              returnTarget?.kind === "pre-battle" && featuredEquipped
+                ? "Continue"
+                : featuredEquipped
+                  ? "Equipped"
+                  : "Equip"
+            }
             onDetails={handleDetails}
             onEquip={handleEquip}
           />
@@ -179,7 +188,7 @@ export function FleetRosterScreen() {
                 onSelect={() =>
                   handleCardSelect(
                     ship.id,
-                    data.statusVariant === "locked",
+                    data.statusVariant === "locked" || !data.owned,
                     data.displayName ?? ship.name,
                     data.unlockRequirement,
                   )

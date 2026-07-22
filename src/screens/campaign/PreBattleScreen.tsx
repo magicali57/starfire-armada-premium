@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePlayerStore } from "@/store/playerStore";
 import { PreBattleTopBar } from "@/components/pre-battle/PreBattleTopBar";
 import { PreBattleMissionPanel } from "@/components/pre-battle/PreBattleMissionPanel";
@@ -8,11 +8,15 @@ import { PreBattleModuleRow } from "@/components/pre-battle/PreBattleModuleRow";
 import { PreBattleInfoPanels } from "@/components/pre-battle/PreBattleInfoPanels";
 import { LockedContentModal } from "@/components/feedback/LockedContentModal";
 import { BattleModeIcon } from "@/components/icons/BattleModeIcon";
+import { getShipById } from "@/data";
 import { getStageMapNodeById } from "@/data/campaignChapterMap";
 import { getPreBattleContent } from "@/data/preBattle";
 import { getStageById, getChapterById, isStageAccessible } from "@/data/campaign";
+import { RAPID_FIRE_SHIP_ID } from "@/data/gameplayRapidFire";
 import { getBattleEnergyCost } from "@/systems/battleSession";
-import { SHIP_ROSTER_ART, COMPANION_ART, MODULE_ART } from "@/data/assetRegistry";
+import { createDefaultShipProgress } from "@/systems/shipStats";
+import { SHIP_ROSTER_ART, COMPANION_ART, MODULE_ART, getShipMasterArt } from "@/data/assetRegistry";
+import { RARITY_LABEL } from "@/utils/rarity";
 import { navigate, pathFor } from "@/app/routes";
 import "./PreBattleScreen.css";
 
@@ -21,17 +25,8 @@ interface ModalState {
   message: string;
 }
 
-// The reference's ship caption reads "HOMING MISSILES" verbatim — an exact
-// name match to the real roster id `ship-03-homing-missiles`, not a loose
-// substitution like Stage Detail's own loadout art (which used
-// ship-01-rapid-fire for its differently-named "Void Reaper"). Companion
-// caption "REPAIR DRONE" is likewise an exact match to `repairDrone`.
-const LOADOUT_SHIP_ART = SHIP_ROSTER_ART["ship-03-homing-missiles"] ?? "";
 const LOADOUT_COMPANION_ART = COMPANION_ART.repairDrone;
 
-// Closest-by-function module art substitutions — no exact "Nebula Core" /
-// "Titanium Plating" / "Targeting AI" assets exist in MODULE_ART. Disclosed
-// in the completion report.
 const MODULE_ART_BY_SLOT = {
   core: MODULE_ART.energyShieldMatrix,
   plating: MODULE_ART.nanoHullPlating,
@@ -51,13 +46,21 @@ export function PreBattleScreen() {
     return new URLSearchParams(hash.slice(queryIndex + 1)).get("id") ?? undefined;
   }, []);
 
-  // Real canonical stage (data/campaign.ts, the same ids the battle-session
-  // pipeline/rewards use) takes priority over the prototype reference-map
-  // node (campaignChapterMap.ts's disconnected "stage-N" ids) — a real
-  // stage id gets real mission fields (index/chapter) fed into the same
-  // presentational content generator; a prototype-only id keeps the exact
-  // previous behavior. `content` is never undefined for either case, only
-  // when the id matches neither.
+  const rapidFireReason = useMemo(() => {
+    const hash = window.location.hash;
+    const queryIndex = hash.indexOf("?");
+    if (queryIndex === -1) return false;
+    return new URLSearchParams(hash.slice(queryIndex + 1)).get("reason") === "rapid-fire-required";
+  }, []);
+
+  useEffect(() => {
+    if (!rapidFireReason) return;
+    setModal({
+      title: "Rapid-Fire Required",
+      message: "Rapid-Fire is required for the current gameplay prototype. Equip it before starting battle.",
+    });
+  }, [rapidFireReason]);
+
   const realStage = stageId ? getStageById(stageId) : undefined;
   const stageNode = stageId ? getStageMapNodeById(stageId) : undefined;
   const content = realStage
@@ -66,33 +69,59 @@ export function PreBattleScreen() {
       ? getPreBattleContent(stageNode.id, stageNode.index, 2)
       : undefined;
 
+  const selectedShip = getShipById(player.selectedShipId);
+  const shipProgress =
+    player.shipProgress[player.selectedShipId] ?? createDefaultShipProgress(player.selectedShipId);
+  const shipArt =
+    (selectedShip
+      ? SHIP_ROSTER_ART[selectedShip.id] ?? getShipMasterArt(selectedShip.id) ?? ""
+      : "") ||
+    SHIP_ROSTER_ART[RAPID_FIRE_SHIP_ID] ||
+    "";
+  const loadoutShip = {
+    name: selectedShip?.name ?? "Unknown Ship",
+    level: shipProgress.level,
+    rarityLabel: selectedShip ? RARITY_LABEL[selectedShip.rarity].toUpperCase() : "—",
+  };
+  const isRapidFireEquipped = player.selectedShipId === RAPID_FIRE_SHIP_ID;
+
   const backToStageDetail = () => {
     if (!stageId) {
       navigate("campaign-chapter-map");
       return;
     }
-    window.location.hash = `${pathFor("stage-detail")}?id=${stageId}`;
+    window.location.hash = `${pathFor("stage-detail")}?id=${encodeURIComponent(stageId)}`;
   };
 
-  // Real Energy cost (the same flat canonical value the battle-session
-  // pipeline itself will charge) once this is a real stage; the prototype
-  // content's own made-up cost only remains for prototype-only ids that
-  // have no real economy backing at all.
   const energyCost = realStage ? getBattleEnergyCost(realStage.id) : content?.energyCost ?? 0;
   const hasSufficientEnergy = content ? player.currencies.energy >= energyCost : false;
   const isLocked = realStage ? !isStageAccessible(player, realStage.id) : false;
+  const canStart =
+    !!realStage &&
+    !isLocked &&
+    hasSufficientEnergy &&
+    isRapidFireEquipped &&
+    !isStarting;
+
+  const goChangeShip = () => {
+    if (!stageId) return;
+    window.location.hash = `${pathFor("ship-selection")}?return=pre-battle&stage=${encodeURIComponent(stageId)}`;
+  };
 
   // ENERGY DEDUCTION BOUNDARY: Energy is never spent in this component.
-  // `startBattle` (the store action wrapping the canonical
-  // prepareBattleSession → startBattleSession transition) is the ONLY
-  // place Energy is deducted, atomically, exactly once, only after every
-  // other validation (stage exists, accessible, Energy available) passes.
-  // Navigation to Gameplay only happens after that call reports success.
+  // `startBattle` deducts Energy exactly once after validation passes.
   const handleStart = () => {
     if (!content || !stageId || isStarting) return;
 
     if (!realStage) {
       openModal("Stage Unavailable", "This stage isn't connected to the battle system yet.");
+      return;
+    }
+    if (!isRapidFireEquipped) {
+      openModal(
+        "Rapid-Fire Required",
+        "Rapid-Fire is required for the current gameplay prototype. Equip it in Fleet to continue.",
+      );
       return;
     }
     if (isLocked) {
@@ -114,8 +143,6 @@ export function PreBattleScreen() {
       } else if (result.error === "unknown-stage") {
         openModal("Stage Unavailable", "This stage isn't connected to the battle system yet.");
       } else {
-        // "busy"/"invalid-transition" — an in-flight/duplicate start; the
-        // store already rejected the second attempt, so no state changed.
         openModal("Please Wait", "A battle is already starting. Please try again in a moment.");
       }
       return;
@@ -146,10 +173,16 @@ export function PreBattleScreen() {
             </div>
           ) : (
             <>
-              {!content.isReferenceMatched ? (
+              {!content.isReferenceMatched && !realStage ? (
                 <p className="pre-battle__prototype-note">
                   Prototype layout — this stage reuses Stage 7's reference-matched design with placeholder
                   copy until real per-stage data exists.
+                </p>
+              ) : null}
+
+              {!isRapidFireEquipped ? (
+                <p className="pre-battle__prototype-note pre-battle__rapid-fire-warning" role="status">
+                  Rapid-Fire is required for the current gameplay prototype.
                 </p>
               ) : null}
 
@@ -159,7 +192,7 @@ export function PreBattleScreen() {
                 <h3 className="pre-battle__loadout-heading">Your Loadout</h3>
 
                 <div className="pre-battle__loadout-cards">
-                  <PreBattleShipCard ship={content.loadoutShip} art={LOADOUT_SHIP_ART} />
+                  <PreBattleShipCard ship={loadoutShip} art={shipArt} />
                   <PreBattleCompanionCard companion={content.loadoutCompanion} art={LOADOUT_COMPANION_ART} />
                 </div>
 
@@ -192,15 +225,21 @@ export function PreBattleScreen() {
               <div className="pre-battle__actions">
                 <button
                   type="button"
-                  className={`pre-battle__start press-scale${!hasSufficientEnergy ? " pre-battle__start--insufficient" : ""}`}
+                  className={`pre-battle__start press-scale${!canStart ? " pre-battle__start--insufficient" : ""}`}
                   onClick={handleStart}
-                  aria-disabled={!hasSufficientEnergy}
+                  disabled={!canStart}
+                  aria-disabled={!canStart}
                 >
                   <span className="pre-battle__start-label">Start</span>
                   <span className="pre-battle__start-cost">
                     <BattleModeIcon variant="energy" size={13} />
-                    {content.energyCost}
+                    {energyCost}
                   </span>
+                </button>
+
+                <button type="button" className="pre-battle__change-loadout press-scale" onClick={goChangeShip}>
+                  <BattleModeIcon variant="refresh" size={13} />
+                  Change Ship
                 </button>
 
                 <button
@@ -208,7 +247,7 @@ export function PreBattleScreen() {
                   className="pre-battle__change-loadout press-scale"
                   onClick={() => {
                     if (!stageId) return;
-                    window.location.hash = `${pathFor("loadout")}?return=pre-battle&stage=${stageId}`;
+                    window.location.hash = `${pathFor("loadout")}?return=pre-battle&stage=${encodeURIComponent(stageId)}`;
                   }}
                 >
                   <BattleModeIcon variant="refresh" size={13} />

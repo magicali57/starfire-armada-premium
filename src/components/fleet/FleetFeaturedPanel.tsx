@@ -11,6 +11,9 @@ import "./FleetFeaturedPanel.css";
 interface FleetFeaturedPanelProps {
   ship: ShipDefinition;
   stats: FleetFeaturedPrototype;
+  equipped: boolean;
+  canEquip: boolean;
+  equipLabel?: string;
   onDetails: () => void;
   onEquip: () => void;
 }
@@ -22,10 +25,20 @@ const ROLE_ICON_KEY: Record<ShipDefinition["role"], keyof typeof ROLE_ICON> = {
   Heavy: "heavy",
 };
 
-export function FleetFeaturedPanel({ ship, stats, onDetails, onEquip }: FleetFeaturedPanelProps) {
+export function FleetFeaturedPanel({
+  ship,
+  stats,
+  equipped,
+  canEquip,
+  equipLabel,
+  onDetails,
+  onEquip,
+}: FleetFeaturedPanelProps) {
   const art = getShipMasterArt(ship.id);
   const roleIconKey = ROLE_ICON_KEY[ship.role];
   const levelPct = Math.round((stats.levelCurrent / stats.levelMax) * 100);
+  const label = equipLabel ?? (equipped ? "Equipped" : "Equip");
+  const equipDisabled = !canEquip || (equipped && label === "Equipped");
 
   return (
     <div className="fleet-featured-panel glass-panel">
@@ -96,7 +109,9 @@ export function FleetFeaturedPanel({ ship, stats, onDetails, onEquip }: FleetFea
 
       <div className="fleet-featured-panel__actions">
         <SecondaryButton onClick={onDetails}>Details</SecondaryButton>
-        <PrimaryButton onClick={onEquip}>Equip</PrimaryButton>
+        <PrimaryButton onClick={onEquip} disabled={equipDisabled}>
+          {label}
+        </PrimaryButton>
       </div>
     </div>
   );

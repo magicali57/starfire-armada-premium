@@ -154,13 +154,32 @@ const GENERIC_FRAGMENT_MAX: Record<string, number> = {
  * Resolves the card data for any of the other 12 real ships not pictured in
  * the reference frame, from real ship/player data so the roster is complete
  * below the fold. Returns null if the ship id doesn't exist at all.
+ *
+ * Reference fixtures keep display level/power/statusVariant for visual
+ * fidelity, but `owned` / `equipped` always come from the live save —
+ * `selectedShipId` is the sole equipped-ship source of truth.
  */
 export function getFleetRosterEntry(
   shipId: string,
   player: PlayerState,
 ): FleetRosterCardData | null {
   const reference = FLEET_ROSTER_CARDS.find((c) => c.shipId === shipId);
-  if (reference) return reference;
+  if (reference) {
+    const owned = player.ownedShipIds.includes(shipId);
+    const equipped = player.selectedShipId === shipId;
+    return {
+      ...reference,
+      owned,
+      equipped,
+      // Locked reference ships stay locked until actually owned.
+      statusVariant: owned
+        ? reference.statusVariant === "locked"
+          ? "fragments"
+          : reference.statusVariant
+        : "locked",
+      unlockRequirement: owned ? undefined : reference.unlockRequirement,
+    };
+  }
 
   const ship = getShipById(shipId);
   if (!ship) return null;

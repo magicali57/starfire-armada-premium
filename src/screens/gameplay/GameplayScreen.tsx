@@ -8,7 +8,7 @@ import { calculateShipStatsWithRank } from "@/systems/shipStarRank";
 import { createDefaultShipProgress } from "@/systems/shipStats";
 import type { BattlePerformance } from "@/systems/battleSession";
 import { usePlayerStore } from "@/store/playerStore";
-import { navigate } from "@/app/routes";
+import { navigate, pathFor } from "@/app/routes";
 import "./GameplayScreen.css";
 
 /**
@@ -63,12 +63,19 @@ export function GameplayScreen() {
   }, [hasActiveSession, battleSession?.sessionId, battleSession?.status]);
 
   // First slice supports Rapid-Fire only — do not silently remap other ships.
+  // Clear the invalid session (no extra Energy charge) and return to Pre-Battle
+  // for the same stage when possible.
   useEffect(() => {
     if (!hasActiveSession) return;
     if (isRapidFire) return;
+    const stageId = battleSession?.stageId;
     resetBattle();
+    if (stageId) {
+      window.location.hash = `${pathFor("pre-battle-placeholder")}?id=${encodeURIComponent(stageId)}&reason=rapid-fire-required`;
+      return;
+    }
     navigate("campaign");
-  }, [hasActiveSession, isRapidFire, resetBattle]);
+  }, [hasActiveSession, isRapidFire, resetBattle, battleSession?.stageId]);
 
   const ship = battleSession ? getShipById(battleSession.shipId) : undefined;
   const stage = battleSession ? getStageById(battleSession.stageId) : undefined;

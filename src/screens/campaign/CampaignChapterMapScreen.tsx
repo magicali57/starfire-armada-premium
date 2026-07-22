@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { usePlayerStore } from "@/store/playerStore";
 import { HubScreenShell } from "@/components/layout/HubScreenShell";
 import { HubHeader } from "@/components/layout/HubHeader";
@@ -9,11 +9,12 @@ import { ChapterStarChestTrack } from "@/components/campaign-map/ChapterStarChes
 import { StageMapPath } from "@/components/campaign-map/StageMapPath";
 import { LockedContentModal } from "@/components/feedback/LockedContentModal";
 import {
-  CHAPTER_MAP_INFO,
-  CHAPTER_MAP_INTRO_REWARDS,
   CHAPTER_MAP_CHEST_TRACK,
-  CAMPAIGN_CHAPTER_MAP_LEFT_STAGES,
-  CAMPAIGN_CHAPTER_MAP_RIGHT_STAGES,
+  CHAPTER_MAP_INTRO_REWARDS,
+  getChapterMapInfo,
+  getChapterMapLeftStages,
+  getChapterMapRightStages,
+  resolveChapterMapIdFromHash,
   type StageMapNode,
   type ChestMilestone,
 } from "@/data/campaignChapterMap";
@@ -30,6 +31,13 @@ export function CampaignChapterMapScreen() {
   const [modal, setModal] = useState<InfoModalState | null>(null);
   const openModal = (title: string, message: string) => setModal({ title, message });
 
+  // Resolve from `?chapter=` — never hard-code Chapter 2. Invalid ids fall
+  // back inside `resolveChapterMapIdFromHash` to Chapter 1.
+  const chapterId = useMemo(() => resolveChapterMapIdFromHash(window.location.hash), []);
+  const mapInfo = getChapterMapInfo(chapterId);
+  const leftStages = useMemo(() => getChapterMapLeftStages(chapterId, player), [chapterId, player]);
+  const rightStages = useMemo(() => getChapterMapRightStages(chapterId, player), [chapterId, player]);
+
   const xpPct =
     player.xpToNextLevel > 0 ? Math.min(100, Math.round((player.xp / player.xpToNextLevel) * 100)) : 0;
 
@@ -41,11 +49,10 @@ export function CampaignChapterMapScreen() {
       openModal(`Stage ${stage.index}${stage.isBoss ? " · Boss" : ""}`, copy);
       return;
     }
-    // Stages 1-7 (completed/current) — the real Campaign Stage Detail
-    // screen. The hash router only exact-matches routes (no param parsing),
-    // so the selected stage id rides along as a "?id=" suffix that
-    // `resolveRoute` strips before its dictionary lookup — see routes.tsx.
-    window.location.hash = `${pathFor("stage-detail")}?id=${stage.id}`;
+    // Stage ids are canonical for Chapter 1 (`ch1-stage-N`) and prototype
+    // `stage-N` for Chapter 2. Stage Detail / Pre-Battle resolve via
+    // getStageById first.
+    window.location.hash = `${pathFor("stage-detail")}?id=${encodeURIComponent(stage.id)}`;
   };
 
   const handleSelectChest = (milestone: ChestMilestone) => {
@@ -68,16 +75,14 @@ export function CampaignChapterMapScreen() {
       >
         <div className="chapter-map__content">
           <ChapterMapHeaderBar
-            chapterIndex={CHAPTER_MAP_INFO.chapterIndex}
-            chapterName={CHAPTER_MAP_INFO.name}
+            chapterIndex={mapInfo.chapterIndex}
+            chapterName={mapInfo.name}
             onBack={() => navigate("campaign")}
-            onInfo={() =>
-              openModal(`Chapter ${CHAPTER_MAP_INFO.chapterIndex}`, CHAPTER_MAP_INFO.description)
-            }
+            onInfo={() => openModal(`Chapter ${mapInfo.chapterIndex}`, mapInfo.description)}
           />
 
           <ChapterMapIntroPanel
-            description={CHAPTER_MAP_INFO.description}
+            description={mapInfo.description}
             rewards={CHAPTER_MAP_INTRO_REWARDS}
             onViewRewards={() =>
               openModal("Chapter Rewards", "Full chapter reward details aren't built yet — coming soon.")
@@ -85,15 +90,15 @@ export function CampaignChapterMapScreen() {
           />
 
           <ChapterStarChestTrack
-            current={CHAPTER_MAP_INFO.chapterStars.current}
-            max={CHAPTER_MAP_INFO.chapterStars.max}
+            current={mapInfo.chapterStars.current}
+            max={mapInfo.chapterStars.max}
             milestones={CHAPTER_MAP_CHEST_TRACK}
             onSelectMilestone={handleSelectChest}
           />
 
           <StageMapPath
-            leftStages={CAMPAIGN_CHAPTER_MAP_LEFT_STAGES}
-            rightStages={CAMPAIGN_CHAPTER_MAP_RIGHT_STAGES}
+            leftStages={leftStages}
+            rightStages={rightStages}
             onSelectStage={handleSelectStage}
           />
         </div>

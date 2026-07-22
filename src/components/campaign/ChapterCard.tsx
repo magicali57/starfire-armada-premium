@@ -10,6 +10,8 @@ interface ChapterCardProps {
    *  same source image is reused across cards — see
    *  CAMPAIGN_OVERVIEW_PLAN.md's chapter-art substitution note. */
   artFilter?: string;
+  /** UI selection highlight — independent of progression `status`. */
+  selected?: boolean;
   onSelect: () => void;
 }
 
@@ -22,15 +24,16 @@ interface ChapterCardProps {
  * chapters — only the check/lock badge and the missing "CLEARED"/stage
  * line communicate the state, matching the reference exactly.
  */
-export function ChapterCard({ chapter, art, artFilter, onSelect }: ChapterCardProps) {
+export function ChapterCard({ chapter, art, artFilter, selected = false, onSelect }: ChapterCardProps) {
   const { status, name, chapterIndex, stars, starsMax, stageLabel } = chapter;
 
   return (
     <button
       type="button"
-      className={`chapter-card chapter-card--${status} press-scale`}
+      data-chapter-id={chapter.id}
+      className={`chapter-card chapter-card--${status}${selected ? " chapter-card--selected" : ""} press-scale`}
       onClick={onSelect}
-      aria-current={status === "current" ? "true" : undefined}
+      aria-current={selected || status === "current" ? "true" : undefined}
     >
       <img className="chapter-card__art" src={art} alt="" style={artFilter ? { filter: artFilter } : undefined} />
       <span className="chapter-card__scrim" aria-hidden="true" />

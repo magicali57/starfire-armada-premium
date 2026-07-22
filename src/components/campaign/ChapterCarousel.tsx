@@ -12,6 +12,7 @@ export interface ChapterCarouselItem {
 
 interface ChapterCarouselProps {
   items: ChapterCarouselItem[];
+  selectedChapterId?: string;
   onCardSelect: (chapter: ChapterOverviewCard) => void;
 }
 
@@ -19,21 +20,22 @@ interface ChapterCarouselProps {
  * Horizontally scrollable strip of chapter cards. Scroll is native touch/
  * drag (`overflow-x: auto`) with its scrollbar hidden, not a JS carousel
  * library — vertical page scroll is unaffected since this only captures the
- * horizontal axis. On mount, scrolls so the current chapter's card is
- * centered/prominent, matching the reference's initial framing. The small
- * left/right chevrons are both a visual scroll affordance (present in the
- * reference at the card edges) and a real scroll-by-one-card control for
- * non-touch input.
+ * horizontal axis. On mount, scrolls so the selected (or current) chapter's
+ * card is centered/prominent. The small left/right chevrons are both a
+ * visual scroll affordance and a real scroll-by-one-card control.
  */
-export function ChapterCarousel({ items, onCardSelect }: ChapterCarouselProps) {
+export function ChapterCarousel({ items, selectedChapterId, onCardSelect }: ChapterCarouselProps) {
   const trackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const track = trackRef.current;
     if (!track) return;
-    const current = track.querySelector<HTMLElement>(".chapter-card--current");
+    const selected = selectedChapterId
+      ? track.querySelector<HTMLElement>(`[data-chapter-id="${selectedChapterId}"]`)
+      : null;
+    const current = selected ?? track.querySelector<HTMLElement>(".chapter-card--current");
     current?.scrollIntoView({ inline: "center", block: "nearest" });
-  }, []);
+  }, [selectedChapterId]);
 
   const scrollBy = (direction: -1 | 1) => {
     trackRef.current?.scrollBy({ left: direction * 160, behavior: "smooth" });
@@ -57,6 +59,7 @@ export function ChapterCarousel({ items, onCardSelect }: ChapterCarouselProps) {
             chapter={chapter}
             art={art}
             artFilter={artFilter}
+            selected={chapter.id === selectedChapterId}
             onSelect={() => onCardSelect(chapter)}
           />
         ))}

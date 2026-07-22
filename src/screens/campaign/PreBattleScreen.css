@@ -77,6 +77,14 @@
   line-height: 1.4;
 }
 
+.pre-battle__rapid-fire-warning {
+  border-style: solid;
+  border-color: rgba(255, 120, 120, 0.45);
+  background: rgba(48, 12, 16, 0.72);
+  color: #ffc4c4;
+  font-weight: 700;
+}
+
 .pre-battle__not-found {
   display: flex;
   flex-direction: column;

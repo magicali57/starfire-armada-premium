@@ -25,6 +25,10 @@ The approved UI visual-reference library is available at `STARFIRE_ARMADA_UI_HAN
 - Shop Hub at `#/shop` — Featured hero (Commander Supply Bundle), Resources/Energy/Chests categories, confirmation + success modals, canonical `purchaseShopOffer` transaction (`src/screens/shop`, `src/data/shopOffers.ts`, `src/systems/rewards/purchaseShopOffer.ts`)
 - Daily Missions at `#/missions/daily` — 8 trackable missions, activity milestones 20–100, local-day reset, atomic claims (`src/screens/missions`, `src/data/dailyMissions.ts`, `src/systems/dailyMissions/`)
 
+## Gameplay vertical slice (planned)
+
+- **Rapid-Fire** (`ship-01-rapid-fire`) is the approved **first playable gameplay vertical slice**. Spec: `docs/gameplay/RAPID_FIRE_VERTICAL_SLICE_SPEC.md`. Audit: `docs/handoffs/rapid-fire-audit/REPORT.md`. Engine not implemented yet (placeholder `GameplayScreen`).
+
 ## Implemented progression systems
 
 - Ship progression: Level, Star Rank, Weapon/Ability level (`src/systems/shipStats.ts`, `shipStarRank.ts`, `shipAbilities.ts`)
@@ -110,4 +114,4 @@ The approved UI visual-reference library is available at `STARFIRE_ARMADA_UI_HAN
 
 ## Recommended next task
 
-Player Profile, Player Level-Up, Battle Results, Reward Reveal, Chest Opening, Shop Hub (`#/shop`), Daily Missions (`#/missions/daily`), and the campaign battle navigation loop are implemented. Daily Login Rewards and real gameplay-engine integration remain the main remaining systems.
+Implement the Rapid-Fire first playable vertical slice per `docs/gameplay/RAPID_FIRE_VERTICAL_SLICE_SPEC.md` (Firepower 0–10, Fire-Up, enemies, Hull, session→Results). Daily Login Rewards remain separate and postponed.

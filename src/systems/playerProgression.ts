@@ -148,7 +148,12 @@ export const PLAYER_UNLOCKS: readonly PlayerUnlockDefinition[] = [
   // these yet:
   { id: "daily-rewards", label: "Daily Rewards", level: 4, implemented: false },
   { id: "events", label: "Events", level: 8, implemented: false },
-  { id: "shop", label: "Shop", level: 10, implemented: false },
+  // Shop now exists in the current build (#/shop), reachable from Home/
+  // HubBottomNav at any level — moved to level 1 and flipped to
+  // implemented: true, matching every other currently-reachable feature
+  // above (same "nothing the player can open today becomes locked" rule
+  // this table's header comment documents).
+  { id: "shop", label: "Shop", level: 1, implemented: true },
   { id: "campaign-hard", label: "Hard Campaign Difficulty", level: 15, implemented: false },
   { id: "campaign-nightmare", label: "Nightmare Campaign Difficulty", level: 30, implemented: false },
 ];

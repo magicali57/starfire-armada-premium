@@ -86,7 +86,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     // Player Profile ("profile") renders its own <HubScreenShell>/
     // <HubBottomNav>, same double-footer reason as Arsenal/Companions/
     // Modules above.
-    route !== "profile";
+    route !== "profile" &&
+    // Shop Hub (#/shop) owns HubScreenShell + HubBottomNav.
+    route !== "shop" &&
+    // Chest Vault (#/inventory/chests) owns HubScreenShell + HubBottomNav.
+    route !== "chest-opening";
   const isHome = route === "home";
 
   return (

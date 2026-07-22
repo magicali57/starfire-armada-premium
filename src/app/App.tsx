@@ -22,6 +22,7 @@ import { ResultsScreen } from "@/screens/results/ResultsScreen";
 import { InventoryHubScreen } from "@/screens/inventory/InventoryHubScreen";
 import { LoadoutManagerScreen } from "@/screens/loadout/LoadoutManagerScreen";
 import { ChestOpeningScreen } from "@/screens/chest-opening/ChestOpeningScreen";
+import { ShopScreen } from "@/screens/shop/ShopScreen";
 import { CompanionsRosterScreen } from "@/screens/companions/CompanionsRosterScreen";
 import { CompanionDetailScreen } from "@/screens/companion-detail/CompanionDetailScreen";
 import { CompanionUpgradeScreen } from "@/screens/companion-upgrade/CompanionUpgradeScreen";
@@ -108,6 +109,8 @@ function ActiveScreen() {
       return <WeaponUpgradeScreen />;
     case "profile":
       return <ProfileScreen />;
+    case "shop":
+      return <ShopScreen />;
     default:
       return <HomeScreen />;
   }

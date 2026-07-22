@@ -22,6 +22,7 @@ The approved UI visual-reference library is available at `STARFIRE_ARMADA_UI_HAN
 - Player Level-Up modal, integrated into Results on victory (`src/components/level-up`)
 - Reward Reveal overlay visually aligned to `49_Rewards_Acquired.png` (heading, first-clear banner, rarity art, gold Continue), integrated into Results after Level-Up (`src/components/reward-reveal`)
 - Chest Vault / Chest Opening screen at `#/inventory/chests`, reachable from Inventory Hub's Chests category/section (`src/screens/chest-opening`)
+- Shop Hub at `#/shop` — Featured hero (Commander Supply Bundle), Resources/Energy/Chests categories, confirmation + success modals, canonical `purchaseShopOffer` transaction (`src/screens/shop`, `src/data/shopOffers.ts`, `src/systems/rewards/purchaseShopOffer.ts`)
 
 ## Implemented progression systems
 
@@ -101,9 +102,9 @@ The approved UI visual-reference library is available at `STARFIRE_ARMADA_UI_HAN
 - Real combat victory/defeat conditions are not yet integrated — the gameplay engine is still a placeholder canvas; outcomes are only triggered via a dev-only debug button (stripped from production builds).
 - No difficulty selector or loadout-validation gate exists yet in Pre-Battle — Start always uses the default `"normal"` difficulty and the player's already-owned `selectedShipId` (always valid by construction); both remain future work if/when those become real player choices.
 - The prototype Chapter Map / Stage Detail / Pre-Battle reference content (`campaignChapterMap.ts`'s "stage-N" ids, disconnected from `data/campaign.ts`'s real "ch1-stage-N" ids) is unchanged and still cosmetic-only for those ids — only real canonical stage ids get a working Start button.
-- Shop, Daily Rewards remain to be developed (Chest Opening and Reward Reveal are implemented).
+- Daily Rewards remain to be developed (Shop Hub, Chest Opening, and Reward Reveal are implemented).
 - Battle statistics on Player Profile are limited to what the save genuinely tracks today (stages cleared, highest stage reached, derived from `highestClearedStageId`) — battles-completed/victories/bosses-defeated counters are not persisted anywhere yet, so Profile intentionally omits them rather than showing invented zeros.
 
 ## Recommended next task
 
-Player Profile, Player Level-Up, Battle Results (Victory/Defeat), Reward Reveal, Chest Opening, and the campaign battle navigation loop are implemented. Results and Reward Reveal visuals are aligned to Batch 5 references `47`/`48`/`49` (see handoff completion reports). Shop and Daily Rewards remain the next major screens. Real gameplay-engine integration (wave/enemy/boss driving victory/defeat instead of DEV Win/Lose) remains the main future work.
+Player Profile, Player Level-Up, Battle Results, Reward Reveal, Chest Opening, Shop Hub (`#/shop`), and the campaign battle navigation loop are implemented. Daily Rewards and real gameplay-engine integration remain the main remaining systems.

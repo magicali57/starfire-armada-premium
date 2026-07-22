@@ -35,6 +35,7 @@ export type RouteId =
   | "weapon-detail"
   | "weapon-upgrade"
   | "profile"
+  | "shop"
   // Dynamic route — see COMPANION_DETAIL_PREFIX / getCompanionIdFromHash /
   // pathForCompanionDetail below. There is no single static path for this
   // id (the real path always carries a companion id segment), so it is
@@ -164,6 +165,10 @@ export const ROUTES: { id: RouteId; path: string; label: string }[] = [
   { id: "weapon-detail", path: "#/arsenal/weapon/:weaponId", label: "Weapon Detail" },
   { id: "weapon-upgrade", path: "#/arsenal/weapon/:weaponId/upgrade", label: "Weapon Upgrade" },
   { id: "profile", path: "#/profile", label: "Profile" },
+  // New route (Shop) — canonical in-game economy Shop. Home Dashboard's
+  // bottom-nav Shop button and HubBottomNav's Shop tab both navigate here
+  // directly; no placeholder dialog remains.
+  { id: "shop", path: "#/shop", label: "Shop" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -389,6 +394,7 @@ const HASH_TO_ROUTE: Record<string, RouteId> = {
   "#/inventory/modules": "modules",
   "#/arsenal": "arsenal",
   "#/profile": "profile",
+  "#/shop": "shop",
 };
 
 export function resolveRoute(hash: string): RouteId {

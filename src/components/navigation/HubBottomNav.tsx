@@ -30,10 +30,10 @@ const TABS: { id: HubNavTabId; label: string; icon: string }[] = [
  * position; this component has no layout opinion of its own beyond its
  * internal five-tab grid.
  *
- * Fleet and Inventory navigate to their implemented top-level hubs. Shop
- * remains an in-app Coming Soon destination.
+ * Every tab navigates to its implemented top-level hub, including Shop
+ * (#/shop).
  */
-export function HubBottomNav({ active, onComingSoon = () => {} }: HubBottomNavProps) {
+export function HubBottomNav({ active, onComingSoon: _onComingSoon = () => {} }: HubBottomNavProps) {
   const handleTap = (id: HubNavTabId) => {
     switch (id) {
       case "home":
@@ -45,7 +45,7 @@ export function HubBottomNav({ active, onComingSoon = () => {} }: HubBottomNavPr
       case "inventory":
         return navigate("inventory");
       case "shop":
-        return onComingSoon("Shop", "Shop is coming soon.");
+        return navigate("shop");
     }
   };
 

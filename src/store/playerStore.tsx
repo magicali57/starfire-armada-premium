@@ -34,6 +34,11 @@ import {
   type CompleteCampaignStageArgs,
 } from "@/systems/rewards/completeCampaignStage";
 import { buildChestOpeningFailure, openChestTransaction, type ChestOpeningResult } from "@/systems/rewards/openChest";
+import {
+  buildShopPurchaseFailure,
+  purchaseShopOfferTransaction,
+  type ShopPurchaseResult,
+} from "@/systems/rewards/purchaseShopOffer";
 import { productionRandomSource } from "@/systems/rewards/randomSource";
 import type { BattleCompletionSummary, RewardDifficulty } from "@/types";
 import {
@@ -531,6 +536,14 @@ interface PlayerStoreValue {
    *  an injectable RandomSource for verification; defaults to the
    *  production one. */
   openChest: (input: { chestId: string; randomSource?: import("@/types").RandomSource }) => ChestOpeningResult;
+  /** Canonical Shop purchase transaction
+   *  (systems/rewards/purchaseShopOffer.ts): deducts the offer's exact
+   *  cost and atomically applies its full reward bundle. Ignored (typed
+   *  "purchase-in-progress" failure) while a previous call from this same
+   *  store instance hasn't finished. Same persist-before-commit strategy
+   *  as openChest — a disk-write failure can never report a successful
+   *  purchase the save doesn't actually contain. */
+  purchaseShopOffer: (offerId: string) => ShopPurchaseResult;
   resetSave: () => void;
 }
 
@@ -551,6 +564,9 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
   // There is only ever one chest-opening presentation on screen at a time,
   // so a single boolean (not a per-chestId Set) is enough.
   const chestOpenInFlight = useRef(false);
+  // Same synchronous-guard pattern, scoped to Shop purchases — there is
+  // only ever one purchase confirmation on screen at a time.
+  const shopPurchaseInFlight = useRef(false);
   const companionUpgradeInFlight = useRef<Set<string>>(new Set());
   const moduleUpgradeInFlight = useRef<Set<string>>(new Set());
   const weaponUpgradeInFlight = useRef<Set<string>>(new Set());
@@ -1100,6 +1116,41 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
     [player],
   );
 
+  const purchaseShopOffer = useCallback(
+    (offerId: string): ShopPurchaseResult => {
+      // Repeated BUY taps while a previous call from this store instance
+      // hasn't finished are rejected outright — a typed failure, no state
+      // change, nothing charged twice.
+      if (shopPurchaseInFlight.current) {
+        return buildShopPurchaseFailure(player, offerId, "purchase-in-progress");
+      }
+      shopPurchaseInFlight.current = true;
+      try {
+        // Resolve against `player` (this render's committed state) — same
+        // reasoning as openChest: the synchronous click-to-return window is
+        // far too short for a concurrent update to land first.
+        const attempt = purchaseShopOfferTransaction(player, { offerId });
+        if (!attempt.result.success) return attempt.result;
+
+        // Same stricter persist-before-commit strategy as openChest: a
+        // Shop purchase only ever reports success once the deduction +
+        // rewards are actually confirmed written to disk. On failure here,
+        // `setPlayer` is never called — in-memory state stays untouched
+        // too, so "consume nothing, grant nothing" holds for this failure
+        // path as well.
+        const withTimestamp: PlayerState = { ...attempt.state, lastUpdatedAt: Date.now() };
+        if (!persistPlayerState(withTimestamp)) {
+          return buildShopPurchaseFailure(player, offerId, "persistence-failure", attempt.result.purchaseId);
+        }
+        setPlayer(withTimestamp);
+        return attempt.result;
+      } finally {
+        shopPurchaseInFlight.current = false;
+      }
+    },
+    [player],
+  );
+
   const resetSave = useCallback(() => {
     upgradeInFlight.current.clear();
     rankUpInFlight.current.clear();
@@ -1111,6 +1162,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
     moduleUpgradeInFlight.current.clear();
     weaponUpgradeInFlight.current.clear();
     chestOpenInFlight.current = false;
+    shopPurchaseInFlight.current = false;
     update(() => ({ ...DEFAULT_PLAYER_STATE }));
   }, [update]);
 
@@ -1146,6 +1198,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       saveActiveLoadout,
       updatePlayerProfile,
       openChest,
+      purchaseShopOffer,
       resetSave,
     }),
     [
@@ -1179,6 +1232,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       saveActiveLoadout,
       updatePlayerProfile,
       openChest,
+      purchaseShopOffer,
       resetSave,
     ],
   );

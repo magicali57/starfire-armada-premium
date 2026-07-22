@@ -15,6 +15,8 @@ export type RewardSource =
   | "chest"
   /** Player level-up milestone rewards (systems/playerProgression.ts). */
   | "level-up"
+  /** Canonical Shop purchases (systems/rewards/purchaseShopOffer.ts). */
+  | "shop"
   // Defined for future systems; nothing awards from these yet.
   | "mission"
   | "event";

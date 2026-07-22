@@ -285,13 +285,13 @@ function MissionsProgressSection({ onOpen }: { onOpen: OpenPanel }) {
   );
 }
 
-function HomeBottomNav({ onOpen }: { onOpen: OpenPanel }) {
+function HomeBottomNav({ onOpen: _onOpen }: { onOpen: OpenPanel }) {
   const items = [
     { id: "home", label: "HOME", icon: HOME_BOTTOM_NAV_FINAL.home, action: () => navigate("home") },
     { id: "battle", label: "BATTLE", icon: HOME_BOTTOM_NAV_FINAL.battle, action: () => navigate("battle") },
     { id: "fleet", label: "FLEET", icon: HOME_BOTTOM_NAV_FINAL.fleet, action: () => navigate("ship-selection") },
     { id: "inventory", label: "INVENTORY", icon: HOME_BOTTOM_NAV_FINAL.inventory, action: () => navigate("inventory") },
-    { id: "shop", label: "SHOP", icon: HOME_BOTTOM_NAV_FINAL.shop, action: () => onOpen("Shop", "Shop is coming soon.") },
+    { id: "shop", label: "SHOP", icon: HOME_BOTTOM_NAV_FINAL.shop, action: () => navigate("shop") },
   ];
 
   return (

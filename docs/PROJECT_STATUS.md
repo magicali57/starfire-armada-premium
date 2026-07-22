@@ -1,6 +1,10 @@
 # Starfire Armada — Project Status
 
-Factual snapshot based on the current repository and recent Git history. This document is the second-priority source of truth after source code/Git (see `AGENTS.md`).
+Factual snapshot based on the current repository and recent Git history. This document is functional source-of-truth priority #3 after source code/canonical stores and Git (see `AGENTS.md`).
+
+## Visual references
+
+The approved UI visual-reference library is available at `STARFIRE_ARMADA_UI_HANDOFF/` (173 readable images). Index: `docs/UI_REFERENCE_INDEX.md`. All visual create/redesign work must inspect the matching reference image(s) first — see **VISUAL REFERENCE RULES** in `AGENTS.md`. References are visual truth only; they do not override economy, routes, stores, or transaction logic.
 
 ## Implemented major screens
 

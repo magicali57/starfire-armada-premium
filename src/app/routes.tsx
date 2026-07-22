@@ -25,6 +25,7 @@ export type RouteId =
   | "results"
   | "inventory"
   | "loadout"
+  | "chest-opening"
   | "companions"
   | "companion-upgrade"
   | "modules"
@@ -128,6 +129,9 @@ export const ROUTES: { id: RouteId; path: string; label: string }[] = [
   // the same way stage-detail/pre-battle-placeholder carry "?id=" — see
   // getLoadoutReturnTarget in data/loadout.ts for how it's parsed.
   { id: "loadout", path: "#/inventory/loadout", label: "Loadout" },
+  // New route (Chest Opening) — same static "#/inventory/<x>" convention
+  // as loadout/companions/modules above.
+  { id: "chest-opening", path: "#/inventory/chests", label: "Chest Vault" },
   // New route (Companions Roster) — same "?return=..." convention as
   // loadout above; see getCompanionRosterReturnTarget in
   // data/companionRoster.ts for how it's parsed.
@@ -380,6 +384,7 @@ const HASH_TO_ROUTE: Record<string, RouteId> = {
   "#/results": "results",
   "#/inventory": "inventory",
   "#/inventory/loadout": "loadout",
+  "#/inventory/chests": "chest-opening",
   "#/inventory/companions": "companions",
   "#/inventory/modules": "modules",
   "#/arsenal": "arsenal",

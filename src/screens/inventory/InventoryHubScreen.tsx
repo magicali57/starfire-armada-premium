@@ -21,6 +21,7 @@ export function InventoryHubScreen() {
 
   const openCategory = (id: InventoryHubCategoryId) => {
     if (id === "loadout") return navigate("loadout");
+    if (id === "chests") return navigate("chest-opening");
     if (id === "materials") return setDialog({ title: "Materials Summary", message: "Current upgrade materials", materials: true });
     const label = view.categories.find((category) => category.id === id)?.label ?? "Inventory Category";
     return openComingSoon(label, `${label} browsing is coming soon. No items or quantities have been created for this category.`);
@@ -64,6 +65,13 @@ export function InventoryHubScreen() {
             <div className="inventory-hub__section-title"><h2 id="inventory-materials-title">Materials</h2><button type="button" onClick={() => openCategory("materials")}>View Summary</button></div>
             <div className="inventory-hub__materials">
               {view.materials.map((material) => <button key={material.id} type="button" className={`inventory-hub__material inventory-hub__material--${material.tone} press-scale`} onClick={() => openCategory("materials")}><span>{material.label}</span><img src={material.icon} alt="" /><strong>{material.amount.toLocaleString()}</strong></button>)}
+            </div>
+          </section>
+
+          <section className="inventory-hub__section" aria-labelledby="inventory-chests-title">
+            <div className="inventory-hub__section-title"><h2 id="inventory-chests-title">Chests</h2><button type="button" onClick={() => navigate("chest-opening")}>Open Chests</button></div>
+            <div className="inventory-hub__materials">
+              {view.chests.map((chest) => <button key={chest.chestId} type="button" className={`inventory-hub__material inventory-hub__material--${chest.rarity} press-scale`} onClick={() => navigate("chest-opening")}><span>{chest.displayName}</span><img src={chest.art} alt="" /><strong>{chest.ownedCount}</strong></button>)}
             </div>
           </section>
 

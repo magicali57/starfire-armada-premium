@@ -33,6 +33,8 @@ import {
   applyCompleteCampaignStage,
   type CompleteCampaignStageArgs,
 } from "@/systems/rewards/completeCampaignStage";
+import { buildChestOpeningFailure, openChestTransaction, type ChestOpeningResult } from "@/systems/rewards/openChest";
+import { productionRandomSource } from "@/systems/rewards/randomSource";
 import type { BattleCompletionSummary, RewardDifficulty } from "@/types";
 import {
   completeBattleSession as applyBattleCompletion,
@@ -522,6 +524,13 @@ interface PlayerStoreValue {
   equipWeapon:(weaponId:string)=>boolean;
   /** Atomic Edit Profile save (display name + built-in avatar id). */
   updatePlayerProfile: (input: { displayName: string; avatarId: string }) => UpdateProfileResult;
+  /** Canonical Chest Opening transaction (systems/rewards/openChest.ts):
+   *  consumes exactly one owned chest and atomically applies its resolved
+   *  rewards. Ignored (typed "opening-in-progress" failure) while a
+   *  previous call from this same store instance hasn't finished. Accepts
+   *  an injectable RandomSource for verification; defaults to the
+   *  production one. */
+  openChest: (input: { chestId: string; randomSource?: import("@/types").RandomSource }) => ChestOpeningResult;
   resetSave: () => void;
 }
 
@@ -538,6 +547,10 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
   // loadout save transaction (there is only ever one active loadout, so a
   // boolean is enough — no per-id Set needed).
   const loadoutSaveInFlight = useRef(false);
+  // Synchronous guard for openChest — same reasoning as loadoutSaveInFlight.
+  // There is only ever one chest-opening presentation on screen at a time,
+  // so a single boolean (not a per-chestId Set) is enough.
+  const chestOpenInFlight = useRef(false);
   const companionUpgradeInFlight = useRef<Set<string>>(new Set());
   const moduleUpgradeInFlight = useRef<Set<string>>(new Set());
   const weaponUpgradeInFlight = useRef<Set<string>>(new Set());
@@ -1042,6 +1055,51 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
     [player, update],
   );
 
+  const openChest = useCallback(
+    (input: { chestId: string; randomSource?: import("@/types").RandomSource }): ChestOpeningResult => {
+      // Repeated Open taps while a previous call from this store instance
+      // hasn't finished are ignored outright — a typed failure, no state
+      // change, no second chest consumed.
+      if (chestOpenInFlight.current) {
+        return buildChestOpeningFailure(player, input.chestId, "opening-in-progress");
+      }
+      chestOpenInFlight.current = true;
+      try {
+        // Resolve against `player` (this render's committed state) — the
+        // synchronous click-to-return window is far too short for a
+        // concurrent update to land first in this single-threaded store,
+        // so (unlike completeCampaignStage's extra prev!==player re-derive
+        // guard) there is no meaningful race to protect against here.
+        const attempt = openChestTransaction(player, {
+          chestId: input.chestId,
+          randomSource: input.randomSource ?? productionRandomSource,
+        });
+        if (!attempt.result.success) return attempt.result;
+
+        // Deliberately stricter than this store's usual best-effort
+        // `update()` helper (which always commits in-memory even if the
+        // persist write fails): a chest opening only ever reports success
+        // once the deduction + rewards are actually confirmed written, so
+        // a disk-write failure can never leave the UI showing a granted
+        // chest reveal the save doesn't actually contain. On failure here,
+        // `setPlayer` is never called — in-memory state is untouched too,
+        // matching "consume nothing, grant nothing" for every failure
+        // path, including this one.
+        const withTimestamp: PlayerState = { ...attempt.state, lastUpdatedAt: Date.now() };
+        if (!persistPlayerState(withTimestamp)) {
+          return {
+            ...buildChestOpeningFailure(player, input.chestId, "persistence-failure", attempt.result.openingId),
+          };
+        }
+        setPlayer(withTimestamp);
+        return attempt.result;
+      } finally {
+        chestOpenInFlight.current = false;
+      }
+    },
+    [player],
+  );
+
   const resetSave = useCallback(() => {
     upgradeInFlight.current.clear();
     rankUpInFlight.current.clear();
@@ -1052,6 +1110,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
     companionUpgradeInFlight.current.clear();
     moduleUpgradeInFlight.current.clear();
     weaponUpgradeInFlight.current.clear();
+    chestOpenInFlight.current = false;
     update(() => ({ ...DEFAULT_PLAYER_STATE }));
   }, [update]);
 
@@ -1086,6 +1145,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       equipWeapon,
       saveActiveLoadout,
       updatePlayerProfile,
+      openChest,
       resetSave,
     }),
     [
@@ -1118,6 +1178,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       equipWeapon,
       saveActiveLoadout,
       updatePlayerProfile,
+      openChest,
       resetSave,
     ],
   );

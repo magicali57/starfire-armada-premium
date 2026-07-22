@@ -21,6 +21,7 @@ import { GameplayScreen } from "@/screens/gameplay/GameplayScreen";
 import { ResultsScreen } from "@/screens/results/ResultsScreen";
 import { InventoryHubScreen } from "@/screens/inventory/InventoryHubScreen";
 import { LoadoutManagerScreen } from "@/screens/loadout/LoadoutManagerScreen";
+import { ChestOpeningScreen } from "@/screens/chest-opening/ChestOpeningScreen";
 import { CompanionsRosterScreen } from "@/screens/companions/CompanionsRosterScreen";
 import { CompanionDetailScreen } from "@/screens/companion-detail/CompanionDetailScreen";
 import { CompanionUpgradeScreen } from "@/screens/companion-upgrade/CompanionUpgradeScreen";
@@ -82,6 +83,8 @@ function ActiveScreen() {
       return <InventoryHubScreen />;
     case "loadout":
       return <LoadoutManagerScreen />;
+    case "chest-opening":
+      return <ChestOpeningScreen />;
     case "companions":
       return <CompanionsRosterScreen />;
     case "companion-detail":

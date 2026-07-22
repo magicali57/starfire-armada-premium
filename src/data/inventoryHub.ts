@@ -1,8 +1,9 @@
 import { COMPANION_ART, MATERIAL_ICON, MODULE_ART } from "@/data/assetRegistry";
 import { getActiveLoadoutViewModel, type ActiveLoadoutViewModel } from "@/data/loadout";
+import { getChestVaultViewModel, type ChestVaultCard } from "@/data/chests";
 import type { PlayerState } from "@/types";
 
-export type InventoryHubCategoryId = "loadout" | "materials" | "entry-items" | "cosmetics";
+export type InventoryHubCategoryId = "loadout" | "materials" | "chests" | "entry-items" | "cosmetics";
 
 export interface InventoryHubCategory {
   id: InventoryHubCategoryId;
@@ -22,6 +23,7 @@ export interface InventoryHubViewModel {
   loadout: ActiveLoadoutViewModel;
   categories: InventoryHubCategory[];
   materials: InventoryHubMaterial[];
+  chests: ChestVaultCard[];
 }
 
 const resolveCompanionArt = (artKey: string) => COMPANION_ART[artKey as keyof typeof COMPANION_ART];
@@ -40,6 +42,7 @@ export function getInventoryHubViewModel(player: PlayerState): InventoryHubViewM
     categories: [
       { id: "loadout", label: "Loadout", implemented: true },
       { id: "materials", label: "Materials", implemented: true },
+      { id: "chests", label: "Chests", implemented: true },
       { id: "entry-items", label: "Entry Items", implemented: false },
       { id: "cosmetics", label: "Cosmetics", implemented: false },
     ],
@@ -48,5 +51,6 @@ export function getInventoryHubViewModel(player: PlayerState): InventoryHubViewM
       { id: "companionData", label: "Companion Data", amount: player.materials.companionData, icon: MATERIAL_ICON.companionData, tone: "purple" },
       { id: "moduleParts", label: "Module Parts", amount: player.materials.moduleParts, icon: MATERIAL_ICON.moduleParts, tone: "green" },
     ],
+    chests: getChestVaultViewModel(player),
   };
 }

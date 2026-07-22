@@ -381,8 +381,27 @@ export interface BattleResultsView {
   difficulty: RewardDifficulty;
   firstClear: boolean;
   performance: BattlePerformance | null;
+  /** Raw resolved bundle (pre-duplicate-resolution) — kept for
+   *  compatibility/inspection. The grouped fields below (derived from the
+   *  ACTUALLY-applied entries, post-duplicate-resolution) are what Results
+   *  should render; they are the ground truth of what was really granted. */
   rewards: BattleCompletionSummary["bundle"];
   duplicateConversions: NonNullable<BattleCompletionSummary["application"]>["duplicateConversions"] | [];
+  /** Applied entries earned ONLY because this was a first clear
+   *  (`source: "campaign-first-clear"`), collectibles and duplicate
+   *  conversions excluded (shown separately below). Empty on a repeat
+   *  clear or defeat. */
+  firstClearRewards: ResolvedReward[];
+  /** Applied entries granted on every clear (`source: "campaign-repeat"` /
+   *  `"campaign-drop"`), collectibles and duplicate conversions excluded.
+   *  Empty on a first clear (those entries move to firstClearRewards
+   *  instead — never shown in both groups) or on defeat. */
+  baseRewards: ResolvedReward[];
+  /** Newly-owned ship/companion/module/weapon grants (never a duplicate —
+   *  duplicates were already replaced by their converted entry upstream in
+   *  applyRewardBundle, so this list can never double-count with
+   *  duplicateConversions). */
+  newCollectibles: ResolvedReward[];
   playerXpGained: number;
   previousPlayerLevel: number;
   newPlayerLevel: number;
@@ -391,8 +410,9 @@ export interface BattleResultsView {
   /** Player-level milestone rewards crossed by this completion ONLY (the
    *  entries the atomic application tagged `source: "level-up"`) — never
    *  the stage/campaign bundle itself, and never recomputed here. Empty
-   *  when playerLevelsGained is 0. Feeds PlayerLevelUpModal exclusively;
-   *  ResultsScreen's own reward list continues to read `rewards`. */
+   *  when playerLevelsGained is 0. Feeds PlayerLevelUpModal AND Results'
+   *  own "Player Level Rewards" section — same source data, no
+   *  recomputation. */
   levelUpRewards: ResolvedReward[];
   nextStageId: string | null;
   /** Victory: continue/replay/return · Defeat: retry/return. */
@@ -408,6 +428,21 @@ export function getBattleResultsView(session: BattleSession | null): BattleResul
   const completion = session.completion;
   const stage = getStageById(session.stageId);
   const victory = completion.outcome === "victory";
+
+  const applied = completion.summary?.application?.applied ?? [];
+  const duplicateConversions = completion.summary?.application?.duplicateConversions ?? [];
+  // Reference equality is intentional and safe: applyRewardBundle
+  // (systems/rewards/applyRewards.ts) pushes the SAME `converted` object
+  // both into `duplicateConversions[i].converted` and into
+  // `applied[i].entry` — so this is the exact, already-computed link
+  // between "this applied entry" and "this is what a duplicate became",
+  // never a second lookup by id (two different collectibles could
+  // legitimately convert to the same material/amount).
+  const isDuplicateConversion = (reward: ResolvedReward) =>
+    duplicateConversions.some((conversion) => conversion.converted === reward.entry);
+  const isGenericGroupable = (reward: ResolvedReward) =>
+    reward.entry.kind !== "collectible" && !isDuplicateConversion(reward);
+
   return {
     outcome: completion.outcome,
     sessionId: session.sessionId,
@@ -417,7 +452,15 @@ export function getBattleResultsView(session: BattleSession | null): BattleResul
     firstClear: completion.summary?.firstClear ?? false,
     performance: session.performance,
     rewards: completion.summary?.bundle ?? null,
-    duplicateConversions: completion.summary?.application?.duplicateConversions ?? [],
+    duplicateConversions,
+    firstClearRewards: applied.filter(
+      (reward) => reward.source === "campaign-first-clear" && isGenericGroupable(reward),
+    ),
+    baseRewards: applied.filter(
+      (reward) =>
+        (reward.source === "campaign-repeat" || reward.source === "campaign-drop") && isGenericGroupable(reward),
+    ),
+    newCollectibles: applied.filter((reward) => reward.entry.kind === "collectible"),
     // Within-level xp resets on each level-up, so gained XP is read from
     // the resolved bundle (the authoritative award amounts), not from the
     // before/after within-level values.
@@ -431,8 +474,7 @@ export function getBattleResultsView(session: BattleSession | null): BattleResul
     newPlayerLevel: completion.newPlayerLevel,
     playerLevelsGained: completion.playerLevelsGained,
     unlocksEarned: completion.unlocksEarned,
-    levelUpRewards:
-      completion.summary?.application?.applied.filter((reward) => reward.source === "level-up") ?? [],
+    levelUpRewards: applied.filter((reward) => reward.source === "level-up"),
     nextStageId: completion.nextStageId,
     availableActions: victory
       ? completion.nextStageId

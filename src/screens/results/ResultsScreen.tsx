@@ -1,27 +1,28 @@
 import { useEffect, useState } from "react";
-import { ScreenHeader } from "@/components/layout/ScreenHeader";
-import { NeonPanel } from "@/components/cards/NeonPanel";
-import { PrimaryButton } from "@/components/controls/PrimaryButton";
-import { SecondaryButton } from "@/components/controls/SecondaryButton";
+import { BattleResultHero } from "@/components/results/BattleResultHero";
+import { BattlePerformanceSummary } from "@/components/results/BattlePerformanceSummary";
+import { BattleRewardSummary } from "@/components/results/BattleRewardSummary";
+import { BattleResultActions } from "@/components/results/BattleResultActions";
+import { InlineAlert } from "@/components/feedback/InlineAlert";
 import { PlayerLevelUpModal } from "@/components/level-up/PlayerLevelUpModal";
 import { usePlayerStore } from "@/store/playerStore";
 import { getBattleResultsView } from "@/systems/battleSession";
 import { isPlayerMaxLevel } from "@/systems/playerProgression";
-import { navigate } from "@/app/routes";
+import { navigate, pathFor } from "@/app/routes";
 import "./ResultsScreen.css";
 
 /**
- * Minimal Results consumer of the canonical battle-session contract
- * (getBattleResultsView). NOT the polished Results screen — kept
- * deliberately simple pending that task. The old prototype behavior that
- * hand-granted stage coins/crystals here was removed: all rewards are now
- * applied exactly once by the atomic completion transaction BEFORE this
- * screen renders, so nothing here mutates progression. With no completed
- * session to show (direct navigation, reload, stale/mismatched session)
- * it redirects safely to Campaign without touching state.
+ * The complete, canonical-contract-only Results screen. Reads ONLY
+ * getBattleResultsView(battleSession) — never resolves rewards, grants XP,
+ * changes Player Level, deducts Energy, marks campaign progress, or
+ * repeats a completion transaction. All of that already happened before
+ * this screen ever renders (see battleSession.completeBattleSession /
+ * systems/rewards/completeCampaignStage.ts). With no completed session to
+ * show (direct navigation, reload, stale/mismatched session) it redirects
+ * safely to Campaign without touching state.
  */
 export function ResultsScreen() {
-  const { battleSession, resetBattle } = usePlayerStore();
+  const { battleSession, resetBattle, retryBattle } = usePlayerStore();
   const view = getBattleResultsView(battleSession);
 
   useEffect(() => {
@@ -32,67 +33,102 @@ export function ResultsScreen() {
   // tracks which sessionId's Level-Up modal has already been shown/closed
   // this Results visit, so a rerender (or a duplicate completion callback,
   // which the battle-session transaction already ignores) never reopens
-  // it. A genuinely new session (e.g. Replay) gets a new sessionId and is
+  // it. A genuinely new session (Replay/Retry) gets a new sessionId and is
   // free to show its own Level-Up modal again.
   const [levelUpConsumedSessionId, setLevelUpConsumedSessionId] = useState<string | null>(null);
+  // Navigation-safety guard: true while Replay/Retry is creating a fresh
+  // session, so a double tap (or tapping while the store's own in-flight
+  // guard is active) can never fire a second startBattle/Energy spend.
+  const [isStartingSession, setIsStartingSession] = useState(false);
+  const [energyAlert, setEnergyAlert] = useState<string | null>(null);
 
   if (!view) return null;
 
   const showLevelUpModal =
     view.outcome === "victory" && view.playerLevelsGained > 0 && levelUpConsumedSessionId !== view.sessionId;
 
-  const finish = (route: "home" | "campaign") => {
+  const handleCampaign = () => {
     // Clears TEMPORARY session state only — awarded progression persists.
     resetBattle();
-    navigate(route);
+    navigate("campaign");
+  };
+
+  const handleContinue = () => {
+    if (!view.nextStageId) return;
+    // Continue never spends Energy or creates a session — it only clears
+    // the finished session's temporary state and hands off to the
+    // existing Stage Detail flow (same "?id=" convention Pre-Battle/Stage
+    // Detail already use) for the next unlocked stage.
+    resetBattle();
+    window.location.hash = `${pathFor("stage-detail")}?id=${view.nextStageId}`;
+  };
+
+  const handleReplayOrRetry = () => {
+    if (isStartingSession) return;
+    setIsStartingSession(true);
+    setEnergyAlert(null);
+    // retryBattle (store/playerStore.tsx) creates a fresh sessionId for
+    // the SAME stage/difficulty and validates + spends Energy exactly
+    // once through the canonical session-start action — never reusing
+    // the completed sessionId, never re-running any reward transaction.
+    const result = retryBattle();
+    if (result.ok) {
+      navigate("gameplay");
+      return;
+    }
+    setIsStartingSession(false);
+    if (result.error === "insufficient-energy") {
+      setEnergyAlert("Not enough Energy to start a new battle. Come back once you've recovered enough.");
+      return;
+    }
+    // "busy" (already starting) or any other transient rejection: stay on
+    // Results, nothing was created or spent.
+    setEnergyAlert("Couldn't start a new battle. Please try again.");
   };
 
   const victory = view.outcome === "victory";
 
   return (
     <div className="results-screen">
-      <ScreenHeader
-        title={victory ? "Stage Cleared" : "Stage Failed"}
-        subtitle={view.stageName}
+      <BattleResultHero
+        outcome={view.outcome}
+        stageName={view.stageName}
+        difficulty={view.difficulty}
+        firstClear={view.firstClear}
+        starsEarned={view.performance?.starsEarned}
       />
-      <NeonPanel tone="gold" className="results-screen__rewards">
-        <h3>{victory ? (view.firstClear ? "First Clear Rewards" : "Rewards") : "No Rewards"}</h3>
-        {victory && view.rewards ? (
-          view.rewards.rewards.map((reward, i) => {
-            const e = reward.entry;
-            const label =
-              e.kind === "currency"
-                ? `${e.amount.toLocaleString()} ${e.currencyId === "coins" ? "Credits" : e.currencyId}`
-                : e.kind === "playerXp"
-                  ? `${e.amount.toLocaleString()} Player XP`
-                  : e.kind === "material"
-                    ? `${e.amount.toLocaleString()} ${e.materialId}`
-                    : e.kind === "shipFragment"
-                      ? `${e.amount.toLocaleString()} ship fragments`
-                      : e.kind === "chest"
-                        ? `${e.amount}x ${e.chestId}`
-                        : e.kind === "consumable"
-                          ? `${e.amount}x ${e.consumableId}`
-                          : e.collectibleId;
-            return <p key={`${reward.source}-${i}`}>{label}</p>;
-          })
-        ) : (
-          <p>{victory ? "—" : "Defeat grants no rewards. Try again!"}</p>
-        )}
-        {view.playerLevelsGained > 0 ? (
-          <p>
-            Player Level {view.previousPlayerLevel} → {view.newPlayerLevel}
-          </p>
-        ) : null}
-      </NeonPanel>
-      <div className="results-screen__actions">
-        <PrimaryButton fullWidth onClick={() => finish("home")}>
-          Continue
-        </PrimaryButton>
-        <SecondaryButton fullWidth onClick={() => finish("campaign")}>
-          Back to Campaign
-        </SecondaryButton>
-      </div>
+
+      <BattlePerformanceSummary performance={view.performance} />
+
+      {victory ? (
+        <BattleRewardSummary
+          playerXpGained={view.playerXpGained}
+          firstClearRewards={view.firstClearRewards}
+          baseRewards={view.baseRewards}
+          levelUpRewards={view.levelUpRewards}
+          newCollectibles={view.newCollectibles}
+          duplicateConversions={view.duplicateConversions}
+          previousPlayerLevel={view.previousPlayerLevel}
+          newPlayerLevel={view.newPlayerLevel}
+          playerLevelsGained={view.playerLevelsGained}
+        />
+      ) : (
+        <p className="results-screen__defeat-message">Defeat grants no rewards. Regroup and try again.</p>
+      )}
+
+      {energyAlert ? (
+        <InlineAlert tone="danger" message={energyAlert} onDismiss={() => setEnergyAlert(null)} />
+      ) : null}
+
+      <BattleResultActions
+        availableActions={view.availableActions}
+        busy={isStartingSession}
+        onContinue={handleContinue}
+        onReplay={handleReplayOrRetry}
+        onRetry={handleReplayOrRetry}
+        onCampaign={handleCampaign}
+      />
+
       <PlayerLevelUpModal
         isOpen={showLevelUpModal}
         previousLevel={view.previousPlayerLevel}

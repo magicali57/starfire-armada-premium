@@ -1,0 +1,190 @@
+.battle-reward-summary,
+.battle-reward-summary * {
+  box-sizing: border-box;
+}
+
+.battle-reward-summary {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.battle-reward-summary h3 {
+  margin: 0;
+  font-size: var(--font-size-md);
+}
+
+.battle-reward-summary__xp {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-gold-300);
+}
+
+.battle-reward-summary__level-transition {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.battle-reward-summary__group h4 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.battle-reward-summary__rows,
+.battle-reward-summary__collectibles,
+.battle-reward-summary__conversions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.battle-reward-summary__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: var(--border-hairline);
+  border-left: 3px solid var(--color-rarity-common);
+  background: var(--color-bg-inset);
+  opacity: 0;
+  animation: battle-reward-row-reveal 0.28s ease-out both;
+  animation-delay: calc(var(--reveal-index, 0) * 55ms);
+}
+
+.battle-reward-summary__row--rare {
+  border-left-color: var(--color-rarity-rare);
+}
+.battle-reward-summary__row--epic {
+  border-left-color: var(--color-rarity-epic);
+}
+.battle-reward-summary__row--legendary {
+  border-left-color: var(--color-rarity-legendary);
+}
+
+.battle-reward-summary__row img {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.battle-reward-summary__row-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.battle-reward-summary__row-amount {
+  flex-shrink: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.battle-reward-summary__collectibles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.battle-reward-summary__collectible {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  border: var(--border-neon-gold);
+  background: var(--color-bg-inset);
+  text-align: center;
+  opacity: 0;
+  animation: battle-reward-row-reveal 0.28s ease-out both;
+  animation-delay: calc(var(--reveal-index, 0) * 55ms);
+}
+
+.battle-reward-summary__collectible img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+
+.battle-reward-summary__collectible span {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.battle-reward-summary__conversion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: var(--border-hairline);
+  background: var(--color-bg-inset);
+  opacity: 0;
+  animation: battle-reward-row-reveal 0.28s ease-out both;
+  animation-delay: calc(var(--reveal-index, 0) * 55ms);
+}
+
+.battle-reward-summary__conversion-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  text-transform: capitalize;
+  overflow-wrap: anywhere;
+}
+
+.battle-reward-summary__conversion-result {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.battle-reward-summary__conversion-result img {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+@keyframes battle-reward-row-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 360px) {
+  .battle-reward-summary__collectibles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

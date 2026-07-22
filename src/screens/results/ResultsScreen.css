@@ -1,23 +1,26 @@
+.results-screen,
+.results-screen * {
+  box-sizing: border-box;
+}
+
 .results-screen {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding: 0 var(--space-4) var(--space-8);
+  padding: var(--space-4) var(--space-4) var(--space-8);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
-.results-screen__rewards h3 {
-  font-size: var(--font-size-md);
-  margin: 0 0 var(--space-2);
-}
-
-.results-screen__rewards p {
+.results-screen__defeat-message {
   margin: 0;
-  font-size: var(--font-size-sm);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: var(--border-hairline);
+  background: var(--color-bg-inset);
   color: var(--color-text-secondary);
-}
-
-.results-screen__actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  text-align: center;
 }

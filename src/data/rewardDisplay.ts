@@ -1,5 +1,14 @@
 import type { ChestId, CurrencyId, ResolvedReward, RewardEntry, RewardRarity } from "@/types";
-import { MATERIAL_ICON, REWARD_CHEST, RESOURCE_ICON, UTILITY_ICON } from "@/data/assetRegistry";
+import {
+  COMPANION_ART,
+  MATERIAL_ICON,
+  MODULE_ART,
+  REWARD_CHEST,
+  RESOURCE_ICON,
+  UTILITY_ICON,
+  getShipMasterArt,
+  getWeaponMasterArt,
+} from "@/data/assetRegistry";
 import { getShipById } from "@/data/ships";
 import { getCompanionById } from "@/data/companions";
 import { getModuleById } from "@/data/modules";
@@ -39,6 +48,28 @@ const CHEST_TIER: Record<ChestId, "basic" | "rare" | "epic" | "legendary"> = {
   chestEpic: "epic",
 };
 
+/** Genuine collectible artwork — same per-type art registries the
+ *  Fleet/Companions/Modules/Arsenal screens already use, keyed off each
+ *  definition's own canonical `artKey` (companion/module) or dedicated
+ *  resolver (ship/weapon). Falls back to the empty-slot placeholder for an
+ *  unknown id rather than throwing. */
+function resolveCollectibleIcon(entry: Extract<RewardEntry, { kind: "collectible" }>): string {
+  switch (entry.collectibleType) {
+    case "ship":
+      return getShipMasterArt(entry.collectibleId) || UTILITY_ICON.emptySlot;
+    case "companion": {
+      const artKey = getCompanionById(entry.collectibleId)?.artKey;
+      return (artKey && COMPANION_ART[artKey as keyof typeof COMPANION_ART]) || UTILITY_ICON.emptySlot;
+    }
+    case "module": {
+      const artKey = getModuleById(entry.collectibleId)?.artKey;
+      return (artKey && MODULE_ART[artKey as keyof typeof MODULE_ART]) || UTILITY_ICON.emptySlot;
+    }
+    case "weapon":
+      return getWeaponMasterArt(entry.collectibleId) || UTILITY_ICON.emptySlot;
+  }
+}
+
 function resolveIcon(entry: RewardEntry): string {
   switch (entry.kind) {
     case "currency":
@@ -49,8 +80,9 @@ function resolveIcon(entry: RewardEntry): string {
       return REWARD_CHEST[CHEST_TIER[entry.chestId]] ?? UTILITY_ICON.emptySlot;
     case "shipFragment":
       return MATERIAL_ICON.shipFragment;
-    case "consumable":
     case "collectible":
+      return resolveCollectibleIcon(entry);
+    case "consumable":
     case "playerXp":
       return UTILITY_ICON.emptySlot;
   }

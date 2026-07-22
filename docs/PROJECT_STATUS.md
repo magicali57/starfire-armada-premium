@@ -13,7 +13,7 @@ Factual snapshot based on the current repository and recent Git history. This do
 - Loadout Manager (`src/screens/loadout`)
 - Inventory Hub (`src/screens/inventory`)
 - Gameplay (placeholder canvas + debug victory/defeat trigger) (`src/screens/gameplay`)
-- Results (consumes canonical battle-results contract) (`src/screens/results`)
+- Results — complete Victory/Defeat screen (hero, performance summary, grouped reward summary, actions) consuming only the canonical battle-results contract (`src/screens/results`, `src/components/results`)
 - Player Profile + Edit Profile modal (`src/screens/profile`, `src/components/profile`)
 - Player Level-Up modal, integrated into Results on victory (`src/components/level-up`)
 
@@ -36,7 +36,8 @@ Factual snapshot based on the current repository and recent Git history. This do
 - `battleSession` (`src/systems/battleSession.ts`) is a pure, explicit state-machine (`idle → preparing → active → victory/defeat → completing → completed → results`) with a legal-transition table. It is held only in the store's in-memory state (`useState`/`useRef`), never persisted.
 - Reward flow: `resolveStageRewards` (resolve) → `applyRewardBundle` (atomic apply) → `applyCompleteCampaignStage` (stage-clear/first-clear orchestration) → called once, exactly-once-per-session, from `completeBattleSession`.
 - `ResultsScreen` reads only `getBattleResultsView(battleSession)`; it does not grant rewards itself — all rewards are applied before Results renders.
-- `getBattleResultsView` additionally exposes `levelUpRewards` (the completion's already-applied entries tagged `source: "level-up"`, filtered from `application.applied` — never recomputed) and reuses `unlocksEarned`. `ResultsScreen` opens `PlayerLevelUpModal` when `outcome === "victory" && playerLevelsGained > 0`, gated by an in-memory `sessionId` marker (component state, never persisted) so it shows exactly once per completed session and never reopens on rerender.
+- `getBattleResultsView` groups the completion's already-applied entries (`application.applied`) into mutually-exclusive display groups — `firstClearRewards`, `baseRewards`, `levelUpRewards`, `newCollectibles` — plus `duplicateConversions`, purely by filtering on each entry's existing `source`/`kind` and on reference-equality with `duplicateConversions[i].converted`. Nothing is recomputed; an entry never appears in two groups.
+- `ResultsScreen` opens `PlayerLevelUpModal` when `outcome === "victory" && playerLevelsGained > 0`, gated by an in-memory `sessionId` marker (component state, never persisted) so it shows exactly once per completed session and never reopens on rerender. Replay/Retry both reuse the existing `retryBattle` store action (fresh sessionId, same stage/difficulty, Energy validated + spent once via the canonical session-start path); Continue reuses the existing Stage Detail `?id=` navigation convention and never spends Energy.
 - `GameplayScreen` currently renders a placeholder canvas; its "End Stage (debug)" button manually drives the battle-session pipeline (`declareBattleVictory` → `completeBattle` → `enterBattleResults`) as a stand-in for real combat outcomes.
 
 ## Recent important commits
@@ -90,4 +91,4 @@ Factual snapshot based on the current repository and recent Git history. This do
 
 ## Recommended next task
 
-Player Profile (`#/profile`, schema v11) and the Player Level-Up modal (integrated into Results) are implemented. Shop, Daily Rewards, Chest Opening, and Reward Reveal remain the next major screens to build; the full Results screen redesign is also still pending (current Results remains the minimal canonical-contract consumer).
+Player Profile (`#/profile`, schema v11), the Player Level-Up modal, and the complete Battle Results screen (Victory/Defeat, integrated into Results) are implemented. Shop, Daily Rewards, Chest Opening, and Reward Reveal remain the next major screens to build. Real gameplay-engine integration (actual combat victory/defeat conditions, and wiring Pre-Battle's Start button to a real `startBattle` call) remains future work — Results, Replay, and Retry are fully wired to the canonical contract and ready for it.

@@ -1,0 +1,119 @@
+.battle-result-hero,
+.battle-result-hero * {
+  box-sizing: border-box;
+}
+
+.battle-result-hero {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: var(--space-5) var(--space-4);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  animation: battle-result-hero-enter 0.32s ease-out;
+}
+
+.battle-result-hero__heading {
+  margin: 0;
+  font-family: var(--font-family-display-heavy);
+  font-size: clamp(30px, 11vw, var(--font-size-3xl));
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+
+.battle-result-hero--victory {
+  border: var(--border-neon-secondary);
+  box-shadow: var(--shadow-panel), var(--glow-secondary);
+}
+.battle-result-hero--victory .battle-result-hero__heading {
+  color: var(--color-secondary-300);
+  text-shadow: var(--glow-gold);
+  animation: battle-result-hero-glow 2.4s ease-in-out infinite;
+}
+
+.battle-result-hero--defeat {
+  border: 1px solid rgba(255, 77, 77, 0.45);
+  box-shadow: var(--shadow-panel), var(--glow-danger);
+}
+.battle-result-hero--defeat .battle-result-hero__heading {
+  color: var(--color-danger-300);
+  text-shadow: 0 0 14px rgba(139, 61, 255, 0.45);
+  animation: battle-result-hero-pulse 2.6s ease-in-out infinite;
+}
+
+.battle-result-hero__stage {
+  margin: 0;
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+.battle-result-hero__meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.battle-result-hero__badge {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  border: var(--border-hairline);
+  background: var(--color-bg-inset);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.battle-result-hero__badge--gold {
+  border: var(--border-neon-gold);
+  color: var(--color-gold-300);
+}
+
+.battle-result-hero__stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--color-gold-300);
+}
+
+@keyframes battle-result-hero-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes battle-result-hero-glow {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.18);
+  }
+}
+
+@keyframes battle-result-hero-pulse {
+  0%,
+  100% {
+    opacity: 0.92;
+  }
+  50% {
+    opacity: 1;
+  }
+}

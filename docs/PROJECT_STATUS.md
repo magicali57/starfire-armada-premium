@@ -23,6 +23,7 @@ The approved UI visual-reference library is available at `STARFIRE_ARMADA_UI_HAN
 - Reward Reveal overlay visually aligned to `49_Rewards_Acquired.png` (heading, first-clear banner, rarity art, gold Continue), integrated into Results after Level-Up (`src/components/reward-reveal`)
 - Chest Vault / Chest Opening screen at `#/inventory/chests`, reachable from Inventory Hub's Chests category/section (`src/screens/chest-opening`)
 - Shop Hub at `#/shop` — Featured hero (Commander Supply Bundle), Resources/Energy/Chests categories, confirmation + success modals, canonical `purchaseShopOffer` transaction (`src/screens/shop`, `src/data/shopOffers.ts`, `src/systems/rewards/purchaseShopOffer.ts`)
+- Daily Missions at `#/missions/daily` — 8 trackable missions, activity milestones 20–100, local-day reset, atomic claims (`src/screens/missions`, `src/data/dailyMissions.ts`, `src/systems/dailyMissions/`)
 
 ## Implemented progression systems
 
@@ -39,6 +40,7 @@ The approved UI visual-reference library is available at `STARFIRE_ARMADA_UI_HAN
 - Reward Reveal queue helper — decides which already-applied entries from a `BattleResultsView` are special enough for a dedicated reveal (new collectibles; Rare/Epic chests; other Epic/Legendary grants), built entirely on top of `rewardDisplay.ts` (`src/data/rewardReveal.ts`)
 - Campaign stage accessibility helper — the one canonical "is this stage reachable" rule (linear per-chapter progression via `highestClearedStageId`), shared by Stage Detail and Pre-Battle instead of each re-deriving its own calculation (`src/data/campaign.ts`'s `isStageAccessible`)
 - Chest Opening transaction (`src/systems/rewards/openChest.ts`'s `openChestTransaction`) — validates a chest id + ownership, resolves `CHEST_REWARD_TABLES` via the injected `RandomSource`, and applies every resolved reward atomically through the existing `applyRewardBundle` (deducting exactly one chest in the same derived state); any failure returns the untouched original state. Chest Vault presentation helpers (`src/data/chests.ts`, `src/data/chestReveal.ts`) describe the three canonical chest containers and build reveal rows from an already-successful opening — never resolve or apply anything themselves.
+- Daily Missions (`src/systems/dailyMissions/`) — `recordDailyMissionEvent` from successful store transactions only; `claimDailyMissionReward` / `claimDailyActivityMilestone` apply rewards via `applyRewardBundle`; day reset + clock-safety in `dailyMissionDay.ts`.
 
 ## Current architecture
 
@@ -77,9 +79,10 @@ The approved UI visual-reference library is available at `STARFIRE_ARMADA_UI_HAN
 - Player (account) XP/Level: `src/systems/playerProgression.ts`
 - Battle session state machine: `src/systems/battleSession.ts`
 - Save persistence and migrations: `src/store/playerStore.tsx`, `src/data/player.ts`
-- Save schema version constant: `src/types/player.ts` (`SAVE_SCHEMA_VERSION = 11`)
+- Save schema version constant: `src/types/player.ts` (`SAVE_SCHEMA_VERSION = 12`)
 - Save key: `starfire-armada-v2:save` (`src/store/playerStore.tsx`)
 - Stage/economy reward definitions: `src/data/stageRewards.ts`, `src/data/chestRewards.ts`
+- Daily Missions catalog: `src/data/dailyMissions.ts`
 - Launch economy audit reference: `docs/economy/LAUNCH_ECONOMY_AUDIT.md`, `docs/economy/STARFIRE_ARMADA_COMPLETE_ECONOMY_DOCUMENT.md`
 
 ## Facts worth stating explicitly
@@ -102,9 +105,9 @@ The approved UI visual-reference library is available at `STARFIRE_ARMADA_UI_HAN
 - Real combat victory/defeat conditions are not yet integrated — the gameplay engine is still a placeholder canvas; outcomes are only triggered via a dev-only debug button (stripped from production builds).
 - No difficulty selector or loadout-validation gate exists yet in Pre-Battle — Start always uses the default `"normal"` difficulty and the player's already-owned `selectedShipId` (always valid by construction); both remain future work if/when those become real player choices.
 - The prototype Chapter Map / Stage Detail / Pre-Battle reference content (`campaignChapterMap.ts`'s "stage-N" ids, disconnected from `data/campaign.ts`'s real "ch1-stage-N" ids) is unchanged and still cosmetic-only for those ids — only real canonical stage ids get a working Start button.
-- Daily Rewards remain to be developed (Shop Hub, Chest Opening, and Reward Reveal are implemented).
+- Daily Login Rewards (calendar/streak) remain to be developed. Daily Missions (task board + activity milestones) are implemented.
 - Battle statistics on Player Profile are limited to what the save genuinely tracks today (stages cleared, highest stage reached, derived from `highestClearedStageId`) — battles-completed/victories/bosses-defeated counters are not persisted anywhere yet, so Profile intentionally omits them rather than showing invented zeros.
 
 ## Recommended next task
 
-Player Profile, Player Level-Up, Battle Results, Reward Reveal, Chest Opening, Shop Hub (`#/shop`), and the campaign battle navigation loop are implemented. Daily Rewards and real gameplay-engine integration remain the main remaining systems.
+Player Profile, Player Level-Up, Battle Results, Reward Reveal, Chest Opening, Shop Hub (`#/shop`), Daily Missions (`#/missions/daily`), and the campaign battle navigation loop are implemented. Daily Login Rewards and real gameplay-engine integration remain the main remaining systems.

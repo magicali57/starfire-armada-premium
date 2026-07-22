@@ -36,6 +36,7 @@ export type RouteId =
   | "weapon-upgrade"
   | "profile"
   | "shop"
+  | "daily-missions"
   // Dynamic route — see COMPANION_DETAIL_PREFIX / getCompanionIdFromHash /
   // pathForCompanionDetail below. There is no single static path for this
   // id (the real path always carries a companion id segment), so it is
@@ -169,6 +170,9 @@ export const ROUTES: { id: RouteId; path: string; label: string }[] = [
   // bottom-nav Shop button and HubBottomNav's Shop tab both navigate here
   // directly; no placeholder dialog remains.
   { id: "shop", path: "#/shop", label: "Shop" },
+  // New route (Daily Missions) — canonical daily mission board. Home's
+  // Daily Missions card navigates here directly.
+  { id: "daily-missions", path: "#/missions/daily", label: "Daily Missions" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -395,6 +399,7 @@ const HASH_TO_ROUTE: Record<string, RouteId> = {
   "#/arsenal": "arsenal",
   "#/profile": "profile",
   "#/shop": "shop",
+  "#/missions/daily": "daily-missions",
 };
 
 export function resolveRoute(hash: string): RouteId {

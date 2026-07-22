@@ -90,7 +90,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     // Shop Hub (#/shop) owns HubScreenShell + HubBottomNav.
     route !== "shop" &&
     // Chest Vault (#/inventory/chests) owns HubScreenShell + HubBottomNav.
-    route !== "chest-opening";
+    route !== "chest-opening" &&
+    // Daily Missions (#/missions/daily) owns HubScreenShell + HubBottomNav.
+    route !== "daily-missions";
   const isHome = route === "home";
 
   return (

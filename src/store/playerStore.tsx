@@ -45,6 +45,7 @@ import {
   completeBattleSession as applyBattleCompletion,
   declareBattleOutcome,
   enterBattleResults as applyEnterBattleResults,
+  getBattleEnergyCost,
   pauseBattleSession,
   prepareBattleSession,
   resumeBattleSession,
@@ -53,6 +54,17 @@ import {
   type BattleSession,
   type BattleSessionTransitionResult,
 } from "@/systems/battleSession";
+import { recordDailyMissionEvent } from "@/systems/dailyMissions/recordDailyMissionEvent";
+import {
+  buildDailyMissionClaimFailure,
+  claimDailyMissionReward,
+} from "@/systems/dailyMissions/claimDailyMission";
+import {
+  buildDailyActivityClaimFailure,
+  claimDailyActivityMilestone,
+} from "@/systems/dailyMissions/claimDailyActivityMilestone";
+import type { DailyActivityClaimResult, DailyMissionClaimResult } from "@/types/dailyMissions";
+import { ensureCurrentDailyMissionState } from "@/systems/dailyMissions/dailyMissionDay";
 
 // The ONE canonical save key. The ":recovery" sibling is not a second save
 // — it only preserves the raw string of an unrecoverable save for manual
@@ -544,6 +556,12 @@ interface PlayerStoreValue {
    *  as openChest — a disk-write failure can never report a successful
    *  purchase the save doesn't actually contain. */
   purchaseShopOffer: (offerId: string) => ShopPurchaseResult;
+  /** Atomic Daily Mission reward claim — progress must already meet target. */
+  claimDailyMission: (missionId: string) => DailyMissionClaimResult;
+  /** Atomic Daily Activity milestone claim. */
+  claimDailyActivityMilestone: (milestoneId: string) => DailyActivityClaimResult;
+  /** Ensure daily mission day state (reset validation only — never grants). */
+  ensureDailyMissions: () => void;
   resetSave: () => void;
 }
 
@@ -567,6 +585,8 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
   // Same synchronous-guard pattern, scoped to Shop purchases — there is
   // only ever one purchase confirmation on screen at a time.
   const shopPurchaseInFlight = useRef(false);
+  const dailyMissionClaimInFlight = useRef(false);
+  const dailyActivityClaimInFlight = useRef(false);
   const companionUpgradeInFlight = useRef<Set<string>>(new Set());
   const moduleUpgradeInFlight = useRef<Set<string>>(new Set());
   const weaponUpgradeInFlight = useRef<Set<string>>(new Set());
@@ -753,7 +773,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
         ) {
           return prev;
         }
-        return {
+        const upgraded: PlayerState = {
           ...prev,
           currencies: { ...prev.currencies, coins: prev.currencies.coins - quote.totalCoins },
           materials: {
@@ -765,6 +785,10 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
             [shipId]: { ...latestProgress, level: latestProgress.level + quote.levels },
           },
         };
+        return recordDailyMissionEvent(upgraded, {
+          type: "shipUpgraded",
+          amount: quote.levels,
+        }).state;
       });
 
       upgradeInFlight.current.delete(shipId);
@@ -798,7 +822,8 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       update((prev) => {
         const applied = applyCompanionLevelUpgradeState(prev, companionId);
         result = applied.result;
-        return applied.state;
+        if (!applied.result.success) return prev;
+        return recordDailyMissionEvent(applied.state, { type: "companionUpgraded" }).state;
       });
       // Keep the synchronous guard through the browser's double-tap window.
       // The state update itself is immediate, but releasing in a microtask
@@ -823,14 +848,15 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       update((prev) => {
         const applied = applyModuleLevelUpgradeState(prev, moduleId);
         result = applied.result;
-        return applied.state;
+        if (!applied.result.success) return prev;
+        return recordDailyMissionEvent(applied.state, { type: "moduleUpgraded" }).state;
       });
       globalThis.setTimeout(() => moduleUpgradeInFlight.current.delete(moduleId), 300);
       return result;
     },
     [player, update],
   );
-  const upgradeWeaponLevel=useCallback((weaponId:string):UpgradeWeaponResult=>{if(weaponUpgradeInFlight.current.has(weaponId))return{success:false,reason:"busy"};const preflight=applyWeaponLevelUpgradeState(player,weaponId);if(!preflight.result.success)return preflight.result;weaponUpgradeInFlight.current.add(weaponId);let result:UpgradeWeaponResult=preflight.result;update(prev=>{const applied=applyWeaponLevelUpgradeState(prev,weaponId);result=applied.result;return applied.state});globalThis.setTimeout(()=>weaponUpgradeInFlight.current.delete(weaponId),300);return result},[player,update]);
+  const upgradeWeaponLevel=useCallback((weaponId:string):UpgradeWeaponResult=>{if(weaponUpgradeInFlight.current.has(weaponId))return{success:false,reason:"busy"};const preflight=applyWeaponLevelUpgradeState(player,weaponId);if(!preflight.result.success)return preflight.result;weaponUpgradeInFlight.current.add(weaponId);let result:UpgradeWeaponResult=preflight.result;update(prev=>{const applied=applyWeaponLevelUpgradeState(prev,weaponId);result=applied.result;if(!applied.result.success)return prev;return recordDailyMissionEvent(applied.state,{type:"weaponUpgraded"}).state});globalThis.setTimeout(()=>weaponUpgradeInFlight.current.delete(weaponId),300);return result},[player,update]);
   const equipWeapon=useCallback((weaponId:string)=>{if(!player.ownedWeaponIds.includes(weaponId)||!getWeaponById(weaponId))return false;update(prev=>({...prev,equippedWeaponId:weaponId}));return true},[player.ownedWeaponIds,update]);
 
   const rankUpShip = useCallback(
@@ -865,7 +891,8 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       update((prev) => {
         const applied = applyShipAbilityUpgradeState(prev, shipId, category);
         result = applied.result;
-        return applied.state;
+        if (!applied.result.success) return prev;
+        return recordDailyMissionEvent(applied.state, { type: "shipAbilityUpgraded" }).state;
       });
       // Same double-tap guard window as the other upgrade transactions.
       globalThis.setTimeout(() => abilityUpgradeInFlight.current.delete(key), 300);
@@ -911,11 +938,24 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       battleStartInFlight.current = true;
       // Energy deduction + session activation commit together: the player
       // update re-derives the deduction against the freshest state, and the
-      // session is only stored when the spend succeeded.
+      // session is only stored when the spend succeeded. Successful spends
+      // also feed Daily Missions (energySpent / battleStarted).
+      const energySpent = getBattleEnergyCost(prepared.session.stageId);
       update((prev) => {
-        if (prev === player) return started.player;
-        const reapplied = applyBattleStart(prev, prepared.session);
-        return reapplied.result.ok ? reapplied.player : prev;
+        const startedState =
+          prev === player
+            ? started.player
+            : (() => {
+                const reapplied = applyBattleStart(prev, prepared.session);
+                return reapplied.result.ok ? reapplied.player : null;
+              })();
+        if (!startedState) return prev;
+        let next = recordDailyMissionEvent(startedState, {
+          type: "energySpent",
+          amount: energySpent,
+        }).state;
+        next = recordDailyMissionEvent(next, { type: "battleStarted" }).state;
+        return next;
       });
       setBattleSession(started.result.session);
       globalThis.setTimeout(() => {
@@ -968,10 +1008,23 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       battleCompleteInFlight.current = true;
       // Same resolve-once pattern as completeCampaignStage below: the
       // returned summary's random rolls are exactly what persists.
+      // Successful completion also feeds Daily Missions (battleCompleted /
+      // battleWon) — never from UI.
+      const wasVictory = completed.result.session?.outcome === "victory";
       update((prev) => {
-        if (prev === player) return completed.player;
-        const reapplied = applyBattleCompletion(prev, current, sessionId);
-        return reapplied.result.ok ? reapplied.player : prev;
+        const completedState =
+          prev === player
+            ? completed.player
+            : (() => {
+                const reapplied = applyBattleCompletion(prev, current, sessionId);
+                return reapplied.result.ok ? reapplied.player : null;
+              })();
+        if (!completedState) return prev;
+        let next = recordDailyMissionEvent(completedState, { type: "battleCompleted" }).state;
+        if (wasVictory) {
+          next = recordDailyMissionEvent(next, { type: "battleWon" }).state;
+        }
+        return next;
       });
       setBattleSession(completed.result.session);
       globalThis.setTimeout(() => {
@@ -1092,6 +1145,8 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
         });
         if (!attempt.result.success) return attempt.result;
 
+        // Daily Missions: chestOpened fires only after a successful open.
+        const withMission = recordDailyMissionEvent(attempt.state, { type: "chestOpened" }).state;
         // Deliberately stricter than this store's usual best-effort
         // `update()` helper (which always commits in-memory even if the
         // persist write fails): a chest opening only ever reports success
@@ -1101,7 +1156,7 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
         // `setPlayer` is never called — in-memory state is untouched too,
         // matching "consume nothing, grant nothing" for every failure
         // path, including this one.
-        const withTimestamp: PlayerState = { ...attempt.state, lastUpdatedAt: Date.now() };
+        const withTimestamp: PlayerState = { ...withMission, lastUpdatedAt: Date.now() };
         if (!persistPlayerState(withTimestamp)) {
           return {
             ...buildChestOpeningFailure(player, input.chestId, "persistence-failure", attempt.result.openingId),
@@ -1132,13 +1187,17 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
         const attempt = purchaseShopOfferTransaction(player, { offerId });
         if (!attempt.result.success) return attempt.result;
 
+        // Daily Missions: shopPurchaseCompleted fires only after success.
+        const withMission = recordDailyMissionEvent(attempt.state, {
+          type: "shopPurchaseCompleted",
+        }).state;
         // Same stricter persist-before-commit strategy as openChest: a
         // Shop purchase only ever reports success once the deduction +
         // rewards are actually confirmed written to disk. On failure here,
         // `setPlayer` is never called — in-memory state stays untouched
         // too, so "consume nothing, grant nothing" holds for this failure
         // path as well.
-        const withTimestamp: PlayerState = { ...attempt.state, lastUpdatedAt: Date.now() };
+        const withTimestamp: PlayerState = { ...withMission, lastUpdatedAt: Date.now() };
         if (!persistPlayerState(withTimestamp)) {
           return buildShopPurchaseFailure(player, offerId, "persistence-failure", attempt.result.purchaseId);
         }
@@ -1150,6 +1209,58 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
     },
     [player],
   );
+
+  const claimDailyMission = useCallback(
+    (missionId: string): DailyMissionClaimResult => {
+      if (dailyMissionClaimInFlight.current) {
+        return buildDailyMissionClaimFailure(player, missionId, "claim-in-progress");
+      }
+      dailyMissionClaimInFlight.current = true;
+      try {
+        const attempt = claimDailyMissionReward(player, missionId);
+        if (!attempt.result.success) return attempt.result;
+        const withTimestamp: PlayerState = { ...attempt.state, lastUpdatedAt: Date.now() };
+        if (!persistPlayerState(withTimestamp)) {
+          return buildDailyMissionClaimFailure(player, missionId, "persistence-failure");
+        }
+        setPlayer(withTimestamp);
+        return attempt.result;
+      } finally {
+        dailyMissionClaimInFlight.current = false;
+      }
+    },
+    [player],
+  );
+
+  const claimDailyActivityMilestoneAction = useCallback(
+    (milestoneId: string): DailyActivityClaimResult => {
+      if (dailyActivityClaimInFlight.current) {
+        return buildDailyActivityClaimFailure(player, milestoneId, "claim-in-progress");
+      }
+      dailyActivityClaimInFlight.current = true;
+      try {
+        const attempt = claimDailyActivityMilestone(player, milestoneId);
+        if (!attempt.result.success) return attempt.result;
+        const withTimestamp: PlayerState = { ...attempt.state, lastUpdatedAt: Date.now() };
+        if (!persistPlayerState(withTimestamp)) {
+          return buildDailyActivityClaimFailure(player, milestoneId, "persistence-failure");
+        }
+        setPlayer(withTimestamp);
+        return attempt.result;
+      } finally {
+        dailyActivityClaimInFlight.current = false;
+      }
+    },
+    [player],
+  );
+
+  const ensureDailyMissions = useCallback(() => {
+    update((prev) => {
+      const ensured = ensureCurrentDailyMissionState(prev.dailyMissions);
+      if (!ensured.didReset && !ensured.repaired) return prev;
+      return { ...prev, dailyMissions: ensured.state };
+    });
+  }, [update]);
 
   const resetSave = useCallback(() => {
     upgradeInFlight.current.clear();
@@ -1163,6 +1274,8 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
     weaponUpgradeInFlight.current.clear();
     chestOpenInFlight.current = false;
     shopPurchaseInFlight.current = false;
+    dailyMissionClaimInFlight.current = false;
+    dailyActivityClaimInFlight.current = false;
     update(() => ({ ...DEFAULT_PLAYER_STATE }));
   }, [update]);
 
@@ -1199,6 +1312,9 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       updatePlayerProfile,
       openChest,
       purchaseShopOffer,
+      claimDailyMission,
+      claimDailyActivityMilestone: claimDailyActivityMilestoneAction,
+      ensureDailyMissions,
       resetSave,
     }),
     [
@@ -1233,6 +1349,9 @@ export function PlayerStoreProvider({ children }: { children: ReactNode }) {
       updatePlayerProfile,
       openChest,
       purchaseShopOffer,
+      claimDailyMission,
+      claimDailyActivityMilestoneAction,
+      ensureDailyMissions,
       resetSave,
     ],
   );

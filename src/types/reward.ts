@@ -17,6 +17,10 @@ export type RewardSource =
   | "level-up"
   /** Canonical Shop purchases (systems/rewards/purchaseShopOffer.ts). */
   | "shop"
+  /** Daily Mission claim rewards (systems/dailyMissions/claimDailyMission.ts). */
+  | "daily-mission"
+  /** Daily Activity milestone claims (systems/dailyMissions/claimDailyActivityMilestone.ts). */
+  | "daily-activity"
   // Defined for future systems; nothing awards from these yet.
   | "mission"
   | "event";

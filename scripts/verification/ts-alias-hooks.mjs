@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import { register } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 // Throwaway resolution shim so scripts/verification/*.ts can import the
@@ -48,3 +49,7 @@ export async function load(url, context, nextLoad) {
   }
   return nextLoad(url, context);
 }
+
+// Node 20.6+ / 24: `--import` alone no longer installs resolve/load exports as
+// hooks — register this module explicitly when loaded via `--import`.
+register(import.meta.url);

@@ -22,6 +22,8 @@ import {
 } from "@/systems/companionProgression";
 import { normalizePlayerProgression } from "@/systems/playerProgression";
 import { DEFAULT_AVATAR_ID, PROFILE_AVATAR_IDS } from "./playerProfile";
+import { createFreshDailyMissionState } from "./dailyMissions";
+import { ensureCurrentDailyMissionState, getDailyMissionDayKey } from "@/systems/dailyMissions/dailyMissionDay";
 
 const DEFAULT_SHIP_ID = "ship-01-rapid-fire";
 
@@ -135,11 +137,14 @@ export const DEFAULT_PLAYER_STATE: PlayerState = {
   currentChapterId: "chapter-01",
   currentStageId: "ch1-stage-1",
   highestClearedStageId: null,
+  // Fresh installs start on today's local calendar day with empty progress.
+  // Migration never grants claims/rewards — only initializes empty state.
+  dailyMissions: createFreshDailyMissionState(getDailyMissionDayKey()),
   lastUpdatedAt: 0,
   saveSchemaVersion: SAVE_SCHEMA_VERSION,
 };
 
-const MIGRATABLE_SCHEMA_VERSIONS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const;
+const MIGRATABLE_SCHEMA_VERSIONS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
 
 export type SaveRecoveryReason = "unreadable-json" | "invalid-shape" | "unsupported-version";
 
@@ -404,6 +409,17 @@ export function normalizePlayerSave(input: PlayerState): { state: PlayerState; r
         typeof s.highestClearedStageId === "string" || s.highestClearedStageId === null
           ? s.highestClearedStageId
           : null,
+      dailyMissions: (() => {
+        const ensured = ensureCurrentDailyMissionState(s.dailyMissions);
+        if (ensured.repaired || ensured.didReset || !s.dailyMissions) {
+          repairs.push(
+            ensured.didReset
+              ? "dailyMissions: initialized/reset to current local day"
+              : "dailyMissions: normalized malformed progress",
+          );
+        }
+        return ensured.state;
+      })(),
     },
     repairs,
   };
@@ -424,6 +440,9 @@ function mergePlayerWithDefaults(parsed: Partial<PlayerState>): PlayerState {
     shipAbilityLevels: { ...DEFAULT_PLAYER_STATE.shipAbilityLevels, ...parsed.shipAbilityLevels },
     chests: { ...DEFAULT_PLAYER_STATE.chests, ...parsed.chests },
     consumables: { ...DEFAULT_PLAYER_STATE.consumables, ...parsed.consumables },
+    // v11→v12: initialize empty daily mission state when absent. Never
+    // invent claimed rewards during migration.
+    dailyMissions: parsed.dailyMissions ?? createFreshDailyMissionState(getDailyMissionDayKey()),
   };
 }
 
@@ -504,6 +523,8 @@ export function migratePlayerState(parsedValue: unknown): PlayerSaveLoadResult {
   // v10→v11: Player Profile added the selected built-in avatar id.
   // `displayName` already existed since schema 1 and needs no backfill.
   const missingAvatarId = typeof parsed.avatarId !== "string" || parsed.avatarId.length === 0;
+  // v11→v12: Daily Missions persistent day/progress/claim state.
+  const missingDailyMissions = !parsed.dailyMissions || typeof parsed.dailyMissions !== "object";
   const state: PlayerState = {
     ...merged,
     materials: {
@@ -542,7 +563,7 @@ export function migratePlayerState(parsedValue: unknown): PlayerSaveLoadResult {
   const normalized = normalizePlayerSave(state);
 
   const shouldPersist =
-    sourceVersion !== SAVE_SCHEMA_VERSION || missingCompanionData || missingModuleParts || missingWeaponParts || missingWeaponState || missingUniversalShards || missingShipFragments || missingAbilityCores || missingAbilityLevels || missingCompanionShards || missingChests || missingConsumables || missingAvatarId || normalized.repairs.length > 0 || normalizedProgress;
+    sourceVersion !== SAVE_SCHEMA_VERSION || missingCompanionData || missingModuleParts || missingWeaponParts || missingWeaponState || missingUniversalShards || missingShipFragments || missingAbilityCores || missingAbilityLevels || missingCompanionShards || missingChests || missingConsumables || missingAvatarId || missingDailyMissions || normalized.repairs.length > 0 || normalizedProgress;
   return {
     state: normalized.state,
     shouldPersist,

@@ -77,7 +77,7 @@ Companion docs inside the handoff (not indexed as images):
 
 | Filename | Path | Intended screen / feature | Status | Visual notes |
 |---|---|---|---|---|
-| `31_Daily_Missions.png` | `STARFIRE_ARMADA_UI_HANDOFF/references/mobile_screens/Batch_4_Progression_Events_and_Account/31_Daily_Missions.png` | Daily Missions | planned | Mission list + claim row; timers are placeholder. |
+| `31_Daily_Missions.png` | `STARFIRE_ARMADA_UI_HANDOFF/references/mobile_screens/Batch_4_Progression_Events_and_Account/31_Daily_Missions.png` | Daily Missions | implemented | Mission list + claim row; timers are placeholder — app uses “Resets daily”. |
 | `32_Weekly_Missions.png` | `STARFIRE_ARMADA_UI_HANDOFF/references/mobile_screens/Batch_4_Progression_Events_and_Account/32_Weekly_Missions.png` | Weekly Missions | planned | Weekly mission board layout. |
 | `33_Achievements_Hub.png` | `STARFIRE_ARMADA_UI_HANDOFF/references/mobile_screens/Batch_4_Progression_Events_and_Account/33_Achievements_Hub.png` | Achievements Hub | planned | Achievement category hub. |
 | `34_Achievement_Category.png` | `STARFIRE_ARMADA_UI_HANDOFF/references/mobile_screens/Batch_4_Progression_Events_and_Account/34_Achievement_Category.png` | Achievement Category | planned | Category detail list. |

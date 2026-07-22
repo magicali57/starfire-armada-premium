@@ -277,7 +277,7 @@ function MissionsProgressSection({ onOpen }: { onOpen: OpenPanel }) {
             <span className="home-final__mission-status">{mission.status}</span>
             <span className="home-final__progress"><i style={{ width: `${mission.progress}%` }} /></span>
             <small>{mission.reward}</small>
-            <button className="press-scale" type="button" onClick={() => mission.id === "campaign" ? navigate("campaign") : onOpen(mission.title, `${mission.title} are coming soon.`)}>{mission.action}</button>
+            <button className="press-scale" type="button" onClick={() => mission.id === "campaign" ? navigate("campaign") : mission.id === "daily" ? navigate("daily-missions") : onOpen(mission.title, `${mission.title} are coming soon.`)}>{mission.action}</button>
           </article>
         ))}
       </div>

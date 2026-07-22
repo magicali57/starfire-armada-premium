@@ -47,13 +47,15 @@ export type MaterialBalances = Record<MaterialId, number>;
 // Companion Shards (materials.companionShards), unopened chest inventory
 // (chests) and persistent pre-battle consumables (consumables), and to 11
 // when Player Profile added the selected built-in avatar id (`avatarId`;
-// `displayName` already existed since schema 1 and is unchanged).
+// `displayName` already existed since schema 1 and is unchanged), and to 12
+// when Daily Missions added persistent daily mission/activity state
+// (`dailyMissions`).
 // Each version's saves
 // are migrated forward in store/playerStore.tsx's loadPlayerState — not
 // discarded — by merging in defaults for whatever fields that version
 // introduced; only saves that are missing/unparseable/from an unrecognized
 // future version fall back to DEFAULT_PLAYER_STATE.
-export const SAVE_SCHEMA_VERSION = 11;
+export const SAVE_SCHEMA_VERSION = 12;
 
 export interface PlayerState {
   playerId: string;
@@ -114,6 +116,10 @@ export interface PlayerState {
   currentChapterId: string;
   currentStageId: string;
   highestClearedStageId: string | null;
+
+  /** Daily Missions progress for the local calendar day. Schema v12+.
+   *  Reset/claim logic lives in systems/dailyMissions — never mutate from UI. */
+  dailyMissions: import("./dailyMissions").DailyMissionState;
 
   lastUpdatedAt: number;
   saveSchemaVersion: number;

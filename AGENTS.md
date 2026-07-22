@@ -51,8 +51,8 @@ See `docs/UI_REFERENCE_INDEX.md` for the full filename → screen map.
 - Ship abilities are separate from Arsenal weapons.
 - Companion Rank Up and Ship Skins are postponed.
 - Do not reset or damage existing save data.
-  - Current save key: `starfire-armada-v2:save`
-  - Current save schema: version 11
+- Current save key: `starfire-armada-v2:save`
+ - Current save schema: version 12
 - Use focused verification: TypeScript type-check, one production build, and task-specific checks.
 - Do not run browser automation or capture screenshots unless explicitly requested.
 - Keep completion reports brief.

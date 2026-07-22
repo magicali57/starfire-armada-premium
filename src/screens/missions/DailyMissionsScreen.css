@@ -1,0 +1,495 @@
+.daily-missions,
+.daily-missions * {
+  box-sizing: border-box;
+}
+
+.daily-missions {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: #eef4ff;
+  overflow-x: hidden;
+}
+
+.daily-missions::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image: var(--daily-missions-backdrop);
+  background-size: cover;
+  background-position: center top;
+  opacity: 0.34;
+  pointer-events: none;
+}
+
+.daily-missions::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(40, 180, 255, 0.28), transparent 42%),
+    radial-gradient(ellipse at 80% 30%, rgba(120, 60, 220, 0.22), transparent 45%),
+    linear-gradient(180deg, rgba(4, 8, 22, 0.78), rgba(3, 5, 16, 0.94) 50%, rgba(6, 4, 18, 0.98));
+}
+
+.daily-missions__topline {
+  display: flex;
+}
+
+.daily-missions__title {
+  text-align: center;
+  padding: 2px 0 4px;
+}
+
+.daily-missions__title h1 {
+  margin: 0;
+  font-size: clamp(26px, 7.5vw, 38px);
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: #9ef6ff;
+  text-shadow: 0 0 18px rgba(60, 220, 255, 0.55);
+}
+
+.daily-missions__title p {
+  margin: 6px 0 0;
+  color: #a9b8d8;
+  font-size: clamp(11px, 3vw, 13px);
+  overflow-wrap: anywhere;
+}
+
+.daily-missions__reset {
+  margin: 10px auto 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(80, 190, 255, 0.55);
+  background: linear-gradient(180deg, rgba(20, 50, 110, 0.75), rgba(12, 24, 60, 0.9));
+  box-shadow: 0 0 12px rgba(40, 160, 255, 0.25);
+  color: #ccecff;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.daily-missions__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.daily-missions__card {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(70, 150, 255, 0.35);
+  background:
+    linear-gradient(135deg, rgba(24, 36, 78, 0.92), rgba(14, 18, 42, 0.94)),
+    radial-gradient(circle at 100% 0%, rgba(90, 40, 180, 0.18), transparent 50%);
+  box-shadow: inset 0 0 0 1px rgba(120, 200, 255, 0.08);
+}
+
+.daily-missions__card--claimable {
+  border-color: rgba(255, 190, 70, 0.55);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 200, 80, 0.12),
+    0 0 14px rgba(255, 170, 40, 0.18);
+}
+
+.daily-missions__card--claimed {
+  opacity: 0.88;
+  border-color: rgba(70, 210, 140, 0.4);
+}
+
+.daily-missions__card-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(160deg, rgba(30, 70, 140, 0.9), rgba(18, 24, 56, 0.95));
+  border: 1px solid rgba(90, 190, 255, 0.45);
+  box-shadow: 0 0 12px rgba(50, 160, 255, 0.25);
+}
+
+.daily-missions__card-icon img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.daily-missions__card-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.daily-missions__card-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.daily-missions__card-copy {
+  min-width: 0;
+}
+
+.daily-missions__card-copy h2 {
+  margin: 0;
+  font-size: clamp(12px, 3.4vw, 14px);
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #f3f7ff;
+  overflow-wrap: anywhere;
+}
+
+.daily-missions__card-copy p {
+  margin: 3px 0 0;
+  font-size: 11px;
+  line-height: 1.25;
+  color: #9aa9c8;
+  overflow-wrap: anywhere;
+}
+
+.daily-missions__card-rewards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.daily-missions__card-rewards li {
+  width: 36px;
+  min-width: 36px;
+  padding: 3px 2px;
+  border-radius: 8px;
+  border: 1px solid rgba(100, 160, 255, 0.35);
+  background: rgba(8, 14, 34, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.daily-missions__card-rewards img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.daily-missions__card-rewards span {
+  font-size: 9px;
+  font-weight: 700;
+  color: #d7e7ff;
+  line-height: 1;
+}
+
+.daily-missions__action {
+  min-width: 64px;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  position: relative;
+}
+
+.daily-missions__action--go {
+  color: #dff6ff;
+  background: linear-gradient(180deg, rgba(40, 120, 220, 0.95), rgba(20, 60, 150, 0.98));
+  border-color: rgba(100, 200, 255, 0.65);
+  box-shadow: 0 0 12px rgba(40, 150, 255, 0.35);
+}
+
+.daily-missions__action--claim {
+  color: #2a1800;
+  background: linear-gradient(180deg, #ffd56a, #f0a020 55%, #d07a10);
+  border-color: rgba(255, 220, 120, 0.8);
+  box-shadow: 0 0 14px rgba(255, 170, 40, 0.45);
+}
+
+.daily-missions__action--claim b {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff3b4a;
+  box-shadow: 0 0 6px rgba(255, 60, 80, 0.8);
+}
+
+.daily-missions__action--done {
+  color: #b8ffe0;
+  background: linear-gradient(180deg, rgba(30, 120, 80, 0.85), rgba(18, 70, 50, 0.95));
+  border-color: rgba(90, 220, 150, 0.55);
+  cursor: default;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.daily-missions__action:disabled {
+  opacity: 0.9;
+}
+
+.daily-missions__card-progress {
+  min-width: 0;
+}
+
+.daily-missions__card-progress .progress-fill__label {
+  font-size: 10px;
+  color: #b7c8e8;
+}
+
+.daily-missions__complete {
+  margin: 0;
+  text-align: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(80, 220, 160, 0.4);
+  background: rgba(20, 60, 45, 0.45);
+  color: #c8ffe4;
+  font-size: 12px;
+}
+
+.daily-missions__activity {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-top: 4px;
+  padding: 12px 10px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(90, 160, 255, 0.4);
+  background: linear-gradient(180deg, rgba(18, 28, 64, 0.96), rgba(10, 14, 36, 0.98));
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.35);
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.daily-missions__activity-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.daily-missions__activity-head h2 {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #d7e7ff;
+}
+
+.daily-missions__activity-head p {
+  margin: 0;
+  font-size: 11px;
+  color: #9eb0d4;
+  white-space: nowrap;
+}
+
+.daily-missions__activity-head strong {
+  color: #ffe08a;
+}
+
+.daily-missions__activity-track {
+  position: relative;
+  min-width: 280px;
+  height: 72px;
+  padding: 0 8px;
+}
+
+.daily-missions__activity-bar {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 34px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(20, 30, 60, 0.95);
+  border: 1px solid rgba(80, 140, 220, 0.35);
+  overflow: hidden;
+}
+
+.daily-missions__activity-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2ec7ff, #7a5cff 70%, #ffb347);
+  box-shadow: 0 0 10px rgba(80, 200, 255, 0.45);
+  transition: width 280ms ease;
+}
+
+.daily-missions__milestones {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  inset: 0 8px;
+}
+
+.daily-missions__milestone {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 44px;
+}
+
+.daily-missions__milestone-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid rgba(120, 180, 255, 0.4);
+  background: rgba(12, 18, 40, 0.9);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.daily-missions__milestone-btn img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.daily-missions__milestone-btn:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.daily-missions__milestone.is-claimable .daily-missions__milestone-btn {
+  border-color: rgba(255, 200, 80, 0.75);
+  box-shadow: 0 0 12px rgba(255, 180, 50, 0.45);
+  cursor: pointer;
+}
+
+.daily-missions__milestone.is-claimed .daily-missions__milestone-btn {
+  border-color: rgba(90, 220, 150, 0.65);
+}
+
+.daily-missions__milestone.is-locked .daily-missions__milestone-btn {
+  filter: grayscale(0.35) brightness(0.85);
+}
+
+.daily-missions__milestone-check {
+  min-height: 14px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #7dffb4;
+  line-height: 1;
+}
+
+.daily-missions__milestone-pts {
+  font-size: 10px;
+  font-weight: 700;
+  color: #c5d4f0;
+}
+
+.daily-missions__success {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.daily-missions__success h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #eef6ff;
+}
+
+.daily-missions__success-activity {
+  margin: 0;
+  color: #ffe08a;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.daily-missions__success-rewards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.daily-missions__success-rewards li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(90, 160, 255, 0.3);
+  background: rgba(12, 18, 40, 0.7);
+}
+
+.daily-missions__success-rewards img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+@media (max-width: 380px) {
+  .daily-missions__card-top {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "copy action"
+      "rewards action";
+  }
+
+  .daily-missions__card-copy {
+    grid-area: copy;
+  }
+
+  .daily-missions__card-rewards {
+    grid-area: rewards;
+  }
+
+  .daily-missions__action {
+    grid-area: action;
+    align-self: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daily-missions__activity-bar i {
+    transition: none;
+  }
+}

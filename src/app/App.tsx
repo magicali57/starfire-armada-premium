@@ -33,6 +33,7 @@ import { ArsenalScreen } from "@/screens/arsenal/ArsenalScreen";
 import { WeaponDetailScreen } from "@/screens/arsenal/WeaponDetailScreen";
 import { WeaponUpgradeScreen } from "@/screens/arsenal/WeaponUpgradeScreen";
 import { ProfileScreen } from "@/screens/profile/ProfileScreen";
+import { DailyMissionsScreen } from "@/screens/missions/DailyMissionsScreen";
 import { PlayerStoreProvider } from "@/store/playerStore";
 
 function ActiveScreen() {
@@ -111,6 +112,8 @@ function ActiveScreen() {
       return <ProfileScreen />;
     case "shop":
       return <ShopScreen />;
+    case "daily-missions":
+      return <DailyMissionsScreen />;
     default:
       return <HomeScreen />;
   }

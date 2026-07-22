@@ -16,6 +16,7 @@ Factual snapshot based on the current repository and recent Git history. This do
 - Results — complete Victory/Defeat screen (hero, performance summary, grouped reward summary, actions) consuming only the canonical battle-results contract (`src/screens/results`, `src/components/results`)
 - Player Profile + Edit Profile modal (`src/screens/profile`, `src/components/profile`)
 - Player Level-Up modal, integrated into Results on victory (`src/components/level-up`)
+- Reward Reveal overlay for special rewards (new collectibles, Rare/Epic chests, Epic/Legendary rewards), integrated into Results after Level-Up (`src/components/reward-reveal`)
 
 ## Implemented progression systems
 
@@ -29,6 +30,7 @@ Factual snapshot based on the current repository and recent Git history. This do
 - Battle session state machine (`src/systems/battleSession.ts`)
 - Player Profile summary contract (display name, avatar, XP/level, Power, campaign/collection counts, tracked-only battle statistics) (`src/data/playerProfile.ts`)
 - Reward-row presentation helper — canonical rewards → display rows (icon/label/quantity/rarity), reused by both Player Profile and the Level-Up modal (`src/data/rewardDisplay.ts`)
+- Reward Reveal queue helper — decides which already-applied entries from a `BattleResultsView` are special enough for a dedicated reveal (new collectibles; Rare/Epic chests; other Epic/Legendary grants), built entirely on top of `rewardDisplay.ts` (`src/data/rewardReveal.ts`)
 
 ## Current architecture
 
@@ -38,7 +40,8 @@ Factual snapshot based on the current repository and recent Git history. This do
 - `ResultsScreen` reads only `getBattleResultsView(battleSession)`; it does not grant rewards itself — all rewards are applied before Results renders.
 - `getBattleResultsView` groups the completion's already-applied entries (`application.applied`) into mutually-exclusive display groups — `firstClearRewards`, `baseRewards`, `levelUpRewards`, `newCollectibles` — plus `duplicateConversions`, purely by filtering on each entry's existing `source`/`kind` and on reference-equality with `duplicateConversions[i].converted`. Nothing is recomputed; an entry never appears in two groups.
 - `ResultsScreen` opens `PlayerLevelUpModal` when `outcome === "victory" && playerLevelsGained > 0`, gated by an in-memory `sessionId` marker (component state, never persisted) so it shows exactly once per completed session and never reopens on rerender. Replay/Retry both reuse the existing `retryBattle` store action (fresh sessionId, same stage/difficulty, Energy validated + spent once via the canonical session-start path); Continue reuses the existing Stage Detail `?id=` navigation convention and never spends Energy.
-- `GameplayScreen` currently renders a placeholder canvas; its "End Stage (debug)" button manually drives the battle-session pipeline (`declareBattleVictory` → `completeBattle` → `enterBattleResults`) as a stand-in for real combat outcomes.
+- `ResultsScreen` opens `RewardRevealOverlay` (built from `getRewardRevealQueue(view)`) only after Level-Up is absent or already closed, gated by its own in-memory `sessionId` marker — same once-per-session/never-reopens-on-rerender pattern as Level-Up. Presentation order on victory is always Level-Up → Reward Reveal → normal Results.
+- `GameplayScreen` currently renders a placeholder canvas; its "Win/Lose Stage (debug)" buttons self-start a session for the current stage (via `startBattle`) if none is active, then drive the same battle-session pipeline (`declareBattleVictory`/`declareBattleDefeat` → `completeBattle` → `enterBattleResults`) as a stand-in for real combat outcomes — a small fix to a previously dead/unreachable debug button, not real gameplay-engine integration.
 
 ## Recent important commits
 
@@ -91,4 +94,4 @@ Factual snapshot based on the current repository and recent Git history. This do
 
 ## Recommended next task
 
-Player Profile (`#/profile`, schema v11), the Player Level-Up modal, and the complete Battle Results screen (Victory/Defeat, integrated into Results) are implemented. Shop, Daily Rewards, Chest Opening, and Reward Reveal remain the next major screens to build. Real gameplay-engine integration (actual combat victory/defeat conditions, and wiring Pre-Battle's Start button to a real `startBattle` call) remains future work — Results, Replay, and Retry are fully wired to the canonical contract and ready for it.
+Player Profile (`#/profile`, schema v11), the Player Level-Up modal, the complete Battle Results screen (Victory/Defeat), and the Reward Reveal overlay are implemented. Shop, Daily Rewards, and Chest Opening remain the next major screens to build. Real gameplay-engine integration (actual combat victory/defeat conditions, and wiring Pre-Battle's Start button to a real `startBattle` call) remains future work — Results, Replay, Retry, Level-Up, and Reward Reveal are all fully wired to the canonical contract and ready for it.

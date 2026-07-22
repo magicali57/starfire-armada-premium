@@ -5,9 +5,11 @@ import { BattleRewardSummary } from "@/components/results/BattleRewardSummary";
 import { BattleResultActions } from "@/components/results/BattleResultActions";
 import { InlineAlert } from "@/components/feedback/InlineAlert";
 import { PlayerLevelUpModal } from "@/components/level-up/PlayerLevelUpModal";
+import { RewardRevealOverlay } from "@/components/reward-reveal/RewardRevealOverlay";
 import { usePlayerStore } from "@/store/playerStore";
 import { getBattleResultsView } from "@/systems/battleSession";
 import { isPlayerMaxLevel } from "@/systems/playerProgression";
+import { getRewardRevealQueue } from "@/data/rewardReveal";
 import { navigate, pathFor } from "@/app/routes";
 import "./ResultsScreen.css";
 
@@ -36,16 +38,32 @@ export function ResultsScreen() {
   // it. A genuinely new session (Replay/Retry) gets a new sessionId and is
   // free to show its own Level-Up modal again.
   const [levelUpConsumedSessionId, setLevelUpConsumedSessionId] = useState<string | null>(null);
+  // Same in-memory, never-persisted, once-per-session pattern as the
+  // Level-Up marker above, plus a local queue position — reset whenever a
+  // new session's view appears (see the effect below) so a Replay/Retry's
+  // fresh queue always starts at its own first item.
+  const [rewardRevealConsumedSessionId, setRewardRevealConsumedSessionId] = useState<string | null>(null);
+  const [rewardRevealIndex, setRewardRevealIndex] = useState(0);
   // Navigation-safety guard: true while Replay/Retry is creating a fresh
   // session, so a double tap (or tapping while the store's own in-flight
   // guard is active) can never fire a second startBattle/Energy spend.
   const [isStartingSession, setIsStartingSession] = useState(false);
   const [energyAlert, setEnergyAlert] = useState<string | null>(null);
 
+  useEffect(() => {
+    setRewardRevealIndex(0);
+  }, [view?.sessionId]);
+
   if (!view) return null;
 
-  const showLevelUpModal =
-    view.outcome === "victory" && view.playerLevelsGained > 0 && levelUpConsumedSessionId !== view.sessionId;
+  const rewardRevealQueue = view.outcome === "victory" ? getRewardRevealQueue(view) : [];
+  const hasLevelUpToShow = view.outcome === "victory" && view.playerLevelsGained > 0;
+  // Required order: Level-Up first (when it exists), Reward Reveal next
+  // (only once Level-Up is absent or already closed), then the normal
+  // interactive Results screen. Never both stacked at once.
+  const showLevelUpModal = hasLevelUpToShow && levelUpConsumedSessionId !== view.sessionId;
+  const showRewardReveal =
+    !showLevelUpModal && rewardRevealQueue.length > 0 && rewardRevealConsumedSessionId !== view.sessionId;
 
   const handleCampaign = () => {
     // Clears TEMPORARY session state only — awarded progression persists.
@@ -138,6 +156,14 @@ export function ResultsScreen() {
         unlocks={view.unlocksEarned}
         reachedMaxLevel={isPlayerMaxLevel(view.newPlayerLevel)}
         onClose={() => setLevelUpConsumedSessionId(view.sessionId)}
+      />
+
+      <RewardRevealOverlay
+        isOpen={showRewardReveal}
+        items={rewardRevealQueue}
+        currentIndex={rewardRevealIndex}
+        onNext={() => setRewardRevealIndex((index) => index + 1)}
+        onClose={() => setRewardRevealConsumedSessionId(view.sessionId)}
       />
     </div>
   );

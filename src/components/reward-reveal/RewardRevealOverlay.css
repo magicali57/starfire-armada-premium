@@ -1,0 +1,150 @@
+.reward-reveal,
+.reward-reveal * {
+  box-sizing: border-box;
+}
+
+.reward-reveal {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+  max-height: 70dvh;
+  overflow-y: auto;
+  animation: reward-reveal-enter 0.3s ease-out;
+}
+
+.reward-reveal__counter {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
+}
+
+.reward-reveal__art {
+  position: relative;
+  width: min(180px, 60vw);
+  height: min(180px, 60vw);
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-inset);
+  border: 2px solid var(--color-rarity-common);
+  animation: reward-reveal-art-enter 0.36s var(--ease-standard) both;
+}
+
+.reward-reveal__art--rare {
+  border-color: var(--color-rarity-rare);
+  box-shadow: 0 0 22px rgba(79, 180, 255, 0.35);
+}
+.reward-reveal__art--epic {
+  border-color: var(--color-rarity-epic);
+  box-shadow: 0 0 26px rgba(181, 107, 255, 0.4);
+}
+.reward-reveal__art--legendary {
+  border-color: var(--color-rarity-legendary);
+  box-shadow: var(--shadow-panel), var(--glow-gold);
+  animation: reward-reveal-art-enter 0.36s var(--ease-standard) both, reward-reveal-legendary-glow 2.2s ease-in-out 0.4s infinite;
+}
+
+.reward-reveal__art-image {
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+}
+
+.reward-reveal__new-badge {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-success-500);
+  color: var(--color-bg-void);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  opacity: 0;
+  animation: reward-reveal-badge-enter 0.24s ease-out 0.3s both;
+}
+
+.reward-reveal__name {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+.reward-reveal__quantity {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  color: var(--color-gold-300);
+}
+
+.reward-reveal__subtitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+@keyframes reward-reveal-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes reward-reveal-art-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes reward-reveal-badge-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes reward-reveal-legendary-glow {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.18);
+  }
+}
+
+@media (max-width: 360px) {
+  .reward-reveal__art {
+    width: min(140px, 55vw);
+    height: min(140px, 55vw);
+  }
+}
+
+/* Reduced-motion: covered by the project-wide rule in styles/globals.css
+   (near-zero animation-duration on every element) — no per-component
+   override needed here. */

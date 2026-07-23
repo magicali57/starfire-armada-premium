@@ -3,7 +3,8 @@ import { getShipById } from "@/data";
 import { getStageById } from "@/data/campaign";
 import { RAPID_FIRE_SHIP_ID } from "@/data/gameplayRapidFire";
 import { GameCanvas } from "@/gameplay/rapidFire/GameCanvas";
-import type { EngineHudSnapshot } from "@/gameplay/rapidFire/RapidFireEngine";
+import type { EngineHudSnapshot, RapidFireEngine } from "@/gameplay/rapidFire/RapidFireEngine";
+import { loadAudioPrefs, type AudioPrefs } from "@/gameplay/rapidFire/audioSystem";
 import { calculateShipStatsWithRank } from "@/systems/shipStarRank";
 import { createDefaultShipProgress } from "@/systems/shipStats";
 import type { BattlePerformance } from "@/systems/battleSession";
@@ -31,7 +32,23 @@ export function GameplayScreen() {
 
   const [hud, setHud] = useState<EngineHudSnapshot | null>(null);
   const [pausedUi, setPausedUi] = useState(false);
+  const [audioPrefs, setAudioPrefsState] = useState<AudioPrefs>(() => loadAudioPrefs());
   const outcomeSent = useRef(false);
+  const engineRef = useRef<RapidFireEngine | null>(null);
+
+  const handleEngineReady = useCallback((engine: RapidFireEngine | null) => {
+    engineRef.current = engine;
+    if (engine) engine.setAudioPrefs(audioPrefs);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const updateAudioPrefs = (patch: Partial<AudioPrefs>) => {
+    setAudioPrefsState((prev) => {
+      const next = { ...prev, ...patch };
+      engineRef.current?.setAudioPrefs(next);
+      return next;
+    });
+  };
 
   useEffect(() => {
     outcomeSent.current = false;
@@ -195,6 +212,7 @@ export function GameplayScreen() {
           paused={pausedUi}
           onHud={setHud}
           onOutcome={finish}
+          onEngineReady={handleEngineReady}
         />
       </div>
 
@@ -205,6 +223,49 @@ export function GameplayScreen() {
             <p>
               {stage.name} · Wave {hud?.waveIndex ?? 1}/{hud?.waveTotal ?? 5}
             </p>
+            <div className="gameplay-pause__audio">
+              <label className="gameplay-pause__audio-row">
+                <input
+                  type="checkbox"
+                  checked={audioPrefs.muted}
+                  onChange={(e) => updateAudioPrefs({ muted: e.target.checked })}
+                />
+                Mute
+              </label>
+              <label className="gameplay-pause__audio-row">
+                Master
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={audioPrefs.master}
+                  onChange={(e) => updateAudioPrefs({ master: Number(e.target.value) })}
+                />
+              </label>
+              <label className="gameplay-pause__audio-row">
+                Music
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={audioPrefs.music}
+                  onChange={(e) => updateAudioPrefs({ music: Number(e.target.value) })}
+                />
+              </label>
+              <label className="gameplay-pause__audio-row">
+                SFX
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={audioPrefs.sfx}
+                  onChange={(e) => updateAudioPrefs({ sfx: Number(e.target.value) })}
+                />
+              </label>
+            </div>
             <button type="button" className="gameplay-pause__resume press-scale" onClick={handleResume}>
               Resume
             </button>

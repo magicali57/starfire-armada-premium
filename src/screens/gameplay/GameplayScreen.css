@@ -229,6 +229,37 @@
   font-size: 11px;
 }
 
+.gameplay-pause__audio {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 4px;
+  border-radius: 10px;
+  background: rgba(10, 12, 32, 0.55);
+  border: 1px solid rgba(140, 100, 255, 0.28);
+}
+
+.gameplay-pause__audio-row {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #cfd6ff;
+  text-align: left;
+}
+
+.gameplay-pause__audio-row input[type="range"] {
+  width: 100%;
+  accent-color: #ffbf5a;
+}
+
+.gameplay-pause__audio-row input[type="checkbox"] {
+  accent-color: #ffbf5a;
+  width: 16px;
+  height: 16px;
+}
+
 .gameplay-screen__debug-actions {
   position: absolute;
   left: 8px;

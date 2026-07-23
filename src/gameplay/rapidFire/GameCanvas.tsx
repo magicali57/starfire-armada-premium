@@ -10,6 +10,8 @@ export interface GameCanvasProps {
   paused: boolean;
   onHud: (snap: EngineHudSnapshot) => void;
   onOutcome: (outcome: "victory" | "defeat", performance: BattlePerformance) => void;
+  /** Exposes the live engine instance for pause-menu audio controls. */
+  onEngineReady?: (engine: RapidFireEngine | null) => void;
 }
 
 /**
@@ -25,13 +27,16 @@ export function GameCanvas({
   paused,
   onHud,
   onOutcome,
+  onEngineReady,
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<RapidFireEngine | null>(null);
   const onHudRef = useRef(onHud);
   const onOutcomeRef = useRef(onOutcome);
+  const onEngineReadyRef = useRef(onEngineReady);
   onHudRef.current = onHud;
   onOutcomeRef.current = onOutcome;
+  onEngineReadyRef.current = onEngineReady;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -50,6 +55,7 @@ export function GameCanvas({
     if (import.meta.env.DEV) {
       (window as unknown as { __rapidFireEngine?: RapidFireEngine }).__rapidFireEngine = engine;
     }
+    onEngineReadyRef.current?.(engine);
     void engine.start().then(() => {
       if (cancelled) engine.destroy();
     });
@@ -63,6 +69,7 @@ export function GameCanvas({
       window.removeEventListener("resize", onResize);
       engine.destroy();
       engineRef.current = null;
+      onEngineReadyRef.current?.(null);
       if (import.meta.env.DEV) {
         const w = window as unknown as { __rapidFireEngine?: RapidFireEngine };
         if (w.__rapidFireEngine === engine) delete w.__rapidFireEngine;

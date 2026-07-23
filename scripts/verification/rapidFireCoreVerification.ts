@@ -6,7 +6,7 @@ import { RAPID_FIRE_GAMEPLAY_ASSETS, SHIP_GAMEPLAY_SPRITE, CHAPTER_BACKGROUND_IM
 import { RAPID_FIRE_SHIP_ID, RAPID_FIRE_SLICE_STAGE_ID } from "@/data/gameplayRapidFire";
 import { FIREPOWER_LEVELS, FIREPOWER_MAX, getFirepowerConfig, MAX_FIREPOWER } from "@/gameplay/rapidFire/firepowerConfig";
 import { ENEMY_DEFS } from "@/gameplay/rapidFire/enemyConfig";
-import { STAGE_WAVES, WAVE_COUNT, getOrderedSpawns } from "@/gameplay/rapidFire/waveTable";
+import { WAVE_PHASES, WAVE_COUNT, getOrderedSpawns, STAGE_DURATION_HINT_MS, TOTAL_POWER_CARRIERS } from "@/gameplay/rapidFire/waveTable";
 import { SAVE_SCHEMA_VERSION } from "@/types";
 
 let assertions = 0;
@@ -105,16 +105,29 @@ function publicPath(urlPath: string): string {
 {
   check(ENEMY_DEFS.basic && ENEMY_DEFS.shooter && ENEMY_DEFS.powerCarrier, "three enemy defs");
   check(ENEMY_DEFS.shooter.shootIntervalMs! > 0, "shooter fires");
-  equal(WAVE_COUNT, 5, "five waves");
+  equal(WAVE_COUNT, 12, "twelve choreographed wave phases (premium rebuild)");
+  equal(WAVE_PHASES.length, 12, "wave phase table matches WAVE_COUNT");
   const spawns = getOrderedSpawns();
   check(spawns.length > 0, "deterministic spawns");
   const carriers = spawns.filter((s) => s.kind === "powerCarrier");
   equal(carriers.length, 11, "11 Power Carriers (10 + Overdrive test)");
+  equal(TOTAL_POWER_CARRIERS, 11, "TOTAL_POWER_CARRIERS matches actual spawn count");
   // Spawn order sorted
   for (let i = 1; i < spawns.length; i += 1) {
     check(spawns[i].atMs >= spawns[i - 1].atMs, "spawn order non-decreasing");
   }
-  check(STAGE_WAVES.every((w) => w.spawns.length > 0), "every wave has spawns");
+  for (let i = 1; i < WAVE_PHASES.length; i += 1) {
+    check(WAVE_PHASES[i].startMs > WAVE_PHASES[i - 1].startMs, "wave phases strictly increasing");
+  }
+  // Every enemy belongs to a well-formed formation group.
+  for (const s of spawns) {
+    check(s.groupId.length > 0, `spawn has groupId (${s.kind}@${s.atMs})`);
+    check(s.slot >= 0 && s.slot < s.slotCount, `slot within slotCount (${s.groupId})`);
+  }
+  // Stage pacing: at least 2 minutes, and the authored hint stays in a
+  // reasonable range around the 2:00-3:00 target window.
+  check(STAGE_DURATION_HINT_MS >= 120000, "stage duration hint is at least 2 minutes");
+  check(STAGE_DURATION_HINT_MS <= 200000, "stage duration hint stays close to the 2:00-3:00 target");
 }
 
 // First-outcome / victory condition rules (documented invariants)

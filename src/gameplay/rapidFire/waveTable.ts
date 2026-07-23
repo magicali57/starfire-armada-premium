@@ -1,127 +1,142 @@
 import type { EnemyKind } from "./enemyConfig";
-
-export interface WaveSpawnEvent {
-  /** Time from battle start (ms). */
-  atMs: number;
-  kind: EnemyKind;
-  /** Normalized 0–1 x spawn (0.5 = center). */
-  xNorm: number;
-  /** Optional horizontal drift px/s. */
-  driftX?: number;
-}
-
-export interface WaveDefinition {
-  index: number;
-  label: string;
-  /** Inclusive start of wave window (ms). */
-  startMs: number;
-  spawns: WaveSpawnEvent[];
-}
+import type { FormationSpawnEvent, FormationType } from "./formationConfig";
 
 /**
- * Deterministic ~82s prototype stage for ch1-stage-1.
- * 11 Power Carriers (10 guaranteed + 1 Overdrive test).
- * Pacing targets: FP3~20s, FP5~35s, FP8~60s, FP10 before final wave.
+ * Stage 1 wave design — premium choreography rebuild.
+ *
+ * ch1-stage-1 is now built from 12 named phases spanning ~2 minutes 45
+ * seconds (target range: 2:00–3:00), instead of enemies simply falling
+ * straight down. Every enemy belongs to a `FormationSpawnEvent` group; see
+ * `formationConfig.ts` for how each formation type moves. Power Carriers are
+ * threaded individually through the timeline (11 total: 10 guaranteed to
+ * carry the player from Firepower 0 to 10, plus 1 extra so MAX FIREPOWER —
+ * OVERDRIVE gets tested/refreshed near the climax), matching the prior
+ * prototype's guarantee while fitting the new formation timeline.
  */
-export const WAVE_COUNT = 5;
 
-export const STAGE_WAVES: readonly WaveDefinition[] = [
-  {
-    index: 1,
-    label: "Wave 1",
-    startMs: 0,
-    spawns: [
-      { atMs: 1200, kind: "basic", xNorm: 0.3, driftX: 20 },
-      { atMs: 1800, kind: "basic", xNorm: 0.7, driftX: -20 },
-      { atMs: 3200, kind: "basic", xNorm: 0.5 },
-      { atMs: 5000, kind: "powerCarrier", xNorm: 0.45 },
-      { atMs: 7000, kind: "basic", xNorm: 0.25 },
-      { atMs: 7800, kind: "basic", xNorm: 0.75 },
-      { atMs: 10000, kind: "powerCarrier", xNorm: 0.55 },
-      { atMs: 12000, kind: "shooter", xNorm: 0.35 },
-      { atMs: 14000, kind: "basic", xNorm: 0.6 },
-    ],
-  },
-  {
-    index: 2,
-    label: "Wave 2",
-    startMs: 16000,
-    spawns: [
-      { atMs: 16500, kind: "basic", xNorm: 0.2 },
-      { atMs: 17000, kind: "basic", xNorm: 0.8 },
-      { atMs: 18500, kind: "powerCarrier", xNorm: 0.4 }, // ~FP3 target
-      { atMs: 20000, kind: "shooter", xNorm: 0.65 },
-      { atMs: 21000, kind: "basic", xNorm: 0.5, driftX: 30 },
-      { atMs: 23000, kind: "powerCarrier", xNorm: 0.7 },
-      { atMs: 25000, kind: "basic", xNorm: 0.3 },
-      { atMs: 26000, kind: "basic", xNorm: 0.55 },
-      { atMs: 28000, kind: "shooter", xNorm: 0.25 },
-    ],
-  },
-  {
-    index: 3,
-    label: "Wave 3",
-    startMs: 30000,
-    spawns: [
-      { atMs: 31000, kind: "basic", xNorm: 0.35 },
-      { atMs: 31800, kind: "basic", xNorm: 0.65 },
-      { atMs: 33500, kind: "powerCarrier", xNorm: 0.5 }, // ~FP5 target
-      { atMs: 35000, kind: "shooter", xNorm: 0.3 },
-      { atMs: 36000, kind: "shooter", xNorm: 0.7 },
-      { atMs: 38000, kind: "basic", xNorm: 0.45, driftX: -25 },
-      { atMs: 40000, kind: "powerCarrier", xNorm: 0.25 },
-      { atMs: 42000, kind: "basic", xNorm: 0.8 },
-      { atMs: 44000, kind: "basic", xNorm: 0.55 },
-      { atMs: 46000, kind: "powerCarrier", xNorm: 0.6 },
-    ],
-  },
-  {
-    index: 4,
-    label: "Wave 4",
-    startMs: 48000,
-    spawns: [
-      { atMs: 49000, kind: "shooter", xNorm: 0.4 },
-      { atMs: 50000, kind: "basic", xNorm: 0.2 },
-      { atMs: 51000, kind: "basic", xNorm: 0.8 },
-      { atMs: 53000, kind: "powerCarrier", xNorm: 0.5 },
-      { atMs: 55000, kind: "shooter", xNorm: 0.28 },
-      { atMs: 57000, kind: "basic", xNorm: 0.7, driftX: 20 },
-      { atMs: 59000, kind: "powerCarrier", xNorm: 0.35 }, // ~FP8 target
-      { atMs: 61000, kind: "basic", xNorm: 0.55 },
-      { atMs: 63000, kind: "shooter", xNorm: 0.75 },
-      { atMs: 65000, kind: "basic", xNorm: 0.4 },
-    ],
-  },
-  {
-    index: 5,
-    label: "Wave 5",
-    startMs: 67000,
-    spawns: [
-      { atMs: 68000, kind: "powerCarrier", xNorm: 0.45 }, // push toward FP10
-      { atMs: 69500, kind: "shooter", xNorm: 0.3 },
-      { atMs: 70000, kind: "shooter", xNorm: 0.7 },
-      { atMs: 72000, kind: "basic", xNorm: 0.5 },
-      { atMs: 73500, kind: "basic", xNorm: 0.25 },
-      { atMs: 74000, kind: "basic", xNorm: 0.75 },
-      { atMs: 76000, kind: "powerCarrier", xNorm: 0.55 }, // Overdrive test (+1)
-      { atMs: 78000, kind: "shooter", xNorm: 0.4 },
-      { atMs: 80000, kind: "basic", xNorm: 0.6 },
-      { atMs: 82000, kind: "basic", xNorm: 0.35 },
-    ],
-  },
+export interface WavePhase {
+  index: number;
+  label: string;
+  startMs: number;
+}
+
+interface GroupSpec {
+  atMs: number;
+  formation: FormationType;
+  groupId: string;
+  members: readonly EnemyKind[];
+}
+
+function group(spec: GroupSpec): FormationSpawnEvent[] {
+  return spec.members.map((kind, slot) => ({
+    atMs: spec.atMs,
+    kind,
+    formation: spec.formation,
+    groupId: spec.groupId,
+    slot,
+    slotCount: spec.members.length,
+  }));
+}
+
+const B: EnemyKind = "basic";
+const S: EnemyKind = "shooter";
+const C: EnemyKind = "powerCarrier";
+
+export const WAVE_PHASES: readonly WavePhase[] = [
+  { index: 1, label: "Approach", startMs: 0 },
+  { index: 2, label: "Flank Sweep", startMs: 12000 },
+  { index: 3, label: "Shooter Line", startMs: 26000 },
+  { index: 4, label: "Dive Runs", startMs: 42000 },
+  { index: 5, label: "Escort Convoy", startMs: 58000 },
+  { index: 6, label: "Crossfire", startMs: 76000 },
+  { index: 7, label: "Breather", startMs: 96000 },
+  { index: 8, label: "Carrier Wing", startMs: 104000 },
+  { index: 9, label: "Cross-Screen Sweep", startMs: 124000 },
+  { index: 10, label: "Advanced Shooter Wall", startMs: 142000 },
+  { index: 11, label: "Climax Formation", startMs: 160000 },
+  { index: 12, label: "Cleanup", startMs: 176000 },
 ];
 
-/** Flattened chronological spawn list. */
-export function getOrderedSpawns(): WaveSpawnEvent[] {
-  return STAGE_WAVES.flatMap((wave) => wave.spawns).slice().sort((a, b) => a.atMs - b.atMs);
+export const WAVE_COUNT = WAVE_PHASES.length;
+
+const GROUPS: FormationSpawnEvent[][] = [
+  // Phase 1 — Approach: short introductory V of fighters teaches movement/firing.
+  group({ atMs: 1500, formation: "vFormationTop", groupId: "p1-v", members: [B, B, B] }),
+  group({ atMs: 8500, formation: "carrierEscort", groupId: "p1-carrier", members: [C] }),
+
+  // Phase 2 — Flank Sweep: opposing side sweeps cross the screen.
+  group({ atMs: 12500, formation: "sideSweepLeft", groupId: "p2-left", members: [B, B, B] }),
+  group({ atMs: 15500, formation: "sideSweepRight", groupId: "p2-right", members: [B, B] }),
+  group({ atMs: 20000, formation: "carrierEscort", groupId: "p2-carrier", members: [C] }),
+
+  // Phase 3 — Shooter Line: held two-row shooter formation, ~FP3 target.
+  group({ atMs: 26500, formation: "twoRowShooter", groupId: "p3-rows", members: [S, S, S, S] }),
+  group({ atMs: 33000, formation: "carrierEscort", groupId: "p3-carrier", members: [C] }),
+
+  // Phase 4 — Dive Runs: alternating left/right attack dives.
+  group({ atMs: 42500, formation: "alternatingDive", groupId: "p4-dive", members: [B, B, B, B, B] }),
+  group({ atMs: 51000, formation: "carrierEscort", groupId: "p4-carrier", members: [C] }),
+
+  // Phase 5 — Escort Convoy: central Power Carrier with fighter escorts, ~FP5 target.
+  group({ atMs: 58500, formation: "carrierEscort", groupId: "p5-convoy", members: [C, B, B, B, B] }),
+  group({ atMs: 68000, formation: "arcFormation", groupId: "p5-arc", members: [B, B, B] }),
+
+  // Phase 6 — Crossfire: split formation plus a shooter side sweep for density.
+  group({ atMs: 76500, formation: "splitFormation", groupId: "p6-split", members: [B, B, B, B, S, S] }),
+  group({ atMs: 86000, formation: "sideSweepRight", groupId: "p6-sweep", members: [B, B, S] }),
+  group({ atMs: 92000, formation: "carrierEscort", groupId: "p6-carrier", members: [C] }),
+
+  // Phase 7 — Breather: brief pressure release, sparse arc only.
+  group({ atMs: 96500, formation: "arcFormation", groupId: "p7-arc", members: [B, B] }),
+
+  // Phase 8 — Carrier Wing: dedicated Power Carrier formation, ~FP8 target.
+  group({ atMs: 104500, formation: "carrierEscort", groupId: "p8-wing", members: [C, B, B, S, S, B] }),
+
+  // Phase 9 — Cross-Screen Sweep: full-width mixed sweep formations.
+  group({ atMs: 124500, formation: "sideSweepLeft", groupId: "p9-left", members: [B, S, B] }),
+  group({ atMs: 130000, formation: "sideSweepRight", groupId: "p9-right", members: [B, B, S] }),
+  group({ atMs: 137000, formation: "carrierEscort", groupId: "p9-carrier", members: [C] }),
+
+  // Phase 10 — Advanced Shooter Wall: denser two-row shooter formation, pushes toward FP10.
+  group({ atMs: 142500, formation: "twoRowShooter", groupId: "p10-wall", members: [S, S, S, S, S, S] }),
+  group({ atMs: 152000, formation: "carrierEscort", groupId: "p10-carrier", members: [C] }),
+
+  // Phase 11 — Climax Formation: dense mixed final formation, FP10 territory.
+  group({
+    atMs: 160500,
+    formation: "denseMixedFinal",
+    groupId: "p11-climax",
+    members: [B, S, B, C, B, S, B, S, B, B],
+  }),
+  // Overdrive test — a second Power Carrier once the player is already at FP10.
+  group({ atMs: 172000, formation: "carrierEscort", groupId: "p11-overdrive", members: [C] }),
+
+  // Phase 12 — Cleanup: short completion wave, staggered lanes.
+  group({ atMs: 176000, formation: "staggeredLane", groupId: "p12-cleanup", members: [B, B, B] }),
+];
+
+/** Flattened chronological spawn list consumed by the engine. */
+export function getOrderedSpawns(): FormationSpawnEvent[] {
+  return GROUPS.flat()
+    .slice()
+    .sort((a, b) => a.atMs - b.atMs);
 }
 
 export function getWaveIndexAt(elapsedMs: number): number {
   let current = 1;
-  for (const wave of STAGE_WAVES) {
+  for (const wave of WAVE_PHASES) {
     if (elapsedMs >= wave.startMs) current = wave.index;
   }
   return current;
 }
 
-export const STAGE_DURATION_HINT_MS = 85000;
+/** Total Power Carriers across the stage (Fire-Up progression + Overdrive test). */
+export const TOTAL_POWER_CARRIERS = getOrderedSpawns().filter((s) => s.kind === "powerCarrier").length;
+
+/**
+ * Rough authored duration hint: last group's spawn time plus that
+ * formation's own choreography length (entry + hold + exit), used only for
+ * pacing verification — the real stage always ends when every spawned enemy
+ * has been resolved (destroyed or exited), never a hard timer.
+ */
+export const STAGE_DURATION_HINT_MS = 184500;

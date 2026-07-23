@@ -588,10 +588,85 @@ export const MODULE_ART: Record<
 // rapid_fire_cursor_ready_assets.zip — filenames preserved).
 // ---------------------------------------------------------------------------
 
+/**
+ * @deprecated Superseded by RAPID_FIRE_PREMIUM_ASSETS (premium animation
+ * pass, 2026-07-23). Kept only so historical references fail loudly; do not
+ * wire these placeholder combat assets into gameplay.
+ */
 export const RAPID_FIRE_GAMEPLAY_ASSETS = {
   primaryBolt: `${BASE}/gameplay/rapid-fire/rapid_fire_primary_bolt.png`,
   fireUpPickup: `${BASE}/gameplay/rapid-fire/fire_up_pickup.png`,
   enemyBasic: `${BASE}/gameplay/rapid-fire/enemy_basic_fighter.png`,
   enemyShooter: `${BASE}/gameplay/rapid-fire/enemy_shooter.png`,
   enemyPowerCarrier: `${BASE}/gameplay/rapid-fire/enemy_power_carrier.png`,
+} as const;
+
+// ---------------------------------------------------------------------------
+// Rapid-Fire premium combat art (installed 2026-07-23 from
+// 30_named_static_rapid_fire_premium_assets.zip — filenames preserved except
+// warning_frame.png.png → ui/warning_frame.png, double extension fixed).
+// ---------------------------------------------------------------------------
+
+const RF_PREMIUM = `${BASE}/gameplay/rapid-fire-premium`;
+
+export const RAPID_FIRE_PREMIUM_ASSETS = {
+  // Ship
+  playerSprite: `${RF_PREMIUM}/ship/rapid_fire_player_sprite_premium.png`,
+  thrusterFlameStill: `${RF_PREMIUM}/ship/rapid_fire_thruster_flame.png`,
+  maxAura: `${RF_PREMIUM}/ship/rapid_fire_max_aura.png`,
+  // Enemies
+  enemyBasic: `${RF_PREMIUM}/enemies/enemy_basic_fighter_premium.png`,
+  enemyShooter: `${RF_PREMIUM}/enemies/enemy_shooter_premium.png`,
+  enemyPowerCarrier: `${RF_PREMIUM}/enemies/enemy_power_carrier_premium.png`,
+  enemyDebris: `${RF_PREMIUM}/enemies/enemy_debris_fragments.png`,
+  // Projectiles
+  primaryBolt: `${RF_PREMIUM}/projectiles/rapid_fire_primary_bolt.png`,
+  heavyBolt: `${RF_PREMIUM}/projectiles/rapid_fire_heavy_bolt.png`,
+  projectileTrail: `${RF_PREMIUM}/projectiles/rapid_fire_projectile_trail.png`,
+  enemyBulletSmall: `${RF_PREMIUM}/projectiles/enemy_bullet_small.png`,
+  enemyBulletAimed: `${RF_PREMIUM}/projectiles/enemy_bullet_aimed.png`,
+  // Pickups
+  fireUpPickup: `${RF_PREMIUM}/pickups/fire_up_pickup_premium.png`,
+  pickupMagnetGlow: `${RF_PREMIUM}/pickups/pickup_magnet_glow.png`,
+  // Static FX stills (single-frame; animated variants live in the sheet pack)
+  fxExplosionSmallStill: `${RF_PREMIUM}/fx/enemy_explosion_small.png`,
+  fxExplosionMediumStill: `${RF_PREMIUM}/fx/enemy_explosion_medium.png`,
+  fxEnemyHitSparkStill: `${RF_PREMIUM}/fx/enemy_hit_spark.png`,
+  fxEnemyMuzzleStill: `${RF_PREMIUM}/fx/enemy_muzzle_flash.png`,
+  fxMaxFpBurstStill: `${RF_PREMIUM}/fx/max_firepower_activation_burst.png`,
+  fxPickupBurstStill: `${RF_PREMIUM}/fx/pickup_collect_burst.png`,
+  fxImpactRingStill: `${RF_PREMIUM}/fx/player_projectile_impact_ring.png`,
+  fxMuzzleSmallStill: `${RF_PREMIUM}/fx/rapid_fire_muzzle_flash_small.png`,
+  fxMuzzleWideStill: `${RF_PREMIUM}/fx/rapid_fire_muzzle_flash_wide.png`,
+  fxPlayerDamageRingStill: `${RF_PREMIUM}/fx/rapid_fire_player_damage_ring.png`,
+  fxPlayerHitSparkStill: `${RF_PREMIUM}/fx/rapid_fire_player_hit_spark.png`,
+  backgroundSpeedStreak: `${RF_PREMIUM}/fx/background_speed_streak.png`,
+  // HUD/UI frames (registered; not yet wired into combat HUD)
+  comboBadgeFrame: `${RF_PREMIUM}/ui/combo_badge_frame.png`,
+  scorePopupBurst: `${RF_PREMIUM}/ui/score_popup_burst.png`,
+  warningFrame: `${RF_PREMIUM}/ui/warning_frame.png`,
+  waveIntroFrame: `${RF_PREMIUM}/ui/wave_intro_frame.png`,
+} as const;
+
+/**
+ * Runtime PNG spritesheets from
+ * rapid_fire_complete_animation_pack_cursor_ready.zip. Adjacent *_sheet.json
+ * metadata and animation-manifest.json are installed next to each sheet;
+ * frame data is mirrored in src/gameplay/rapidFire/animationDefs.ts.
+ * Preview GIFs in the same folders are review-only and must never be loaded
+ * at runtime.
+ */
+export const RAPID_FIRE_PREMIUM_ANIMATION_SHEETS = {
+  animThruster: `${RF_PREMIUM}/animations/rapid_fire_thruster/rapid_fire_thruster_sheet.png`,
+  animMuzzleSmall: `${RF_PREMIUM}/animations/rapid_fire_muzzle_flash_small/rapid_fire_muzzle_flash_small_sheet.png`,
+  animMuzzleWide: `${RF_PREMIUM}/animations/rapid_fire_muzzle_flash_wide/rapid_fire_muzzle_flash_wide_sheet.png`,
+  animHitSparkSmall: `${RF_PREMIUM}/animations/rapid_fire_hit_spark_small/rapid_fire_hit_spark_small_sheet.png`,
+  animPlayerDamageRing: `${RF_PREMIUM}/animations/rapid_fire_player_damage_ring/rapid_fire_player_damage_ring_sheet.png`,
+  animEnemyMuzzle: `${RF_PREMIUM}/animations/enemy_muzzle_flash/enemy_muzzle_flash_sheet.png`,
+  animEnemyHitSpark: `${RF_PREMIUM}/animations/enemy_hit_spark/enemy_hit_spark_sheet.png`,
+  animExplosionSmall: `${RF_PREMIUM}/animations/enemy_explosion_small/enemy_explosion_small_sheet.png`,
+  animExplosionMedium: `${RF_PREMIUM}/animations/enemy_explosion_medium/enemy_explosion_medium_sheet.png`,
+  animPickupBurst: `${RF_PREMIUM}/animations/pickup_collect_burst/pickup_collect_burst_sheet.png`,
+  animMaxFpBurst: `${RF_PREMIUM}/animations/max_firepower_activation_burst/max_firepower_activation_burst_sheet.png`,
+  animImpactRing: `${RF_PREMIUM}/animations/player_projectile_impact_ring/player_projectile_impact_ring_sheet.png`,
 } as const;

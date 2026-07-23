@@ -163,45 +163,69 @@ export function GameplayScreen() {
 
   return (
     <div className="gameplay-screen">
-      <div className="gameplay-hud" aria-live="polite">
-        <div className="gameplay-hud__top">
-          <div className="gameplay-hud__hull">
-            <span className="gameplay-hud__label">Hull</span>
-            <div className="gameplay-hud__bar" role="progressbar" aria-valuenow={Math.round(hullPct)} aria-valuemin={0} aria-valuemax={100}>
+      {/* Compact corner HUD — no full-width bar, playfield stays open/immersive. */}
+      <div className="gameplay-hud-compact" aria-live="polite">
+        <div className="gameplay-hud-compact__cluster gameplay-hud-compact__cluster--left">
+          <div className="gameplay-hud-compact__avatar" aria-hidden="true">
+            {ship.artwork.icon}
+          </div>
+          <div className="gameplay-hud-compact__stats">
+            <div
+              className="gameplay-hud-compact__bar gameplay-hud-compact__bar--hull"
+              role="progressbar"
+              aria-valuenow={Math.round(hullPct)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Hull"
+            >
               <i style={{ width: `${hullPct}%` }} />
             </div>
-            <span className="gameplay-hud__value">
+            <span className="gameplay-hud-compact__value">
               {Math.round(hud?.hull ?? stats.hp)}/{Math.round(hud?.hullMax ?? stats.hp)}
             </span>
           </div>
-          <div className="gameplay-hud__center">
-            <span className="gameplay-hud__wave">
-              WAVE {hud?.waveIndex ?? 1}/{hud?.waveTotal ?? 5}
-            </span>
-            <span className="gameplay-hud__stage">{stage.name}</span>
-          </div>
-          <div className="gameplay-hud__right">
-            <span className="gameplay-hud__score">{(hud?.score ?? 0).toLocaleString()}</span>
-            <button type="button" className="gameplay-hud__pause press-scale" onClick={handlePause} aria-label="Pause">
-              ❚❚
-            </button>
+        </div>
+
+        <div className="gameplay-hud-compact__cluster gameplay-hud-compact__cluster--right">
+          <button
+            type="button"
+            className="gameplay-hud-compact__pause press-scale"
+            onClick={handlePause}
+            aria-label="Pause"
+          >
+            ❚❚
+          </button>
+          <div className="gameplay-hud-compact__stats gameplay-hud-compact__stats--right">
+            <div
+              className="gameplay-hud-compact__bar gameplay-hud-compact__bar--fp"
+              role="progressbar"
+              aria-valuenow={fp}
+              aria-valuemin={0}
+              aria-valuemax={10}
+              aria-label="Firepower"
+            >
+              <i style={{ width: `${(fp / 10) * 100}%` }} />
+            </div>
+            <span className="gameplay-hud-compact__value">{(hud?.score ?? 0).toLocaleString()}</span>
           </div>
         </div>
 
-        <div className="gameplay-hud__firepower">
-          <span className="gameplay-hud__label">Firepower {fp}/10</span>
-          <div className="gameplay-hud__fp-track" aria-hidden="true">
-            {Array.from({ length: 11 }, (_, i) => (
-              <b key={i} className={i <= fp ? "is-on" : undefined} />
-            ))}
-          </div>
-          {hud?.maxFirepowerActive ? (
-            <span className="gameplay-hud__overdrive">
-              MAX FIREPOWER {Math.ceil((hud.maxFirepowerRemainingMs || 0) / 1000)}s
-            </span>
-          ) : null}
-        </div>
+        {hud?.maxFirepowerActive ? (
+          <span className="gameplay-hud-compact__overdrive">
+            MAX FIREPOWER {Math.ceil((hud.maxFirepowerRemainingMs || 0) / 1000)}s
+          </span>
+        ) : null}
       </div>
+
+      {/* Center-screen wave announcement — replaces a constantly-shown wave counter. */}
+      {hud?.announcement ? (
+        <div className="gameplay-announcement" aria-live="assertive">
+          <div className="gameplay-announcement__panel">
+            <span className="gameplay-announcement__title">{hud.announcement.title}</span>
+            <span className="gameplay-announcement__subtitle">{hud.announcement.subtitle}</span>
+          </div>
+        </div>
+      ) : null}
 
       <div className="gameplay-screen__playfield">
         <GameCanvas
@@ -221,7 +245,7 @@ export function GameplayScreen() {
           <div className="gameplay-pause__panel">
             <h2>Paused</h2>
             <p>
-              {stage.name} · Wave {hud?.waveIndex ?? 1}/{hud?.waveTotal ?? 5}
+              {stage.name} · Wave {hud?.waveIndex ?? 1}/{hud?.waveTotal ?? 12}
             </p>
             <div className="gameplay-pause__audio">
               <label className="gameplay-pause__audio-row">

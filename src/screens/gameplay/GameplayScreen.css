@@ -15,133 +15,172 @@
   color: #e8f2ff;
 }
 
-.gameplay-hud {
-  position: relative;
+/*
+ * Compact corner HUD (mobile playtest correction pass) — replaces the old
+ * full-width blocky top bar. Positioned absolutely so it floats over the
+ * playfield instead of eating vertical space from the flex layout; the
+ * canvas underneath always fills the whole screen, no black dead area.
+ */
+.gameplay-hud-compact {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 3;
-  flex: 0 0 auto;
-  padding: 8px 10px 6px;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  background: linear-gradient(180deg, rgba(4, 8, 22, 0.92), rgba(4, 8, 22, 0.55));
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: max(8px, env(safe-area-inset-top)) 10px 0;
   pointer-events: none;
 }
 
-.gameplay-hud__top {
+.gameplay-hud-compact__cluster {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(6, 10, 24, 0.62);
+  border: 1px solid rgba(120, 170, 255, 0.28);
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+}
+
+.gameplay-hud-compact__cluster--right {
+  flex-direction: row-reverse;
+}
+
+.gameplay-hud-compact__avatar {
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  border-radius: 50%;
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: start;
+  place-items: center;
+  background: radial-gradient(circle at 35% 30%, #6be8ff, #12305a 75%);
+  border: 1px solid rgba(160, 220, 255, 0.6);
+  font-size: 12px;
+  color: #062;
 }
 
-.gameplay-hud__label {
-  display: block;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #9eb4d8;
-  margin-bottom: 2px;
+.gameplay-hud-compact__pause {
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 210, 130, 0.6);
+  background: radial-gradient(circle at 35% 30%, #ffd56a, #7a4a06 85%);
+  color: #2a1800;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
 }
 
-.gameplay-hud__hull .gameplay-hud__bar {
-  height: 8px;
+.gameplay-hud-compact__stats {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 72px;
+}
+
+.gameplay-hud-compact__stats--right {
+  align-items: flex-end;
+}
+
+.gameplay-hud-compact__bar {
+  width: 100%;
+  height: 6px;
   border-radius: 999px;
   background: rgba(20, 30, 50, 0.9);
   border: 1px solid rgba(90, 200, 120, 0.35);
   overflow: hidden;
 }
 
-.gameplay-hud__hull .gameplay-hud__bar i {
+.gameplay-hud-compact__bar--hull i {
   display: block;
   height: 100%;
   background: linear-gradient(90deg, #1f9a4a, #6dff9a);
 }
 
-.gameplay-hud__value {
-  font-size: 10px;
-  color: #c8f0d4;
+.gameplay-hud-compact__bar--fp {
+  border-color: rgba(80, 160, 255, 0.35);
 }
 
-.gameplay-hud__center {
-  text-align: center;
-  min-width: 0;
-}
-
-.gameplay-hud__wave {
+.gameplay-hud-compact__bar--fp i {
   display: block;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: #9ef6ff;
+  height: 100%;
+  background: linear-gradient(90deg, #2a8cff, #6ef0ff);
 }
 
-.gameplay-hud__stage {
-  display: block;
+.gameplay-hud-compact__value {
   font-size: 10px;
-  color: #a9b8d8;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.gameplay-hud__right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  pointer-events: auto;
-}
-
-.gameplay-hud__score {
-  font-size: 13px;
   font-weight: 700;
-  color: #ffe08a;
+  color: #e2ecff;
 }
 
-.gameplay-hud__pause {
-  min-width: 36px;
-  min-height: 32px;
-  border-radius: 8px;
-  border: 1px solid rgba(120, 180, 255, 0.45);
-  background: rgba(20, 40, 80, 0.85);
-  color: #dff6ff;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.gameplay-hud__firepower {
-  pointer-events: none;
-}
-
-.gameplay-hud__fp-track {
-  display: grid;
-  grid-template-columns: repeat(11, minmax(0, 1fr));
-  gap: 3px;
-  margin-top: 2px;
-}
-
-.gameplay-hud__fp-track b {
-  height: 7px;
-  border-radius: 3px;
-  background: rgba(40, 60, 100, 0.7);
-  border: 1px solid rgba(80, 140, 220, 0.25);
-}
-
-.gameplay-hud__fp-track b.is-on {
-  background: linear-gradient(180deg, #6ef0ff, #2a8cff);
-  box-shadow: 0 0 6px rgba(80, 200, 255, 0.45);
-}
-
-.gameplay-hud__overdrive {
-  display: inline-block;
-  margin-top: 4px;
-  padding: 2px 8px;
+.gameplay-hud-compact__overdrive {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 10px;
   border-radius: 999px;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.06em;
   color: #1a1200;
   background: linear-gradient(90deg, #ffd56a, #ff9a2a);
+  pointer-events: none;
+}
+
+/* Center-screen wave announcement (replaces a constantly-shown wave counter). */
+.gameplay-announcement {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.gameplay-announcement__panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 28px;
+  border-radius: 14px;
+  background: rgba(8, 6, 20, 0.55);
+  border: 1px solid rgba(255, 180, 90, 0.45);
+  animation: gameplay-announcement-pop 300ms ease-out;
+}
+
+.gameplay-announcement__title {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: #ff9a4a;
+  text-shadow: 0 0 14px rgba(255, 140, 60, 0.7);
+}
+
+.gameplay-announcement__subtitle {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #dff0ff;
+}
+
+@keyframes gameplay-announcement-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .gameplay-screen__playfield {
@@ -279,24 +318,12 @@
   cursor: pointer;
 }
 
-@media (max-width: 380px) {
-  .gameplay-hud__top {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "hull right"
-      "center right";
+@media (max-width: 360px) {
+  .gameplay-hud-compact__stats {
+    min-width: 58px;
   }
 
-  .gameplay-hud__hull {
-    grid-area: hull;
-  }
-
-  .gameplay-hud__center {
-    grid-area: center;
-    text-align: left;
-  }
-
-  .gameplay-hud__right {
-    grid-area: right;
+  .gameplay-hud-compact__cluster {
+    padding: 4px 6px;
   }
 }

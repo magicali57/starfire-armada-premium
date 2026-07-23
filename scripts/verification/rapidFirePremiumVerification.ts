@@ -174,21 +174,17 @@ function publicPath(urlPath: string): string {
 // Engine wiring static checks
 {
   const engineSrc = fs.readFileSync(path.join(root, "src/gameplay/rapidFire/RapidFireEngine.ts"), "utf8");
-  for (const key of [
-    "ANIM.thruster",
-    "ANIM.muzzleSmall",
-    "ANIM.muzzleWide",
-    "ANIM.hitSparkSmall",
-    "ANIM.playerDamageRing",
-    "ANIM.enemyMuzzle",
-    "ANIM.enemyHitSpark",
-    "ANIM.explosionSmall",
-    "ANIM.explosionMedium",
-    "ANIM.pickupBurst",
-    "ANIM.maxFpBurst",
-    "ANIM.impactRing",
-  ]) {
+  // Still-used one-shot sheet animations (hostile muzzle, hit spark, pickup
+  // burst, MAX FIREPOWER burst, impact ring) remain wired.
+  for (const key of ["ANIM.enemyMuzzle", "ANIM.enemyHitSpark", "ANIM.pickupBurst", "ANIM.maxFpBurst", "ANIM.impactRing"]) {
     check(engineSrc.includes(key), `engine wires ${key}`);
+  }
+  // Mobile-playtest correction pass: these sheet-based effects were
+  // deliberately removed (fake detached thruster, ugly muzzle splash, ugly
+  // player-hit/explosion VFX) and replaced with procedural presentation —
+  // see rapidFireCorrectionPassVerification.ts for what replaced them.
+  for (const key of ["ANIM.thruster", "ANIM.muzzleSmall", "ANIM.muzzleWide", "ANIM.hitSparkSmall", "ANIM.playerDamageRing", "ANIM.explosionSmall", "ANIM.explosionMedium"]) {
+    check(!engineSrc.includes(key), `engine no longer wires removed effect ${key}`);
   }
   check(engineSrc.includes("this.vfx?.update(dt)"), "VFX time driven by simulation update");
   check(!engineSrc.includes("RAPID_FIRE_GAMEPLAY_ASSETS"), "engine no longer uses placeholder assets");

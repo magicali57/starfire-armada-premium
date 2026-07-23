@@ -12,7 +12,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { computeFormationPose, type FormationType } from "@/gameplay/rapidFire/formationConfig";
-import { getOrderedSpawns, WAVE_PHASES, STAGE_DURATION_HINT_MS, TOTAL_POWER_CARRIERS } from "@/gameplay/rapidFire/waveTable";
+import {
+  getAllSpawns,
+  getSpawnsForPhase,
+  WAVE_PHASES,
+  WAVE_COUNT,
+  STAGE_DURATION_HINT_MS,
+  TOTAL_POWER_CARRIERS,
+  PEAK_PHASE_ENEMY_COUNT,
+} from "@/gameplay/rapidFire/waveTable";
 import {
   clampVolume,
   sanitizeAudioPrefs,
@@ -79,22 +87,22 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 }
 
 // ---------------------------------------------------------------------
-// Wave pacing (12 phases, ~2:00-3:00 target range, formation-tagged spawns)
+// Wave pacing (12 enemy-clear-gated phases, ~2:00-3:00 target range,
+// formation-tagged spawns, 10-15 enemies together in the densest phases)
 // ---------------------------------------------------------------------
 {
   equal(WAVE_PHASES.length, 12, "12 named wave phases");
+  equal(WAVE_COUNT, 12, "WAVE_COUNT matches the phase table");
   const labels = new Set(WAVE_PHASES.map((w) => w.label));
   equal(labels.size, 12, "wave phase labels are unique");
 
-  const spawns = getOrderedSpawns();
+  const spawns = getAllSpawns();
   check(spawns.length >= 60, "stage has a substantial enemy population across 12 phases");
   equal(TOTAL_POWER_CARRIERS, 11, "11 Power Carriers thread the whole stage");
+  check(PEAK_PHASE_ENEMY_COUNT >= 10 && PEAK_PHASE_ENEMY_COUNT <= 15, "peak simultaneous phase population is 10-15 enemies");
 
-  const lastSpawnMs = spawns[spawns.length - 1].atMs;
-  check(lastSpawnMs >= 120000, "last enemy spawns no earlier than the 2-minute floor");
-  check(STAGE_DURATION_HINT_MS - lastSpawnMs < 15000, "authored duration hint tracks the last spawn's formation resolve time");
-
-  // Every spawn references a formation type from the 10 required styles.
+  // Every phase is non-empty and delay-sorted; every group has a real
+  // formation type and stays within its own slotCount.
   const validTypes = new Set([
     "vFormationTop",
     "sideSweepLeft",
@@ -107,9 +115,18 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
     "alternatingDive",
     "denseMixedFinal",
   ]);
+  for (const w of WAVE_PHASES) {
+    const forPhase = getSpawnsForPhase(w.index);
+    check(forPhase.length > 0, `phase ${w.index} ("${w.label}") has spawns`);
+    for (let i = 1; i < forPhase.length; i += 1) {
+      check(forPhase[i].delayMs >= forPhase[i - 1].delayMs, `phase ${w.index} spawns sorted by delay`);
+    }
+  }
   for (const s of spawns) {
     check(validTypes.has(s.formation), `spawn formation "${s.formation}" is a recognized type`);
   }
+
+  check(STAGE_DURATION_HINT_MS >= 120000 && STAGE_DURATION_HINT_MS <= 200000, "authored duration hint sits in the 2:00-3:20 band");
 }
 
 // ---------------------------------------------------------------------
@@ -175,7 +192,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
     check(engineSrc.includes(needle), `engine wires ${needle}`);
   }
   check(!engineSrc.includes("STAGE_WAVES"), "engine no longer references the retired flat STAGE_WAVES table");
-  check(engineSrc.includes("getWaveIndexAt"), "engine still derives wave index from the wave table");
+  check(!engineSrc.includes("getWaveIndexAt"), "engine no longer uses the retired absolute-time wave lookup");
+  check(engineSrc.includes("updatePhaseFlow"), "engine drives waves through the enemy-clear-gated phase state machine");
+  check(engineSrc.includes("getSpawnsForPhase"), "engine pulls spawns per-phase, not from a flat schedule");
 
   const gameplayScreenSrc = fs.readFileSync(
     path.join(root, "src/screens/gameplay/GameplayScreen.tsx"),

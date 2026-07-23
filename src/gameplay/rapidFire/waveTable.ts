@@ -2,26 +2,33 @@ import type { EnemyKind } from "./enemyConfig";
 import type { FormationSpawnEvent, FormationType } from "./formationConfig";
 
 /**
- * Stage 1 wave design — premium choreography rebuild.
+ * Stage 1 wave design — mobile-playtest correction pass.
  *
- * ch1-stage-1 is now built from 12 named phases spanning ~2 minutes 45
- * seconds (target range: 2:00–3:00), instead of enemies simply falling
- * straight down. Every enemy belongs to a `FormationSpawnEvent` group; see
- * `formationConfig.ts` for how each formation type moves. Power Carriers are
- * threaded individually through the timeline (11 total: 10 guaranteed to
- * carry the player from Firepower 0 to 10, plus 1 extra so MAX FIREPOWER —
- * OVERDRIVE gets tested/refreshed near the climax), matching the prior
- * prototype's guarantee while fitting the new formation timeline.
+ * Waves are no longer released on a flat absolute-time schedule. Each phase
+ * is now a discrete, enemy-clear-gated beat: every group belonging to a
+ * phase spawns (staggered by `delayMs` within the phase), the phase is
+ * "complete" once every one of its enemies has been destroyed or has
+ * exited via its own formation choreography (formations always eventually
+ * leave the playfield on their own timer — see `formationConfig.ts` — so a
+ * phase can never soft-lock even if the player does nothing), and only then
+ * does the engine run the announcement gap (2s pause, 2s "WAVE N/12"
+ * banner, 2s transition — `RapidFireEngine`'s `PHASE_GAP_*_MS` constants)
+ * before releasing the next phase.
+ *
+ * Several phases now put 8–15 enemies on stage at once (multiple groups
+ * with overlapping hold windows), per the mobile playtest note that the
+ * game read as too sparse.
  */
 
 export interface WavePhase {
   index: number;
   label: string;
-  startMs: number;
 }
 
 interface GroupSpec {
-  atMs: number;
+  phase: number;
+  /** Delay after the phase becomes active before this group spawns (ms). */
+  delayMs: number;
   formation: FormationType;
   groupId: string;
   members: readonly EnemyKind[];
@@ -29,7 +36,8 @@ interface GroupSpec {
 
 function group(spec: GroupSpec): FormationSpawnEvent[] {
   return spec.members.map((kind, slot) => ({
-    atMs: spec.atMs,
+    phase: spec.phase,
+    delayMs: spec.delayMs,
     kind,
     formation: spec.formation,
     groupId: spec.groupId,
@@ -43,100 +51,137 @@ const S: EnemyKind = "shooter";
 const C: EnemyKind = "powerCarrier";
 
 export const WAVE_PHASES: readonly WavePhase[] = [
-  { index: 1, label: "Approach", startMs: 0 },
-  { index: 2, label: "Flank Sweep", startMs: 12000 },
-  { index: 3, label: "Shooter Line", startMs: 26000 },
-  { index: 4, label: "Dive Runs", startMs: 42000 },
-  { index: 5, label: "Escort Convoy", startMs: 58000 },
-  { index: 6, label: "Crossfire", startMs: 76000 },
-  { index: 7, label: "Breather", startMs: 96000 },
-  { index: 8, label: "Carrier Wing", startMs: 104000 },
-  { index: 9, label: "Cross-Screen Sweep", startMs: 124000 },
-  { index: 10, label: "Advanced Shooter Wall", startMs: 142000 },
-  { index: 11, label: "Climax Formation", startMs: 160000 },
-  { index: 12, label: "Cleanup", startMs: 176000 },
+  { index: 1, label: "Approach" },
+  { index: 2, label: "Flank Sweep" },
+  { index: 3, label: "Shooter Line" },
+  { index: 4, label: "Dive Runs" },
+  { index: 5, label: "Escort Convoy" },
+  { index: 6, label: "Crossfire" },
+  { index: 7, label: "Breather" },
+  { index: 8, label: "Carrier Wing" },
+  { index: 9, label: "Cross-Screen Sweep" },
+  { index: 10, label: "Advanced Shooter Wall" },
+  { index: 11, label: "Climax Formation" },
+  { index: 12, label: "Cleanup" },
 ];
 
 export const WAVE_COUNT = WAVE_PHASES.length;
 
 const GROUPS: FormationSpawnEvent[][] = [
   // Phase 1 — Approach: short introductory V of fighters teaches movement/firing.
-  group({ atMs: 1500, formation: "vFormationTop", groupId: "p1-v", members: [B, B, B] }),
-  group({ atMs: 8500, formation: "carrierEscort", groupId: "p1-carrier", members: [C] }),
+  group({ phase: 1, delayMs: 0, formation: "vFormationTop", groupId: "p1-v", members: [B, B, B, B] }),
+  group({ phase: 1, delayMs: 3000, formation: "carrierEscort", groupId: "p1-carrier", members: [C] }),
 
   // Phase 2 — Flank Sweep: opposing side sweeps cross the screen.
-  group({ atMs: 12500, formation: "sideSweepLeft", groupId: "p2-left", members: [B, B, B] }),
-  group({ atMs: 15500, formation: "sideSweepRight", groupId: "p2-right", members: [B, B] }),
-  group({ atMs: 20000, formation: "carrierEscort", groupId: "p2-carrier", members: [C] }),
+  group({ phase: 2, delayMs: 0, formation: "sideSweepLeft", groupId: "p2-left", members: [B, B, B, B] }),
+  group({ phase: 2, delayMs: 1500, formation: "sideSweepRight", groupId: "p2-right", members: [B, B, B] }),
+  group({ phase: 2, delayMs: 4000, formation: "carrierEscort", groupId: "p2-carrier", members: [C] }),
 
-  // Phase 3 — Shooter Line: held two-row shooter formation, ~FP3 target.
-  group({ atMs: 26500, formation: "twoRowShooter", groupId: "p3-rows", members: [S, S, S, S] }),
-  group({ atMs: 33000, formation: "carrierEscort", groupId: "p3-carrier", members: [C] }),
+  // Phase 3 — Shooter Line: held two-row shooter formation.
+  group({ phase: 3, delayMs: 0, formation: "twoRowShooter", groupId: "p3-rows", members: [S, S, S, S, S, S] }),
+  group({ phase: 3, delayMs: 3500, formation: "carrierEscort", groupId: "p3-carrier", members: [C] }),
 
   // Phase 4 — Dive Runs: alternating left/right attack dives.
-  group({ atMs: 42500, formation: "alternatingDive", groupId: "p4-dive", members: [B, B, B, B, B] }),
-  group({ atMs: 51000, formation: "carrierEscort", groupId: "p4-carrier", members: [C] }),
+  group({
+    phase: 4,
+    delayMs: 0,
+    formation: "alternatingDive",
+    groupId: "p4-dive",
+    members: [B, B, B, B, B, B, B],
+  }),
+  group({ phase: 4, delayMs: 3000, formation: "carrierEscort", groupId: "p4-carrier", members: [C] }),
 
-  // Phase 5 — Escort Convoy: central Power Carrier with fighter escorts, ~FP5 target.
-  group({ atMs: 58500, formation: "carrierEscort", groupId: "p5-convoy", members: [C, B, B, B, B] }),
-  group({ atMs: 68000, formation: "arcFormation", groupId: "p5-arc", members: [B, B, B] }),
+  // Phase 5 — Escort Convoy: central Power Carrier with a full escort ring
+  // (8 together), then an arc formation overlaps while the convoy still holds.
+  group({
+    phase: 5,
+    delayMs: 0,
+    formation: "carrierEscort",
+    groupId: "p5-convoy",
+    members: [C, B, B, B, B, B, B, B],
+  }),
+  group({ phase: 5, delayMs: 2500, formation: "arcFormation", groupId: "p5-arc", members: [B, B, B, B] }),
 
-  // Phase 6 — Crossfire: split formation plus a shooter side sweep for density.
-  group({ atMs: 76500, formation: "splitFormation", groupId: "p6-split", members: [B, B, B, B, S, S] }),
-  group({ atMs: 86000, formation: "sideSweepRight", groupId: "p6-sweep", members: [B, B, S] }),
-  group({ atMs: 92000, formation: "carrierEscort", groupId: "p6-carrier", members: [C] }),
+  // Phase 6 — Crossfire: split formation, a side sweep, and a carrier overlap
+  // for the densest early-stage pressure (up to 13 on stage at once).
+  group({
+    phase: 6,
+    delayMs: 0,
+    formation: "splitFormation",
+    groupId: "p6-split",
+    members: [B, B, B, B, B, B, S, S],
+  }),
+  group({ phase: 6, delayMs: 2000, formation: "sideSweepRight", groupId: "p6-sweep", members: [B, B, S, S] }),
+  group({ phase: 6, delayMs: 4000, formation: "carrierEscort", groupId: "p6-carrier", members: [C] }),
 
   // Phase 7 — Breather: brief pressure release, sparse arc only.
-  group({ atMs: 96500, formation: "arcFormation", groupId: "p7-arc", members: [B, B] }),
+  group({ phase: 7, delayMs: 0, formation: "arcFormation", groupId: "p7-arc", members: [B, B, B] }),
 
-  // Phase 8 — Carrier Wing: dedicated Power Carrier formation, ~FP8 target.
-  group({ atMs: 104500, formation: "carrierEscort", groupId: "p8-wing", members: [C, B, B, S, S, B] }),
+  // Phase 8 — Carrier Wing: one large dedicated Power Carrier formation (10).
+  group({
+    phase: 8,
+    delayMs: 0,
+    formation: "carrierEscort",
+    groupId: "p8-wing",
+    members: [C, B, B, B, S, S, B, B, B, B],
+  }),
 
   // Phase 9 — Cross-Screen Sweep: full-width mixed sweep formations.
-  group({ atMs: 124500, formation: "sideSweepLeft", groupId: "p9-left", members: [B, S, B] }),
-  group({ atMs: 130000, formation: "sideSweepRight", groupId: "p9-right", members: [B, B, S] }),
-  group({ atMs: 137000, formation: "carrierEscort", groupId: "p9-carrier", members: [C] }),
+  group({ phase: 9, delayMs: 0, formation: "sideSweepLeft", groupId: "p9-left", members: [B, S, B, B] }),
+  group({ phase: 9, delayMs: 1800, formation: "sideSweepRight", groupId: "p9-right", members: [B, B, S, B] }),
+  group({ phase: 9, delayMs: 3600, formation: "carrierEscort", groupId: "p9-carrier", members: [C] }),
 
-  // Phase 10 — Advanced Shooter Wall: denser two-row shooter formation, pushes toward FP10.
-  group({ atMs: 142500, formation: "twoRowShooter", groupId: "p10-wall", members: [S, S, S, S, S, S] }),
-  group({ atMs: 152000, formation: "carrierEscort", groupId: "p10-carrier", members: [C] }),
-
-  // Phase 11 — Climax Formation: dense mixed final formation, FP10 territory.
+  // Phase 10 — Advanced Shooter Wall: denser two-row shooter formation (8).
   group({
-    atMs: 160500,
+    phase: 10,
+    delayMs: 0,
+    formation: "twoRowShooter",
+    groupId: "p10-wall",
+    members: [S, S, S, S, S, S, S, S],
+  }),
+  group({ phase: 10, delayMs: 3500, formation: "carrierEscort", groupId: "p10-carrier", members: [C] }),
+
+  // Phase 11 — Climax Formation: dense mixed final formation, 14 enemies at
+  // once, plus a dedicated Overdrive-test carrier once Firepower is likely
+  // already at 10.
+  group({
+    phase: 11,
+    delayMs: 0,
     formation: "denseMixedFinal",
     groupId: "p11-climax",
-    members: [B, S, B, C, B, S, B, S, B, B],
+    members: [B, S, B, C, B, S, B, S, B, B, S, B, B, S],
   }),
-  // Overdrive test — a second Power Carrier once the player is already at FP10.
-  group({ atMs: 172000, formation: "carrierEscort", groupId: "p11-overdrive", members: [C] }),
+  group({ phase: 11, delayMs: 3500, formation: "carrierEscort", groupId: "p11-overdrive", members: [C] }),
 
   // Phase 12 — Cleanup: short completion wave, staggered lanes.
-  group({ atMs: 176000, formation: "staggeredLane", groupId: "p12-cleanup", members: [B, B, B] }),
+  group({ phase: 12, delayMs: 0, formation: "staggeredLane", groupId: "p12-cleanup", members: [B, B, B, B, B] }),
 ];
 
-/** Flattened chronological spawn list consumed by the engine. */
-export function getOrderedSpawns(): FormationSpawnEvent[] {
+/** All spawn groups for one phase, sorted by their in-phase delay. */
+export function getSpawnsForPhase(phase: number): FormationSpawnEvent[] {
   return GROUPS.flat()
-    .slice()
-    .sort((a, b) => a.atMs - b.atMs);
+    .filter((s) => s.phase === phase)
+    .sort((a, b) => a.delayMs - b.delayMs);
 }
 
-export function getWaveIndexAt(elapsedMs: number): number {
-  let current = 1;
-  for (const wave of WAVE_PHASES) {
-    if (elapsedMs >= wave.startMs) current = wave.index;
-  }
-  return current;
+/** Every spawn across the whole stage — used for stage-wide counts/verification. */
+export function getAllSpawns(): FormationSpawnEvent[] {
+  return GROUPS.flat();
 }
 
 /** Total Power Carriers across the stage (Fire-Up progression + Overdrive test). */
-export const TOTAL_POWER_CARRIERS = getOrderedSpawns().filter((s) => s.kind === "powerCarrier").length;
+export const TOTAL_POWER_CARRIERS = getAllSpawns().filter((s) => s.kind === "powerCarrier").length;
+
+/** Largest number of enemies belonging to a single phase (peak on-stage count). */
+export const PEAK_PHASE_ENEMY_COUNT = Math.max(
+  ...WAVE_PHASES.map((p) => getSpawnsForPhase(p.index).length),
+);
 
 /**
- * Rough authored duration hint: last group's spawn time plus that
- * formation's own choreography length (entry + hold + exit), used only for
- * pacing verification — the real stage always ends when every spawned enemy
- * has been resolved (destroyed or exited), never a hard timer.
+ * Rough authored duration estimate: 12 phases, each resolving in roughly
+ * 7-12s (formation entry + hold + exit) plus the fixed ~6s announcement gap
+ * between phases, landing in the requested ~2-3 minute range. The real
+ * stage never runs on a hard timer — each phase ends only when every one of
+ * its enemies is destroyed or has exited.
  */
-export const STAGE_DURATION_HINT_MS = 184500;
+export const STAGE_DURATION_HINT_MS = 180000;

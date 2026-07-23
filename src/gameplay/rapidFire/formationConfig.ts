@@ -35,8 +35,10 @@ export type FormationPhase =
   | "exiting";
 
 export interface FormationSpawnEvent {
-  /** Time from battle start (ms). */
-  atMs: number;
+  /** 1-based wave phase this group belongs to (see waveTable.ts). */
+  phase: number;
+  /** Delay after the phase becomes active before this group spawns (ms). */
+  delayMs: number;
   kind: EnemyKind;
   formation: FormationType;
   /** Groups every simultaneously-choreographed enemy together. */
@@ -88,7 +90,7 @@ export function computeFormationPose(
       const target = spreadX(slot, slotCount, 0.62);
       const depth = Math.abs(slot - (slotCount - 1) / 2) * 0.05;
       const enterMs = 900;
-      const holdMs = 3000;
+      const holdMs = 4000;
       if (tMs < enterMs) {
         const t = easeInOut(tMs / enterMs);
         return { xNorm: lerp(0.5, target, t), yNorm: lerp(-0.15, 0.16 + depth, t), phase: "entering", canFire: false, bank: (target - 0.5) * 0.6 };
@@ -144,7 +146,7 @@ export function computeFormationPose(
       const targetX = isCarrier ? 0.5 : 0.5 + side * (0.16 * rank);
       const targetY = isCarrier ? 0.24 : 0.24 + 0.03 * rank;
       const enterMs = 1000;
-      const holdMs = 3400;
+      const holdMs = 4400;
       if (tMs < enterMs) {
         const t = easeInOut(tMs / enterMs);
         return { xNorm: lerp(0.5, targetX, t), yNorm: lerp(-0.15, targetY, t), phase: "entering", canFire: false, bank: side * 0.3 };
@@ -162,7 +164,7 @@ export function computeFormationPose(
       const targetX = 0.5 - Math.cos(angle) * 0.42;
       const targetY = 0.14 + Math.sin(angle) * 0.16;
       const enterMs = 1100;
-      const holdMs = 2600;
+      const holdMs = 3600;
       if (tMs < enterMs) {
         const t = easeInOut(tMs / enterMs);
         return { xNorm: lerp(0.5, targetX, t), yNorm: lerp(-0.15, targetY, t), phase: "entering", canFire: false, bank: 0 };
@@ -205,7 +207,7 @@ export function computeFormationPose(
       const localCount = Math.max(1, goingRight ? slotCount - half : half);
       const enterMs = 850;
       const formMs = 700;
-      const holdMs = 2400;
+      const holdMs = 3400;
       if (tMs < enterMs) {
         const t = easeInOut(tMs / enterMs);
         return { xNorm: lerp(0.5, 0.5, t), yNorm: lerp(-0.15, 0.16, t), phase: "entering", canFire: false, bank: 0 };

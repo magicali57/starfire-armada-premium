@@ -15,10 +15,18 @@ export interface EnemyDefinition {
   scoreValue: number;
 }
 
+/**
+ * Durability rebalance (mobile playtest correction pass): the prior HP
+ * values let a basic fighter die in ~1-2 hits at Firepower 0, which read as
+ * "paper cutouts" rather than real targets. Roughly 3x (basic/shooter) and
+ * 5x (Power Carrier) increases so enemies survive multiple volleys — basic
+ * still dies fastest, shooters noticeably tougher, carriers the toughest —
+ * while staying killable within a formation's own hold window.
+ */
 export const ENEMY_DEFS: Record<EnemyKind, EnemyDefinition> = {
   basic: {
     kind: "basic",
-    hull: 45,
+    hull: 130,
     radius: 18,
     drawWidth: 46,
     drawHeight: 54,
@@ -28,7 +36,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDefinition> = {
   },
   shooter: {
     kind: "shooter",
-    hull: 90,
+    hull: 300,
     radius: 22,
     drawWidth: 52,
     drawHeight: 60,
@@ -41,7 +49,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDefinition> = {
   },
   powerCarrier: {
     kind: "powerCarrier",
-    hull: 110,
+    hull: 550,
     radius: 24,
     drawWidth: 58,
     drawHeight: 64,

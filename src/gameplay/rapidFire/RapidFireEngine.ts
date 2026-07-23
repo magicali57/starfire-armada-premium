@@ -8,11 +8,21 @@ import {
   type BoltKind,
   type FireLane,
 } from "./firepowerConfig";
-import { WAVE_COUNT, getOrderedSpawns, getWaveIndexAt } from "./waveTable";
-import { computeFormationPose, type FormationPhase, type FormationType } from "./formationConfig";
+import { WAVE_COUNT, getSpawnsForPhase } from "./waveTable";
+import {
+  computeFormationPose,
+  type FormationPhase,
+  type FormationSpawnEvent,
+  type FormationType,
+} from "./formationConfig";
 import { ANIM } from "./animationDefs";
-import { VfxSystem, type SpriteAnimationInstance } from "./spriteAnimation";
+import { VfxSystem } from "./spriteAnimation";
 import { RapidFireAudioSystem, type AudioPrefs } from "./audioSystem";
+
+export interface WaveAnnouncement {
+  title: string;
+  subtitle: string;
+}
 
 export interface EngineHudSnapshot {
   hull: number;
@@ -22,6 +32,7 @@ export interface EngineHudSnapshot {
   maxFirepowerRemainingMs: number;
   waveIndex: number;
   waveTotal: number;
+  announcement: WaveAnnouncement | null;
   score: number;
   stageName: string;
   paused: boolean;
@@ -116,6 +127,28 @@ interface Pickup {
   alive: boolean;
 }
 
+interface Debris {
+  angle: number;
+  dist: number;
+  speed: number;
+  len: number;
+}
+
+/**
+ * Procedural destruction burst (replaces the old spritesheet explosion
+ * VFX): a bright flash, an expanding shockwave ring, and flying debris
+ * streaks, size-scaled by `scale`. Pure canvas drawing — no image assets.
+ */
+interface ExplosionFx {
+  x: number;
+  y: number;
+  ageMs: number;
+  durationMs: number;
+  scale: number;
+  color: string;
+  debris: Debris[];
+}
+
 const LOGICAL_W = 390;
 const LOGICAL_H = 700;
 const MAX_DT = 50;
@@ -131,6 +164,14 @@ const ENEMY_DEATH_SPRITE_MS = 200;
 const ENEMY_DEATH_REMOVE_MS = 320;
 /** Power Carrier Fire-Up appears once destruction has resolved. */
 const CARRIER_DROP_DELAY_MS = 240;
+const MAX_EXPLOSIONS = 20;
+
+/** Wave-phase gap timing (mobile playtest requirement): after a phase's
+ * enemies are fully resolved, wait, announce, wait, then begin the next
+ * phase. Total gap ≈ 6s. */
+const PHASE_GAP_PAUSE_MS = 2000;
+const PHASE_GAP_ANNOUNCE_MS = 2000;
+const PHASE_GAP_TRANSITION_MS = 2000;
 
 function clamp(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, n));
@@ -185,8 +226,16 @@ export class RapidFireEngine {
   private enemies: Enemy[] = [];
   private pickups: Pickup[] = [];
 
-  private spawnQueue = getOrderedSpawns();
-  private spawnCursor = 0;
+  // Wave-phase flow: enemy-clear-gated (not a flat absolute-time schedule).
+  // See PHASE_GAP_* constants and updatePhaseFlow().
+  private currentPhase = 1;
+  private phaseSpawnQueue: FormationSpawnEvent[] = getSpawnsForPhase(1);
+  private phaseSpawnCursor = 0;
+  private phaseActiveSinceMs = 0;
+  private phaseState: "spawning" | "gap-pause" | "gap-announce" | "gap-transition" = "spawning";
+  private phaseGapTimerMs = 0;
+  private announcement: WaveAnnouncement | null = null;
+
   private nextEnemyId = 1;
   private score = 0;
   private enemiesDestroyed = 0;
@@ -196,11 +245,12 @@ export class RapidFireEngine {
 
   // Presentation state (never persisted; cleared with the engine instance).
   private vfx: VfxSystem | null = null;
-  private thruster: SpriteAnimationInstance | null = null;
+  private explosions: ExplosionFx[] = [];
   private bank = 0;
   private prevPlayerX = LOGICAL_W / 2;
   private recoil = 0;
-  private playerFlashMs = 0;
+  /** Set on player damage only — rendered as a brief red tint on the ship. */
+  private damageFlashMs = 0;
   private invulnMs = 0;
   private shakeMs = 0;
   private shakeMag = 0;
@@ -209,7 +259,6 @@ export class RapidFireEngine {
   // only — schema v12 / the versioned save are never touched).
   private audio: RapidFireAudioSystem;
   private audioUnlocked = false;
-  private lastWaveIndexForAudio = 0;
   private lowHullWarned = false;
   private musicStarted = false;
 
@@ -272,21 +321,10 @@ export class RapidFireEngine {
     );
     this.images = Object.fromEntries(entries);
     this.vfx = new VfxSystem(this.images, 48);
-    // Persistent looping thruster attached to the ship tail; banks with it.
-    this.thruster = this.vfx.spawn(
-      ANIM.thruster,
-      {
-        follow: () => ({
-          x: this.player.x + Math.sin(this.bank) * this.player.h * 0.3,
-          y: this.player.y + this.player.h * 0.34,
-          rotation: this.bank,
-        }),
-        scale: 0.3,
-        opacity: 0.95,
-        boost: 0.1,
-      },
-      "world",
-    );
+    // No separate thruster sprite is spawned — the player ship's own art has
+    // baked-in engine glow, and drawPlayer() adds a tight procedural
+    // under-ship glow tied to Firepower/Max Firepower instead of a detached
+    // VFX blob (mobile playtest correction: the old thruster read as fake).
     this.ready = true;
     this.resize();
     this.bindInput();
@@ -303,7 +341,7 @@ export class RapidFireEngine {
     this.unbindInput();
     document.removeEventListener("visibilitychange", this.visibilityHandler);
     this.vfx?.clear();
-    this.thruster = null;
+    this.explosions = [];
     this.pendingShots = [];
     this.audio.destroy();
   }
@@ -337,8 +375,9 @@ export class RapidFireEngine {
       firepower: this.firepower,
       maxFirepowerActive: this.maxFpRemaining > 0,
       maxFirepowerRemainingMs: Math.max(0, this.maxFpRemaining),
-      waveIndex: getWaveIndexAt(this.elapsedMs),
+      waveIndex: this.currentPhase,
       waveTotal: WAVE_COUNT,
+      announcement: this.announcement,
       score: this.score,
       stageName: this.opts.stageName,
       paused: this.paused,
@@ -398,7 +437,7 @@ export class RapidFireEngine {
   }
   /** Stop further wave spawns (screenshot / test isolation). */
   __debugStopSpawns(): void {
-    this.spawnCursor = this.spawnQueue.length;
+    this.phaseSpawnCursor = this.phaseSpawnQueue.length;
   }
   __debugGetVfxCount(): number {
     return this.vfx?.activeCount ?? 0;
@@ -532,25 +571,20 @@ export class RapidFireEngine {
   private update(dt: number): void {
     this.elapsedMs += dt;
     this.combatTimeMs += dt;
-    this.bgScroll = (this.bgScroll + dt * 0.035) % LOGICAL_H;
-    this.streakScroll = (this.streakScroll + dt * 0.22) % LOGICAL_H;
+    this.bgScroll = (this.bgScroll + dt * 0.06) % LOGICAL_H;
+    this.streakScroll = (this.streakScroll + dt * 0.26) % LOGICAL_H;
 
     if (this.maxFpRemaining > 0) {
       this.maxFpRemaining = Math.max(0, this.maxFpRemaining - dt);
     }
 
-    const waveNow = getWaveIndexAt(this.elapsedMs);
-    if (waveNow !== this.lastWaveIndexForAudio) {
-      this.lastWaveIndexForAudio = waveNow;
-      this.audio.waveStart();
-    }
-
     this.updatePresentation(dt);
-    this.spawnEnemies();
+    this.updatePhaseFlow(dt);
     this.updatePlayerFire(dt);
     this.updateEnemies(dt);
     this.updateProjectiles(dt);
     this.updatePickups(dt);
+    this.updateExplosions(dt);
     this.resolveCollisions();
     // Animation time advances with (and only with) simulation time, so
     // pausing the game freezes every effect.
@@ -567,23 +601,67 @@ export class RapidFireEngine {
     this.bank += (targetBank - this.bank) * blend;
 
     this.recoil = Math.max(0, this.recoil - dt / 90);
-    this.playerFlashMs = Math.max(0, this.playerFlashMs - dt);
+    this.damageFlashMs = Math.max(0, this.damageFlashMs - dt);
     this.invulnMs = Math.max(0, this.invulnMs - dt);
     this.shakeMs = Math.max(0, this.shakeMs - dt);
-
-    if (this.thruster) {
-      const maxActive = this.maxFpRemaining > 0;
-      this.thruster.boost = maxActive ? 0.55 : 0.1;
-      this.thruster.opacity = maxActive ? 1 : 0.95;
-    }
   }
 
-  private spawnEnemies(): void {
-    while (this.spawnCursor < this.spawnQueue.length) {
-      const next = this.spawnQueue[this.spawnCursor];
-      if (next.atMs > this.elapsedMs) break;
-      this.spawnCursor += 1;
-      this.enemies.push(this.makeEnemy(next.kind, next.formation, next.slot, next.slotCount));
+  /**
+   * Wave-phase state machine. A phase spawns its groups (staggered by their
+   * own `delayMs`), and only once every one of its enemies has been
+   * destroyed or has exited (formations always eventually leave the
+   * playfield on their own timer, so this can never soft-lock) does the
+   * engine run the announcement gap — 2s pause, 2s center-screen "WAVE
+   * N/12" banner, 2s transition (~6s total) — before releasing the next
+   * phase. The final phase skips the gap entirely; `checkVictory()` fires
+   * as soon as it resolves.
+   */
+  private updatePhaseFlow(dt: number): void {
+    if (this.phaseState === "spawning") {
+      const sincePhaseStart = this.elapsedMs - this.phaseActiveSinceMs;
+      while (this.phaseSpawnCursor < this.phaseSpawnQueue.length) {
+        const next = this.phaseSpawnQueue[this.phaseSpawnCursor];
+        if (next.delayMs > sincePhaseStart) break;
+        this.phaseSpawnCursor += 1;
+        this.enemies.push(this.makeEnemy(next.kind, next.formation, next.slot, next.slotCount));
+      }
+      const allSpawned = this.phaseSpawnCursor >= this.phaseSpawnQueue.length;
+      const allResolved = this.enemies.length === 0;
+      if (allSpawned && allResolved) {
+        if (this.currentPhase >= WAVE_COUNT) return; // checkVictory() handles the finish
+        this.phaseState = "gap-pause";
+        this.phaseGapTimerMs = 0;
+        this.announcement = null;
+      }
+      return;
+    }
+
+    this.phaseGapTimerMs += dt;
+    if (this.phaseState === "gap-pause") {
+      if (this.phaseGapTimerMs >= PHASE_GAP_PAUSE_MS) {
+        this.phaseState = "gap-announce";
+        this.phaseGapTimerMs = 0;
+        const nextPhase = this.currentPhase + 1;
+        this.announcement = { title: "WARNING", subtitle: `WAVE ${nextPhase}/${WAVE_COUNT}` };
+        this.audio.waveStart();
+      }
+      return;
+    }
+    if (this.phaseState === "gap-announce") {
+      if (this.phaseGapTimerMs >= PHASE_GAP_ANNOUNCE_MS) {
+        this.phaseState = "gap-transition";
+        this.phaseGapTimerMs = 0;
+        this.announcement = null;
+      }
+      return;
+    }
+    // gap-transition
+    if (this.phaseGapTimerMs >= PHASE_GAP_TRANSITION_MS) {
+      this.currentPhase += 1;
+      this.phaseSpawnQueue = getSpawnsForPhase(this.currentPhase);
+      this.phaseSpawnCursor = 0;
+      this.phaseActiveSinceMs = this.elapsedMs;
+      this.phaseState = "spawning";
     }
   }
 
@@ -599,7 +677,9 @@ export class RapidFireEngine {
     if (this.fireCd <= 0) {
       this.fireCd = cfg.intervalMs / rateMul;
       this.fireVolley(cfg.lanes, cfg.projectileSpeed, dmgMul, glowBoost);
-      this.spawnMuzzleFlash(cfg.muzzle, cfg.glowIntensity + glowBoost);
+      // No muzzle-flash sprite spawn — firing feel now comes entirely from
+      // clean projectile timing/spacing/trails plus recoil (mobile playtest
+      // correction: the old muzzle splash read as noisy/fake).
       this.recoil = 1;
       this.volleyIndex += 1;
       this.audio.playerShot(this.firepower >= 5);
@@ -608,7 +688,6 @@ export class RapidFireEngine {
     if (cfg.heavyBurstMs && cfg.heavyBurstLanes && this.heavyCd <= 0) {
       this.heavyCd = cfg.heavyBurstMs;
       this.fireVolley(cfg.heavyBurstLanes, cfg.projectileSpeed * 1.05, dmgMul * 1.1, glowBoost + 0.2);
-      this.spawnMuzzleFlash("wide", 1);
       this.recoil = 1.4;
       this.audio.playerShot(true);
     }
@@ -661,46 +740,6 @@ export class RapidFireEngine {
       rotation: angle,
       alive: true,
     });
-  }
-
-  private spawnMuzzleFlash(kind: "small" | "wide", intensity: number): void {
-    if (!this.vfx) return;
-    const noseY = -this.player.h * 0.42;
-    if (kind === "small") {
-      // One compact flash per side emitter pair at low Firepower.
-      const offsets = this.firepower <= 0 ? [-8, 8] : [-13, 0, 13];
-      for (const ox of offsets) {
-        this.vfx.spawn(
-          ANIM.muzzleSmall,
-          {
-            follow: () => ({ x: this.player.x + ox, y: this.player.y + noseY, rotation: this.bank }),
-            scale: 0.18,
-            opacity: Math.min(1, 0.7 + intensity * 0.3),
-          },
-          "top",
-        );
-      }
-      return;
-    }
-    // Wide premium flash — one instance spanning the emitter row. Kept at a
-    // fixed readable scale (never stretched full-width) and clamped so the
-    // whole flash stays on-screen without clipping.
-    const scale = 0.22;
-    const halfW = (ANIM.muzzleWide.frameWidth * scale) / 2;
-    this.vfx.spawn(
-      ANIM.muzzleWide,
-      {
-        follow: () => ({
-          x: clamp(this.player.x, halfW, LOGICAL_W - halfW),
-          y: this.player.y + noseY,
-          rotation: this.bank * 0.5,
-        }),
-        scale,
-        opacity: Math.min(1, 0.65 + intensity * 0.35),
-        boost: intensity > 0.7 ? 0.35 : 0,
-      },
-      "top",
-    );
   }
 
   private updateEnemies(dt: number): void {
@@ -919,17 +958,94 @@ export class RapidFireEngine {
       // credit, and no Fire-Up drop — only the destruction presentation.
       enemy.dropped = true;
     }
-    if (enemy.kind === "basic") {
-      this.audio.explosion("small");
-    } else {
-      this.audio.explosion("medium");
+    const tier = enemy.kind === "basic" ? "small" : enemy.kind === "powerCarrier" ? "large" : "medium";
+    this.audio.explosion(tier === "small" ? "small" : "medium");
+    this.spawnExplosion(enemy.x, enemy.y, tier);
+  }
+
+  /**
+   * Procedural destruction burst — replaces the old spritesheet explosion
+   * VFX (mobile playtest correction: the sprite-based bursts read as fake).
+   * A hot flash, an expanding shockwave ring, and flying debris streaks,
+   * scaled by enemy tier so Power Carriers feel like a real kill and basic
+   * fighters stay light.
+   */
+  private spawnExplosion(x: number, y: number, tier: "small" | "medium" | "large"): void {
+    const scale = tier === "small" ? 0.7 : tier === "medium" ? 1 : 1.5;
+    const durationMs = tier === "small" ? 380 : tier === "medium" ? 480 : 620;
+    const debrisCount = tier === "small" ? 6 : tier === "medium" ? 9 : 13;
+    const color = tier === "large" ? "255, 150, 60" : tier === "medium" ? "255, 170, 70" : "255, 200, 110";
+    const debris: Debris[] = Array.from({ length: debrisCount }, () => ({
+      angle: Math.random() * Math.PI * 2,
+      dist: 0,
+      speed: (0.4 + Math.random() * 0.6) * (18 + scale * 10),
+      len: 3 + Math.random() * 5 * scale,
+    }));
+    if (this.explosions.length >= MAX_EXPLOSIONS) this.explosions.shift();
+    this.explosions.push({ x, y, ageMs: 0, durationMs, scale, color, debris });
+  }
+
+  private updateExplosions(dt: number): void {
+    if (this.explosions.length === 0) return;
+    for (const ex of this.explosions) {
+      ex.ageMs += dt;
+      for (const d of ex.debris) d.dist += d.speed * (dt / 1000);
     }
-    if (!this.vfx) return;
-    if (enemy.kind === "basic") {
-      this.vfx.spawn(ANIM.explosionSmall, { x: enemy.x, y: enemy.y, scale: 0.34, opacity: 1 }, "world");
-    } else {
-      // Shooter / Power Carrier — medium explosion with shockwave + debris.
-      this.vfx.spawn(ANIM.explosionMedium, { x: enemy.x, y: enemy.y, scale: 0.34, opacity: 1, boost: 0.15 }, "world");
+    this.explosions = this.explosions.filter((ex) => ex.ageMs < ex.durationMs);
+  }
+
+  private drawExplosions(ctx: CanvasRenderingContext2D): void {
+    for (const ex of this.explosions) {
+      const t = clamp(ex.ageMs / ex.durationMs, 0, 1);
+      const flashT = clamp(ex.ageMs / (ex.durationMs * 0.25), 0, 1);
+      const baseR = 10 * ex.scale;
+
+      ctx.save();
+      ctx.translate(ex.x, ex.y);
+      ctx.globalCompositeOperation = "lighter";
+
+      // Hot core flash — brightest at the start, fades fast.
+      if (flashT < 1) {
+        const flashA = 1 - flashT;
+        const flashR = baseR * (0.6 + flashT * 1.4);
+        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, flashR);
+        grad.addColorStop(0, `rgba(255, 255, 240, ${flashA})`);
+        grad.addColorStop(0.4, `rgba(${ex.color}, ${flashA * 0.9})`);
+        grad.addColorStop(1, `rgba(${ex.color}, 0)`);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(0, 0, flashR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Expanding shockwave ring.
+      const ringR = baseR * (1 + t * 5);
+      const ringA = (1 - t) * 0.8;
+      if (ringA > 0.01) {
+        ctx.strokeStyle = `rgba(${ex.color}, ${ringA})`;
+        ctx.lineWidth = Math.max(1, baseR * 0.35 * (1 - t * 0.6));
+        ctx.beginPath();
+        ctx.arc(0, 0, ringR, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Debris streaks flying outward, fading with age.
+      const debrisA = 1 - t;
+      if (debrisA > 0.01) {
+        ctx.strokeStyle = `rgba(255, 235, 200, ${debrisA})`;
+        ctx.lineWidth = Math.max(1, 1.5 * ex.scale);
+        for (const d of ex.debris) {
+          const dx = Math.cos(d.angle) * d.dist;
+          const dy = Math.sin(d.angle) * d.dist;
+          const tx = Math.cos(d.angle) * (d.dist - d.len);
+          const ty = Math.sin(d.angle) * (d.dist - d.len);
+          ctx.beginPath();
+          ctx.moveTo(tx, ty);
+          ctx.lineTo(dx, dy);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
     }
   }
 
@@ -981,8 +1097,11 @@ export class RapidFireEngine {
     this.damageTaken += applied;
     this.hull = Math.max(0, this.hull - applied);
 
-    // Damage feedback fires only when hull was actually removed.
-    this.playerFlashMs = 140;
+    // Damage feedback fires only when hull was actually removed. Presentation
+    // is now a brief red tint flash directly on the ship sprite (see
+    // drawPlayer) instead of a separate ring/spark VFX (mobile playtest
+    // correction: the old effect read as ugly/disconnected circles).
+    this.damageFlashMs = 260;
     this.invulnMs = INVULN_MS;
     this.shakeMs = 220;
     this.shakeMag = 5;
@@ -991,18 +1110,7 @@ export class RapidFireEngine {
       this.lowHullWarned = true;
       this.audio.warning();
     }
-    this.vfx?.spawn(
-      ANIM.playerDamageRing,
-      {
-        follow: () => ({ x: this.player.x, y: this.player.y }),
-        scale: 0.3,
-        opacity: 0.95,
-      },
-      "top",
-    );
-    if (at) {
-      this.vfx?.spawn(ANIM.hitSparkSmall, { x: at.x, y: at.y, scale: 0.14, opacity: 0.9 }, "top");
-    }
+    void at; // collision point no longer used for a spawned VFX
 
     if (this.hull <= 0) {
       this.lockOutcome("defeat");
@@ -1011,8 +1119,8 @@ export class RapidFireEngine {
 
   private checkVictory(): void {
     if (this.outcomeLocked !== "none") return;
-    const allSpawned = this.spawnCursor >= this.spawnQueue.length;
-    if (!allSpawned) return;
+    if (this.currentPhase < WAVE_COUNT) return;
+    if (this.phaseSpawnCursor < this.phaseSpawnQueue.length) return;
     if (this.enemies.some((e) => e.alive)) return;
     this.lockOutcome("victory");
   }
@@ -1079,6 +1187,7 @@ export class RapidFireEngine {
     this.drawHostileShots(ctx);
     this.drawPlayerShots(ctx);
     this.vfx?.draw(ctx, "world");
+    this.drawExplosions(ctx);
     this.drawPlayer(ctx);
     this.vfx?.draw(ctx, "top");
   }
@@ -1203,11 +1312,16 @@ export class RapidFireEngine {
     const side = h;
     if (img) {
       ctx.drawImage(img, -side / 2, -side / 2, side, side);
-      // Brief white damage flash — brighten with an additive re-draw.
-      if (this.playerFlashMs > 0) {
-        ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = Math.min(1, this.playerFlashMs / 140) * 0.9;
-        ctx.drawImage(img, -side / 2, -side / 2, side, side);
+      // Brief red damage flash — tints exactly the ship's visible pixels
+      // (source-atop) instead of a separate ring/spark VFX (mobile playtest
+      // correction: clean, readable, no ugly circles).
+      if (this.damageFlashMs > 0) {
+        const flashA = Math.min(1, this.damageFlashMs / 260);
+        ctx.save();
+        ctx.globalCompositeOperation = "source-atop";
+        ctx.fillStyle = `rgba(255, 40, 40, ${flashA * 0.85})`;
+        ctx.fillRect(-side / 2, -side / 2, side, side);
+        ctx.restore();
       }
     } else {
       ctx.fillStyle = "#7ef";
@@ -1293,7 +1407,11 @@ export class RapidFireEngine {
       const side = enemy.h; // 500×500 square sources — keep aspect
       ctx.save();
       ctx.translate(enemy.x + sway, enemy.y + recoil);
-      ctx.rotate(bank);
+      // Enemy source art is drawn nose-up (same convention as the player
+      // ship), but enemies travel top-to-bottom toward the player — flip
+      // 180° so the nose/front visually faces the direction of travel
+      // instead of appearing backwards (mobile playtest correction).
+      ctx.rotate(Math.PI + bank);
       if (enemy.dying) {
         ctx.globalAlpha = Math.max(0, 1 - enemy.dyingMs / ENEMY_DEATH_SPRITE_MS);
       }

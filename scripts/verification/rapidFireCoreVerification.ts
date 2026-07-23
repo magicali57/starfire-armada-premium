@@ -6,7 +6,15 @@ import { RAPID_FIRE_GAMEPLAY_ASSETS, SHIP_GAMEPLAY_SPRITE, CHAPTER_BACKGROUND_IM
 import { RAPID_FIRE_SHIP_ID, RAPID_FIRE_SLICE_STAGE_ID } from "@/data/gameplayRapidFire";
 import { FIREPOWER_LEVELS, FIREPOWER_MAX, getFirepowerConfig, MAX_FIREPOWER } from "@/gameplay/rapidFire/firepowerConfig";
 import { ENEMY_DEFS } from "@/gameplay/rapidFire/enemyConfig";
-import { WAVE_PHASES, WAVE_COUNT, getOrderedSpawns, STAGE_DURATION_HINT_MS, TOTAL_POWER_CARRIERS } from "@/gameplay/rapidFire/waveTable";
+import {
+  WAVE_PHASES,
+  WAVE_COUNT,
+  getAllSpawns,
+  getSpawnsForPhase,
+  STAGE_DURATION_HINT_MS,
+  TOTAL_POWER_CARRIERS,
+  PEAK_PHASE_ENEMY_COUNT,
+} from "@/gameplay/rapidFire/waveTable";
 import { SAVE_SCHEMA_VERSION } from "@/types";
 
 let assertions = 0;
@@ -101,29 +109,47 @@ function publicPath(urlPath: string): string {
   equal(hull, 0, "hull clamps at zero");
 }
 
-// Enemies + waves
+// Enemies + waves (mobile playtest correction pass: enemy-clear-gated
+// phases, not a flat absolute-time schedule — see waveTable.ts / formationConfig.ts)
 {
   check(ENEMY_DEFS.basic && ENEMY_DEFS.shooter && ENEMY_DEFS.powerCarrier, "three enemy defs");
   check(ENEMY_DEFS.shooter.shootIntervalMs! > 0, "shooter fires");
+  // Durability rebalance: enemies must survive multiple hits now, with a
+  // clear basic < shooter < powerCarrier toughness ordering.
+  check(ENEMY_DEFS.basic.hull >= 100, "basic fighter survives multiple hits");
+  check(ENEMY_DEFS.shooter.hull > ENEMY_DEFS.basic.hull, "shooter noticeably tougher than basic");
+  check(ENEMY_DEFS.powerCarrier.hull > ENEMY_DEFS.shooter.hull, "Power Carrier is the toughest enemy");
+
   equal(WAVE_COUNT, 12, "twelve choreographed wave phases (premium rebuild)");
   equal(WAVE_PHASES.length, 12, "wave phase table matches WAVE_COUNT");
-  const spawns = getOrderedSpawns();
+  const indices = WAVE_PHASES.map((w) => w.index);
+  assert.deepEqual(indices, Array.from({ length: 12 }, (_, i) => i + 1), "wave phase indices 1-12 in order");
+  assertions += 1;
+
+  const spawns = getAllSpawns();
   check(spawns.length > 0, "deterministic spawns");
   const carriers = spawns.filter((s) => s.kind === "powerCarrier");
   equal(carriers.length, 11, "11 Power Carriers (10 + Overdrive test)");
   equal(TOTAL_POWER_CARRIERS, 11, "TOTAL_POWER_CARRIERS matches actual spawn count");
-  // Spawn order sorted
-  for (let i = 1; i < spawns.length; i += 1) {
-    check(spawns[i].atMs >= spawns[i - 1].atMs, "spawn order non-decreasing");
-  }
-  for (let i = 1; i < WAVE_PHASES.length; i += 1) {
-    check(WAVE_PHASES[i].startMs > WAVE_PHASES[i - 1].startMs, "wave phases strictly increasing");
-  }
-  // Every enemy belongs to a well-formed formation group.
+
+  // Every enemy belongs to a well-formed formation group, and every phase
+  // resolves to a non-empty, delay-sorted spawn list.
   for (const s of spawns) {
-    check(s.groupId.length > 0, `spawn has groupId (${s.kind}@${s.atMs})`);
+    check(s.groupId.length > 0, `spawn has groupId (${s.kind}, phase ${s.phase})`);
     check(s.slot >= 0 && s.slot < s.slotCount, `slot within slotCount (${s.groupId})`);
+    check(s.phase >= 1 && s.phase <= WAVE_COUNT, `spawn phase ${s.phase} within range`);
   }
+  for (const w of WAVE_PHASES) {
+    const forPhase = getSpawnsForPhase(w.index);
+    check(forPhase.length > 0, `phase ${w.index} has spawns`);
+    for (let i = 1; i < forPhase.length; i += 1) {
+      check(forPhase[i].delayMs >= forPhase[i - 1].delayMs, `phase ${w.index} spawns sorted by delay`);
+    }
+  }
+  // Mobile playtest requirement: 10-15 enemies together in the densest phases.
+  check(PEAK_PHASE_ENEMY_COUNT >= 10, "at least one phase puts 10+ enemies on stage at once");
+  check(PEAK_PHASE_ENEMY_COUNT <= 15, "peak phase enemy count stays within the requested 10-15 band");
+
   // Stage pacing: at least 2 minutes, and the authored hint stays in a
   // reasonable range around the 2:00-3:00 target window.
   check(STAGE_DURATION_HINT_MS >= 120000, "stage duration hint is at least 2 minutes");

@@ -125,6 +125,12 @@ export interface BattleSessionTransitionResult {
 export const BATTLE_ENERGY_COST = 10;
 
 export function getBattleEnergyCost(_stageId: string): number {
+  // DEV-only testing override: waives the Energy cost entirely so local
+  // playtesting isn't blocked by the (currently source-less) Energy economy.
+  // Dead-code-eliminated from production builds — never affects real
+  // players. Remove this block once a real Energy source/regen system
+  // exists and testing no longer needs it.
+  if (import.meta.env?.DEV) return 0;
   return BATTLE_ENERGY_COST;
 }
 

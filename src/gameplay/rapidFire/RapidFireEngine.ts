@@ -5,19 +5,28 @@ import {
   FIREPOWER_MAX,
   getFirepowerConfig,
   MAX_FIREPOWER,
-  type BoltKind,
   type FireLane,
 } from "./firepowerConfig";
 import { WAVE_COUNT, getSpawnsForPhase } from "./waveTable";
 import {
   computeFormationPose,
-  type FormationPhase,
   type FormationSpawnEvent,
   type FormationType,
 } from "./formationConfig";
 import { ANIM } from "./animationDefs";
 import { VfxSystem } from "./spriteAnimation";
 import { RapidFireAudioSystem, type AudioPrefs } from "./audioSystem";
+import { PixiRenderer } from "./pixiRenderer";
+import type {
+  BgStar,
+  Debris,
+  Enemy,
+  ExplosionFx,
+  Pickup,
+  Projectile,
+  RenderState,
+  Vec,
+} from "./renderTypes";
 
 export interface WaveAnnouncement {
   title: string;
@@ -49,11 +58,6 @@ export interface RapidFireEngineOptions {
   onOutcome?: (outcome: "victory" | "defeat", performance: BattlePerformance) => void;
 }
 
-interface Vec {
-  x: number;
-  y: number;
-}
-
 interface PlayerState {
   x: number;
   y: number;
@@ -62,91 +66,12 @@ interface PlayerState {
   h: number;
 }
 
-interface Projectile {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  damage: number;
-  radius: number;
-  scale: number;
-  glow: number;
-  kind: BoltKind;
-  hostile: boolean;
-  /** Hostile art variant. */
-  hostileKind?: "small" | "aimed";
-  rotation: number;
-  alive: boolean;
-}
-
 interface PendingLaneShot {
   fireAtMs: number;
   lane: FireLane;
   speed: number;
   dmgMul: number;
   glowBoost: number;
-}
-
-interface Enemy {
-  id: number;
-  kind: EnemyKind;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  hull: number;
-  radius: number;
-  w: number;
-  h: number;
-  shootCd: number;
-  shotIndex: number;
-  /** Presentation state. */
-  swayPhase: number;
-  entryMs: number;
-  flashMs: number;
-  recoilMs: number;
-  dying: boolean;
-  dyingMs: number;
-  alive: boolean;
-  dropped: boolean;
-  /** Formation choreography (every enemy belongs to a formation group). */
-  formation: FormationType;
-  slot: number;
-  slotCount: number;
-  formationSpawnedAtMs: number;
-  formationPhase: FormationPhase;
-  canFire: boolean;
-}
-
-interface Pickup {
-  x: number;
-  y: number;
-  vy: number;
-  radius: number;
-  phase: number;
-  alive: boolean;
-}
-
-interface Debris {
-  angle: number;
-  dist: number;
-  speed: number;
-  len: number;
-}
-
-/**
- * Procedural destruction burst (replaces the old spritesheet explosion
- * VFX): a bright flash, an expanding shockwave ring, and flying debris
- * streaks, size-scaled by `scale`. Pure canvas drawing — no image assets.
- */
-interface ExplosionFx {
-  x: number;
-  y: number;
-  ageMs: number;
-  durationMs: number;
-  scale: number;
-  color: string;
-  debris: Debris[];
 }
 
 const LOGICAL_W = 390;
@@ -195,9 +120,10 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 export class RapidFireEngine {
   private canvas: HTMLCanvasElement;
-  private ctx: CanvasRenderingContext2D;
   private opts: RapidFireEngineOptions;
   private images: Record<string, HTMLImageElement> = {};
+  private renderer: PixiRenderer | null = null;
+  private renderState: RenderState;
   private ready = false;
   private destroyed = false;
   private paused = false;
@@ -262,10 +188,9 @@ export class RapidFireEngine {
   private lowHullWarned = false;
   private musicStarted = false;
 
-  // Parallax background (three layers: far source art, procedural middle
-  // starfield, near speed streaks). Star positions are generated once so the
-  // middle layer never re-randomizes mid-frame.
-  private midStars: { x: number; y: number; r: number; speedMul: number; a: number }[] = [];
+  // Parallax background starfield (rendered by PixiRenderer). Star positions
+  // are generated once so the middle layer never re-randomizes mid-frame.
+  private midStars: BgStar[] = [];
 
   private pointerId: number | null = null;
   private pointerActive = false;
@@ -280,9 +205,9 @@ export class RapidFireEngine {
   constructor(opts: RapidFireEngineOptions) {
     this.opts = opts;
     this.canvas = opts.canvas;
-    const ctx = opts.canvas.getContext("2d");
-    if (!ctx) throw new Error("2d context unavailable");
-    this.ctx = ctx;
+    // The canvas is handed to the Pixi WebGL renderer in start(); the engine
+    // never acquires a 2D context on it (a canvas supports only one context
+    // type — this guarantees Canvas2D and Pixi never run simultaneously).
     this.hullMax = Math.max(1, Math.trunc(opts.hullMax));
     this.hull = this.hullMax;
     this.defense = Math.max(0, opts.defense);
@@ -312,6 +237,35 @@ export class RapidFireEngine {
       speedMul: 0.55 + Math.random() * 0.5,
       a: 0.15 + Math.random() * 0.35,
     }));
+
+    // One persistent render-state object; scalar fields are mutated and array
+    // fields are re-pointed at the live entity arrays each frame, so handing
+    // it to the renderer allocates nothing per frame.
+    this.renderState = {
+      elapsedMs: 0,
+      bank: 0,
+      recoil: 0,
+      damageFlashMs: 0,
+      invulnMs: 0,
+      shakeMs: 0,
+      shakeMag: 0,
+      firepower: 0,
+      maxActive: false,
+      atMax: false,
+      playerX: this.player.x,
+      playerY: this.player.y,
+      playerW: this.player.w,
+      playerH: this.player.h,
+      bgScroll: 0,
+      streakScroll: 0,
+      stars: this.midStars,
+      playerShots: this.playerShots,
+      hostileShots: this.hostileShots,
+      enemies: this.enemies,
+      pickups: this.pickups,
+      explosions: this.explosions,
+      vfx: null,
+    };
   }
 
   async start(): Promise<void> {
@@ -321,12 +275,19 @@ export class RapidFireEngine {
     );
     this.images = Object.fromEntries(entries);
     this.vfx = new VfxSystem(this.images, 48);
-    // No separate thruster sprite is spawned — the player ship's own art has
-    // baked-in engine glow, and drawPlayer() adds a tight procedural
-    // under-ship glow tied to Firepower/Max Firepower instead of a detached
-    // VFX blob (mobile playtest correction: the old thruster read as fake).
+    this.renderState.vfx = this.vfx;
+    // The player ship's own art carries its engine glow; PixiRenderer adds a
+    // tight additive under-ship glow tied to Firepower/Max Firepower (no
+    // detached thruster VFX).
+    const renderer = new PixiRenderer(this.canvas);
+    await renderer.init(this.images);
+    if (this.destroyed) {
+      renderer.destroy();
+      return;
+    }
+    this.renderer = renderer;
+
     this.ready = true;
-    this.resize();
     this.bindInput();
     document.addEventListener("visibilitychange", this.visibilityHandler);
     this.lastTs = performance.now();
@@ -344,6 +305,8 @@ export class RapidFireEngine {
     this.explosions = [];
     this.pendingShots = [];
     this.audio.destroy();
+    this.renderer?.destroy();
+    this.renderer = null;
   }
 
   setPaused(paused: boolean): void {
@@ -539,14 +502,9 @@ export class RapidFireEngine {
     this.player.y = clamp(targetY, this.player.h * 0.5 + 40, LOGICAL_H - this.player.h * 0.45);
   }
 
-  private resize(): void {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const cssW = this.canvas.clientWidth || LOGICAL_W;
-    const cssH = this.canvas.clientHeight || Math.round((cssW * LOGICAL_H) / LOGICAL_W);
-    this.canvas.width = Math.round(cssW * dpr);
-    this.canvas.height = Math.round(cssH * dpr);
-    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
+  // Canvas sizing/DPR is owned by PixiRenderer (it observes the canvas and
+  // resizes its WebGL buffer), so the engine no longer manages the backing
+  // store directly.
 
   private loop = (ts: number): void => {
     if (this.destroyed) return;
@@ -560,13 +518,44 @@ export class RapidFireEngine {
     if (!this.paused && this.outcomeLocked === "none") {
       this.update(dt);
     }
-    this.draw();
+    // Single loop: simulation (above, only when running) then render (always,
+    // so a paused frame shows the frozen scene). Pixi's own ticker is stopped.
+    this.renderFrame();
     this.hudAcc += rawDt;
     if (this.hudAcc >= 100) {
       this.hudAcc = 0;
       this.emitHud(false);
     }
   };
+
+  /** Sync the persistent render-state to current sim values and draw. */
+  private renderFrame(): void {
+    if (!this.renderer) return;
+    const rs = this.renderState;
+    rs.elapsedMs = this.elapsedMs;
+    rs.bank = this.bank;
+    rs.recoil = this.recoil;
+    rs.damageFlashMs = this.damageFlashMs;
+    rs.invulnMs = this.invulnMs;
+    rs.shakeMs = this.shakeMs;
+    rs.shakeMag = this.shakeMag;
+    rs.firepower = this.firepower;
+    rs.maxActive = this.maxFpRemaining > 0;
+    rs.atMax = this.firepower >= FIREPOWER_MAX;
+    rs.playerX = this.player.x;
+    rs.playerY = this.player.y;
+    rs.playerW = this.player.w;
+    rs.playerH = this.player.h;
+    rs.bgScroll = this.bgScroll;
+    rs.streakScroll = this.streakScroll;
+    // Array fields are re-pointed because the sim reassigns them via filter().
+    rs.playerShots = this.playerShots;
+    rs.hostileShots = this.hostileShots;
+    rs.enemies = this.enemies;
+    rs.pickups = this.pickups;
+    rs.explosions = this.explosions;
+    this.renderer.render(rs);
+  }
 
   private update(dt: number): void {
     this.elapsedMs += dt;
@@ -974,7 +963,7 @@ export class RapidFireEngine {
     const scale = tier === "small" ? 0.7 : tier === "medium" ? 1 : 1.5;
     const durationMs = tier === "small" ? 380 : tier === "medium" ? 480 : 620;
     const debrisCount = tier === "small" ? 6 : tier === "medium" ? 9 : 13;
-    const color = tier === "large" ? "255, 150, 60" : tier === "medium" ? "255, 170, 70" : "255, 200, 110";
+    const color = tier === "large" ? 0xff963c : tier === "medium" ? 0xffaa46 : 0xffc86e;
     const debris: Debris[] = Array.from({ length: debrisCount }, () => ({
       angle: Math.random() * Math.PI * 2,
       dist: 0,
@@ -992,61 +981,6 @@ export class RapidFireEngine {
       for (const d of ex.debris) d.dist += d.speed * (dt / 1000);
     }
     this.explosions = this.explosions.filter((ex) => ex.ageMs < ex.durationMs);
-  }
-
-  private drawExplosions(ctx: CanvasRenderingContext2D): void {
-    for (const ex of this.explosions) {
-      const t = clamp(ex.ageMs / ex.durationMs, 0, 1);
-      const flashT = clamp(ex.ageMs / (ex.durationMs * 0.25), 0, 1);
-      const baseR = 10 * ex.scale;
-
-      ctx.save();
-      ctx.translate(ex.x, ex.y);
-      ctx.globalCompositeOperation = "lighter";
-
-      // Hot core flash — brightest at the start, fades fast.
-      if (flashT < 1) {
-        const flashA = 1 - flashT;
-        const flashR = baseR * (0.6 + flashT * 1.4);
-        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, flashR);
-        grad.addColorStop(0, `rgba(255, 255, 240, ${flashA})`);
-        grad.addColorStop(0.4, `rgba(${ex.color}, ${flashA * 0.9})`);
-        grad.addColorStop(1, `rgba(${ex.color}, 0)`);
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(0, 0, flashR, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // Expanding shockwave ring.
-      const ringR = baseR * (1 + t * 5);
-      const ringA = (1 - t) * 0.8;
-      if (ringA > 0.01) {
-        ctx.strokeStyle = `rgba(${ex.color}, ${ringA})`;
-        ctx.lineWidth = Math.max(1, baseR * 0.35 * (1 - t * 0.6));
-        ctx.beginPath();
-        ctx.arc(0, 0, ringR, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-
-      // Debris streaks flying outward, fading with age.
-      const debrisA = 1 - t;
-      if (debrisA > 0.01) {
-        ctx.strokeStyle = `rgba(255, 235, 200, ${debrisA})`;
-        ctx.lineWidth = Math.max(1, 1.5 * ex.scale);
-        for (const d of ex.debris) {
-          const dx = Math.cos(d.angle) * d.dist;
-          const dy = Math.sin(d.angle) * d.dist;
-          const tx = Math.cos(d.angle) * (d.dist - d.len);
-          const ty = Math.sin(d.angle) * (d.dist - d.len);
-          ctx.beginPath();
-          ctx.moveTo(tx, ty);
-          ctx.lineTo(dx, dy);
-          ctx.stroke();
-        }
-      }
-      ctx.restore();
-    }
   }
 
   private spawnFireUp(x: number, y: number): void {
@@ -1157,305 +1091,4 @@ export class RapidFireEngine {
     this.opts.onHud?.(this.getSnapshot());
   }
 
-  // -------------------------------------------------------------------------
-  // Rendering
-  // -------------------------------------------------------------------------
-
-  private draw(): void {
-    const ctx = this.ctx;
-    const cssW = this.canvas.clientWidth || LOGICAL_W;
-    const cssH = this.canvas.clientHeight || Math.round((cssW * LOGICAL_H) / LOGICAL_W);
-    const scaleX = cssW / LOGICAL_W;
-    const scaleY = cssH / LOGICAL_H;
-
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    const dpr = this.canvas.width / cssW;
-    ctx.setTransform(dpr * scaleX, 0, 0, dpr * scaleY, 0, 0);
-
-    // Screen shake (presentation only).
-    if (this.shakeMs > 0) {
-      const k = this.shakeMs / 220;
-      const ox = (Math.random() * 2 - 1) * this.shakeMag * k;
-      const oy = (Math.random() * 2 - 1) * this.shakeMag * k;
-      ctx.translate(ox, oy);
-    }
-
-    this.drawBackground(ctx);
-    this.drawPickups(ctx);
-    this.drawEnemies(ctx);
-    this.drawHostileShots(ctx);
-    this.drawPlayerShots(ctx);
-    this.vfx?.draw(ctx, "world");
-    this.drawExplosions(ctx);
-    this.drawPlayer(ctx);
-    this.vfx?.draw(ctx, "top");
-  }
-
-  /**
-   * Three-layer parallax background:
-   *  1. Far — the source chapter art, seamlessly scrolled/wrapped vertically
-   *     (two stacked copies offset by one viewport height) instead of drawn
-   *     statically.
-   *  2. Middle — a procedural drifting starfield (no extra art required),
-   *     moving faster than the far layer for real depth.
-   *  3. Near — the existing speed-streak instances, fastest and sparsest.
-   * All three freeze together whenever gameplay pauses because bgScroll /
-   * streakScroll only advance inside `update()`.
-   */
-  private drawBackground(ctx: CanvasRenderingContext2D): void {
-    const bg = this.images.background;
-    if (bg) {
-      const imgAspect = bg.width / bg.height;
-      const viewAspect = LOGICAL_W / LOGICAL_H;
-      let sx = 0;
-      let sy = 0;
-      let sw = bg.width;
-      let sh = bg.height;
-      if (imgAspect > viewAspect) {
-        sw = bg.height * viewAspect;
-        sx = (bg.width - sw) / 2;
-      } else {
-        sh = bg.width / viewAspect;
-        sy = (bg.height - sh) * 0.35;
-      }
-      // Seamless vertical wrap: draw the crop twice, offset by one viewport
-      // height and by the current scroll position, so there is never a gap.
-      const offset = this.bgScroll % LOGICAL_H;
-      ctx.globalAlpha = 0.85;
-      ctx.drawImage(bg, sx, sy, sw, sh, 0, offset - LOGICAL_H, LOGICAL_W, LOGICAL_H);
-      ctx.drawImage(bg, sx, sy, sw, sh, 0, offset, LOGICAL_W, LOGICAL_H);
-      ctx.globalAlpha = 1;
-    } else {
-      ctx.fillStyle = "#070816";
-      ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H);
-    }
-    ctx.fillStyle = "rgba(4,6,18,0.35)";
-    ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H);
-
-    // Middle layer — procedural drifting starfield, wraps seamlessly per star.
-    ctx.save();
-    for (const star of this.midStars) {
-      const y = ((star.y + this.bgScroll * star.speedMul) % (LOGICAL_H + 6)) - 3;
-      ctx.globalAlpha = star.a;
-      ctx.fillStyle = "#bcd8ff";
-      ctx.beginPath();
-      ctx.arc(star.x, y, star.r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-
-    // Near layer — subtle scrolling speed streaks for a sense of forward
-    // motion, a few slender instances, never a full-width stretch of art.
-    const streak = this.images.backgroundSpeedStreak;
-    if (streak) {
-      ctx.save();
-      ctx.globalCompositeOperation = "screen";
-      const sw = 26;
-      const sh = 180;
-      const cols = [0.14, 0.42, 0.66, 0.9];
-      for (let i = 0; i < cols.length; i += 1) {
-        const x = cols[i] * LOGICAL_W - sw / 2;
-        const speedMul = 0.7 + (i % 3) * 0.35;
-        const y = ((this.streakScroll * speedMul + i * 240) % (LOGICAL_H + sh)) - sh;
-        ctx.globalAlpha = 0.1 + (i % 2) * 0.05;
-        ctx.drawImage(streak, x, y, sw, sh);
-      }
-      ctx.restore();
-    }
-  }
-
-  private drawPlayer(ctx: CanvasRenderingContext2D): void {
-    const img = this.images.shipSprite;
-    const { x, w, h } = this.player;
-    // Subtle idle hover + firing recoil (presentation offsets only —
-    // collision uses the true player position).
-    const hover = Math.sin(this.elapsedMs / 480) * 2.2;
-    const recoilY = this.recoil * 3.2;
-    const y = this.player.y + hover + recoilY;
-    const maxActive = this.maxFpRemaining > 0;
-    const atMax = this.firepower >= FIREPOWER_MAX;
-
-    // Invulnerability flicker.
-    if (this.invulnMs > 0 && Math.floor(this.invulnMs / 70) % 2 === 0) return;
-
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(this.bank);
-
-    // Under-ship glow.
-    const glowR = w * 0.62;
-    const grad = ctx.createRadialGradient(0, h * 0.1, 4, 0, h * 0.1, glowR);
-    const glowA = maxActive ? 0.5 : 0.28;
-    grad.addColorStop(0, `rgba(90, 205, 255, ${glowA})`);
-    grad.addColorStop(1, "rgba(90, 205, 255, 0)");
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(0, h * 0.1, glowR, 0, Math.PI * 2);
-    ctx.fill();
-
-    // MAX FIREPOWER aura — subtle loop at FP10, intensified while the
-    // Max Firepower buff timer is running.
-    const aura = this.images.maxAura;
-    if (aura && atMax) {
-      const pulse = 0.82 + 0.12 * Math.sin(this.elapsedMs / 160);
-      const size = h * 2.1 * pulse;
-      ctx.save();
-      ctx.rotate(this.elapsedMs / 900);
-      ctx.globalCompositeOperation = "screen";
-      ctx.globalAlpha = maxActive ? 0.85 : 0.35;
-      ctx.drawImage(aura, -size / 2, -size / 2, size, size);
-      ctx.restore();
-    }
-
-    // Ship (500×500 square source — draw square to preserve aspect).
-    const side = h;
-    if (img) {
-      ctx.drawImage(img, -side / 2, -side / 2, side, side);
-      // Brief red damage flash — tints exactly the ship's visible pixels
-      // (source-atop) instead of a separate ring/spark VFX (mobile playtest
-      // correction: clean, readable, no ugly circles).
-      if (this.damageFlashMs > 0) {
-        const flashA = Math.min(1, this.damageFlashMs / 260);
-        ctx.save();
-        ctx.globalCompositeOperation = "source-atop";
-        ctx.fillStyle = `rgba(255, 40, 40, ${flashA * 0.85})`;
-        ctx.fillRect(-side / 2, -side / 2, side, side);
-        ctx.restore();
-      }
-    } else {
-      ctx.fillStyle = "#7ef";
-      ctx.fillRect(-w / 2, -h / 2, w, h);
-    }
-    ctx.restore();
-  }
-
-  private drawPlayerShots(ctx: CanvasRenderingContext2D): void {
-    const primary = this.images.primaryBolt;
-    const heavy = this.images.heavyBolt;
-    const trail = this.images.projectileTrail;
-    for (const shot of this.playerShots) {
-      if (!shot.alive) continue;
-      const img = shot.kind === "heavy" ? heavy : primary;
-      const side = (shot.kind === "heavy" ? 42 : 26) * shot.scale;
-      ctx.save();
-      ctx.translate(shot.x, shot.y);
-      if (shot.rotation !== 0) ctx.rotate(shot.rotation);
-      // Trail behind the bolt (additive, glow-scaled).
-      if (trail) {
-        const tw = side * 0.6;
-        const th = side * 1.5;
-        ctx.globalCompositeOperation = "screen";
-        ctx.globalAlpha = 0.3 + shot.glow * 0.4;
-        ctx.drawImage(trail, -tw / 2, side * 0.18, tw, th);
-        ctx.globalCompositeOperation = "source-over";
-        ctx.globalAlpha = 1;
-      }
-      if (img) {
-        ctx.drawImage(img, -side / 2, -side / 2, side, side);
-        if (shot.glow > 0.45) {
-          ctx.globalCompositeOperation = "lighter";
-          ctx.globalAlpha = (shot.glow - 0.45) * 0.9;
-          ctx.drawImage(img, -side / 2, -side / 2, side, side);
-        }
-      } else {
-        ctx.fillStyle = "#6ef";
-        ctx.fillRect(-2, -10, 4, 16);
-      }
-      ctx.restore();
-    }
-  }
-
-  private drawHostileShots(ctx: CanvasRenderingContext2D): void {
-    const small = this.images.enemyBulletSmall;
-    const aimed = this.images.enemyBulletAimed;
-    for (const shot of this.hostileShots) {
-      if (!shot.alive) continue;
-      const img = shot.hostileKind === "aimed" ? aimed : small;
-      const side = shot.hostileKind === "aimed" ? 22 : 18;
-      if (img) {
-        ctx.save();
-        ctx.translate(shot.x, shot.y);
-        // Sprite art points downward; rotate aimed shots along velocity.
-        if (shot.hostileKind === "aimed") ctx.rotate(-shot.rotation);
-        ctx.drawImage(img, -side / 2, -side / 2, side, side);
-        ctx.restore();
-      } else {
-        ctx.beginPath();
-        ctx.fillStyle = "#ff8a3a";
-        ctx.arc(shot.x, shot.y, 4, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-  }
-
-  private drawEnemies(ctx: CanvasRenderingContext2D): void {
-    for (const enemy of this.enemies) {
-      if (!enemy.alive) continue;
-      if (enemy.dying && enemy.dyingMs >= ENEMY_DEATH_SPRITE_MS) continue;
-      const key =
-        enemy.kind === "basic"
-          ? "enemyBasic"
-          : enemy.kind === "shooter"
-            ? "enemyShooter"
-            : "enemyPowerCarrier";
-      const img = this.images[key];
-      // Subtle sway + banking (visual only; collision stays at enemy.x/y).
-      const sway = Math.sin(this.elapsedMs / 620 + enemy.swayPhase) * 3;
-      const bank = clamp(enemy.vx * 0.006, -0.22, 0.22) + Math.sin(this.elapsedMs / 900 + enemy.swayPhase) * 0.05;
-      const recoil = enemy.recoilMs > 0 ? -(enemy.recoilMs / 130) * 3 : 0;
-      const side = enemy.h; // 500×500 square sources — keep aspect
-      ctx.save();
-      ctx.translate(enemy.x + sway, enemy.y + recoil);
-      // Enemy source art is drawn nose-up (same convention as the player
-      // ship), but enemies travel top-to-bottom toward the player — flip
-      // 180° so the nose/front visually faces the direction of travel
-      // instead of appearing backwards (mobile playtest correction).
-      ctx.rotate(Math.PI + bank);
-      if (enemy.dying) {
-        ctx.globalAlpha = Math.max(0, 1 - enemy.dyingMs / ENEMY_DEATH_SPRITE_MS);
-      }
-      if (img) {
-        ctx.drawImage(img, -side / 2, -side / 2, side, side);
-        // Short white/orange damage flash via additive re-draw.
-        if (enemy.flashMs > 0) {
-          ctx.globalCompositeOperation = "lighter";
-          ctx.globalAlpha = Math.min(1, enemy.flashMs / 90) * 0.85 * (enemy.dying ? Math.max(0, 1 - enemy.dyingMs / ENEMY_DEATH_SPRITE_MS) : 1);
-          ctx.drawImage(img, -side / 2, -side / 2, side, side);
-        }
-      } else {
-        ctx.fillStyle = "#f55";
-        ctx.fillRect(-enemy.w / 2, -enemy.h / 2, enemy.w, enemy.h);
-      }
-      ctx.restore();
-    }
-  }
-
-  private drawPickups(ctx: CanvasRenderingContext2D): void {
-    const img = this.images.fireUpPickup;
-    const glow = this.images.pickupMagnetGlow;
-    for (const pickup of this.pickups) {
-      if (!pickup.alive) continue;
-      const pulse = 1 + 0.08 * Math.sin(this.elapsedMs / 220 + pickup.phase);
-      const bobX = Math.sin(this.elapsedMs / 500 + pickup.phase) * 4;
-      const s = 36 * pulse;
-      const x = pickup.x + bobX;
-      if (glow) {
-        ctx.save();
-        ctx.globalCompositeOperation = "screen";
-        ctx.globalAlpha = 0.55 + 0.2 * Math.sin(this.elapsedMs / 260 + pickup.phase);
-        const gs = s * 1.9;
-        ctx.drawImage(glow, x - gs / 2, pickup.y - gs / 2, gs, gs);
-        ctx.restore();
-      }
-      if (img) {
-        ctx.drawImage(img, x - s / 2, pickup.y - s / 2, s, s);
-      } else {
-        ctx.fillStyle = "#fd4";
-        ctx.beginPath();
-        ctx.arc(x, pickup.y, 12, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-  }
 }

@@ -76,6 +76,25 @@ export class SpriteAnimationInstance {
     return Math.min(1, this.elapsed / this.durationMs);
   }
 
+  /** Current spritesheet frame index (for external renderers, e.g. Pixi). */
+  get frameIndex(): number {
+    return this.currentFrame();
+  }
+
+  /** Resolved world transform, applying the optional `follow` source. */
+  resolvePose(): { x: number; y: number; rotation: number } {
+    let px = this.x;
+    let py = this.y;
+    let rot = this.rotation;
+    if (this.follow) {
+      const p = this.follow();
+      px = p.x;
+      py = p.y;
+      if (p.rotation != null) rot = p.rotation + this.rotation;
+    }
+    return { x: px, y: py, rotation: rot };
+  }
+
   update(dt: number): void {
     if (this.done) return;
     this.elapsed += dt;
@@ -182,6 +201,13 @@ export class VfxSystem {
   update(dt: number): void {
     for (const m of this.items) m.inst.update(dt);
     this.items = this.items.filter((m) => !m.inst.done);
+  }
+
+  /** Iterate live instances (for an external renderer to draw them). */
+  forEachActive(cb: (inst: SpriteAnimationInstance, layer: VfxLayer) => void): void {
+    for (const m of this.items) {
+      if (!m.inst.done) cb(m.inst, m.layer);
+    }
   }
 
   draw(ctx: CanvasRenderingContext2D, layer: VfxLayer): void {

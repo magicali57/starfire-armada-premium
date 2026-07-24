@@ -5,9 +5,15 @@
  * procedural destruction, enemy orientation, HP rebalance, larger
  * formations, compact HUD, wave-announcement gap timing).
  *
+ * Also covers the PixiJS renderer migration (section 12): the WebGL renderer
+ * owns all drawing, the engine keeps the simulation and no longer touches
+ * Canvas2D, one loop drives both, textures are preloaded/pooled, and teardown
+ * disposes the Application/filter/observer.
+ *
  * Static/structural checks only — no headless browser is available in this
- * sandbox, so canvas rendering and mobile viewport feel are not screenshot-
- * verified here (disclosed in the completion report).
+ * sandbox, so actual WebGL rendering and mobile viewport feel are not
+ * screenshot-verified here (disclosed in the completion report; the user
+ * verifies visually + runs the full typecheck/build on their machine).
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -31,6 +37,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const engineSrc = fs.readFileSync(path.join(root, "src/gameplay/rapidFire/RapidFireEngine.ts"), "utf8");
 const gameplayScreenSrc = fs.readFileSync(path.join(root, "src/screens/gameplay/GameplayScreen.tsx"), "utf8");
 const gameplayCss = fs.readFileSync(path.join(root, "src/screens/gameplay/GameplayScreen.css"), "utf8");
+// Since the PixiJS migration, drawing lives in pixiRenderer.ts. The behavior
+// guarantees below are asserted against whichever file now owns them.
+const rendererSrc = fs.readFileSync(path.join(root, "src/gameplay/rapidFire/pixiRenderer.ts"), "utf8");
 
 // ---------------------------------------------------------------------
 // 1) Fake detached thruster removed
@@ -38,7 +47,7 @@ const gameplayCss = fs.readFileSync(path.join(root, "src/screens/gameplay/Gamepl
 {
   check(!/private thruster/.test(engineSrc), "no thruster field remains on the engine");
   check(!engineSrc.includes("ANIM.thruster"), "thruster spritesheet is never spawned");
-  check(engineSrc.includes("Under-ship glow"), "engine glow feel is now procedural, tied to the ship draw itself");
+  check(/under-ship glow/i.test(rendererSrc), "ship glow feel is procedural (additive under-ship glow in the renderer), not a detached VFX");
 }
 
 // ---------------------------------------------------------------------
@@ -55,8 +64,8 @@ const gameplayCss = fs.readFileSync(path.join(root, "src/screens/gameplay/Gamepl
 {
   check(engineSrc.includes("damageFlashMs"), "engine tracks a dedicated damage-flash timer");
   check(!engineSrc.includes("ANIM.playerDamageRing") && !engineSrc.includes("ANIM.hitSparkSmall"), "no ring/spark VFX spawned on player damage");
-  check(engineSrc.includes('rgba(255, 40, 40'), "damage flash renders as a red tint");
-  check(engineSrc.includes("source-atop"), "red tint is clipped to the ship's own visible pixels (source-atop)");
+  check(rendererSrc.includes("damageFlashMs"), "renderer consumes the damage-flash timer");
+  check(/damage flash/i.test(rendererSrc) && rendererSrc.includes("0xff"), "damage flash renders as a red tint on the ship sprite");
 }
 
 // ---------------------------------------------------------------------
@@ -67,14 +76,14 @@ const gameplayCss = fs.readFileSync(path.join(root, "src/screens/gameplay/Gamepl
   check(!engineSrc.includes("ANIM.explosionSmall") && !engineSrc.includes("ANIM.explosionMedium"), "no spritesheet explosion VFX spawned");
   check(engineSrc.includes("spawnExplosion") && engineSrc.includes("ExplosionFx"), "procedural explosion system exists");
   check(engineSrc.includes('"small" : enemy.kind === "powerCarrier" ? "large" : "medium"'), "destruction tier scales with enemy kind (basic < shooter < carrier)");
-  check(engineSrc.includes("drawExplosions"), "explosions are actually drawn each frame");
+  check(rendererSrc.includes("syncExplosions") && rendererSrc.includes("shockwave"), "explosions are drawn each frame (flash + shockwave + debris) by the renderer");
 }
 
 // ---------------------------------------------------------------------
 // 5) Enemy orientation fix
 // ---------------------------------------------------------------------
 {
-  check(engineSrc.includes("Math.PI + bank"), "enemy sprites are rotated 180° so they face their direction of travel");
+  check(rendererSrc.includes("Math.PI + bank"), "enemy sprites are rotated 180° so they face their direction of travel");
 }
 
 // ---------------------------------------------------------------------
@@ -121,6 +130,7 @@ const gameplayCss = fs.readFileSync(path.join(root, "src/screens/gameplay/Gamepl
 {
   check(engineSrc.includes("dt * 0.06") , "far-layer background scroll speed increased for visibly-alive motion");
   check(engineSrc.includes("dt * 0.26"), "near-layer speed streak scroll increased to match");
+  check(rendererSrc.includes("tilePosition") && rendererSrc.includes("TilingSprite"), "renderer scrolls the background via a Pixi TilingSprite");
 }
 
 // ---------------------------------------------------------------------
@@ -144,6 +154,52 @@ const gameplayCss = fs.readFileSync(path.join(root, "src/screens/gameplay/Gamepl
   ]) {
     check(engineSrc.includes(call), `sound event preserved: ${call}`);
   }
+}
+
+// ---------------------------------------------------------------------
+// 12) PixiJS renderer migration: WebGL renderer owns drawing; the engine
+//     keeps the simulation and no longer touches Canvas2D; one loop; textures
+//     preloaded/reused; full teardown.
+// ---------------------------------------------------------------------
+{
+  // Engine no longer acquires a 2D context (guarantees Canvas2D and Pixi
+  // never run on the same canvas).
+  check(!engineSrc.includes('getContext("2d")'), "engine no longer acquires a Canvas2D context");
+  check(!engineSrc.includes("CanvasRenderingContext2D"), "engine has no Canvas2D type references left");
+  check(!/private ctx/.test(engineSrc), "engine has no 2D ctx field");
+
+  // Renderer wired in and driven from the engine's single loop.
+  check(engineSrc.includes("new PixiRenderer") && engineSrc.includes("this.renderer"), "engine owns a PixiRenderer");
+  check(engineSrc.includes("this.renderer.render(rs)"), "engine drives rendering from its own loop each frame");
+  check(engineSrc.includes("renderFrame"), "engine has a single render step feeding sim state to the renderer");
+
+  // One loop: Pixi's ticker is not the driver.
+  check(rendererSrc.includes("autoStart: false"), "Pixi Application autoStart is disabled (no second loop)");
+  check(rendererSrc.includes("ticker.stop()"), "Pixi ticker is explicitly stopped");
+  check((rendererSrc.match(/new Application\(\)/g) ?? []).length === 1, "exactly one Pixi Application is created");
+
+  // Preload / reuse: textures + pools built once; a single bloom filter.
+  check(rendererSrc.includes("class SpritePool"), "sprites are pooled and reused, not created per frame");
+  check((rendererSrc.match(/new BlurFilter/g) ?? []).length === 1, "the bloom filter is created once, not per frame");
+  check(rendererSrc.includes("sliceSheets"), "spritesheets are pre-sliced into per-frame textures once");
+  check(rendererSrc.includes("Texture.from"), "textures are created once from the preloaded images");
+
+  // The render() hot path must not allocate GPU objects. Slice out the
+  // render method body and assert no per-frame construction of sprites,
+  // textures, filters, or graphics inside it.
+  const renderIdx = rendererSrc.indexOf("render(s: RenderState)");
+  const renderBody = renderIdx >= 0 ? rendererSrc.slice(renderIdx, renderIdx + 1400) : "";
+  check(renderIdx >= 0, "renderer exposes a render(state) entry point");
+  check(
+    !/new Sprite|new Texture|new BlurFilter|new Graphics|new TilingSprite/.test(renderBody),
+    "render() allocates no sprites/textures/filters/graphics (pools + reused objects only)",
+  );
+
+  // Teardown: Application, pools, filter, and ResizeObserver all disposed.
+  check(rendererSrc.includes("this.app?.destroy") || rendererSrc.includes("this.app.destroy"), "renderer destroys the Pixi Application");
+  check(rendererSrc.includes("resizeObserver") && rendererSrc.includes("disconnect"), "renderer disconnects its ResizeObserver on teardown");
+  check(rendererSrc.includes("this.blur?.destroy") || rendererSrc.includes("blur.destroy"), "renderer destroys the bloom filter on teardown");
+  check(engineSrc.includes("this.renderer?.destroy()"), "engine destroys the renderer on its own teardown/retry");
 }
 
 equal(SAVE_SCHEMA_VERSION, 12, "save schema unchanged at v12");

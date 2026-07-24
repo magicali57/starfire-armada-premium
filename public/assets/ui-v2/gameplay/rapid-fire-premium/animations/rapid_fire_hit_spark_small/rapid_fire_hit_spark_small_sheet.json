@@ -1,0 +1,69 @@
+{
+  "name": "rapid_fire_hit_spark_small",
+  "image": "rapid_fire_hit_spark_small_sheet.png",
+  "frameWidth": 444,
+  "frameHeight": 444,
+  "columns": 4,
+  "rows": 2,
+  "frameCount": 8,
+  "fps": 20,
+  "loop": false,
+  "frames": [
+    {
+      "index": 0,
+      "x": 0,
+      "y": 0,
+      "w": 444,
+      "h": 444
+    },
+    {
+      "index": 1,
+      "x": 444,
+      "y": 0,
+      "w": 444,
+      "h": 444
+    },
+    {
+      "index": 2,
+      "x": 888,
+      "y": 0,
+      "w": 444,
+      "h": 444
+    },
+    {
+      "index": 3,
+      "x": 1332,
+      "y": 0,
+      "w": 444,
+      "h": 444
+    },
+    {
+      "index": 4,
+      "x": 0,
+      "y": 444,
+      "w": 444,
+      "h": 444
+    },
+    {
+      "index": 5,
+      "x": 444,
+      "y": 444,
+      "w": 444,
+      "h": 444
+    },
+    {
+      "index": 6,
+      "x": 888,
+      "y": 444,
+      "w": 444,
+      "h": 444
+    },
+    {
+      "index": 7,
+      "x": 1332,
+      "y": 444,
+      "w": 444,
+      "h": 444
+    }
+  ]
+}

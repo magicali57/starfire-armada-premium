@@ -1,0 +1,19 @@
+{
+  "name": "rapid_fire_player_damage_ring",
+  "image": "rapid_fire_player_damage_ring_sheet.png",
+  "frameWidth": 512,
+  "frameHeight": 512,
+  "frameCount": 8,
+  "columns": 4,
+  "rows": 2,
+  "fps": 24,
+  "loop": false,
+  "playback": "forward",
+  "removeOnComplete": true,
+  "anchor": {
+    "x": 0.5,
+    "y": 0.5
+  },
+  "recommendedBlendMode": "screen",
+  "usage": "Play once centered on the Rapid-Fire ship when the player takes hull damage. Do not use it as the projectile hit spark."
+}

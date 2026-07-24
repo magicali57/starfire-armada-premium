@@ -1,0 +1,19 @@
+{
+  "name": "pickup_collect_burst",
+  "image": "pickup_collect_burst_sheet.png",
+  "frameWidth": 320,
+  "frameHeight": 320,
+  "frameCount": 10,
+  "columns": 5,
+  "rows": 2,
+  "fps": 24,
+  "loop": false,
+  "playback": "forward",
+  "removeOnComplete": true,
+  "anchor": {
+    "x": 0.5,
+    "y": 0.5
+  },
+  "recommendedBlendMode": "screen",
+  "usage": "Play once at the player position when a Fire-Up or other pickup is collected. Combine with the pickup disappearing and the HUD Firepower segment filling."
+}

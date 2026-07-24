@@ -1,0 +1,18 @@
+{
+  "image": "rapid_fire_muzzle_flash_small_sheet.png",
+  "frameWidth": 256,
+  "frameHeight": 256,
+  "frameCount": 4,
+  "columns": 4,
+  "rows": 1,
+  "fps": 30,
+  "loop": false,
+  "playback": "forward",
+  "removeOnComplete": true,
+  "anchor": {
+    "x": 0.5,
+    "y": 0.5
+  },
+  "recommendedBlendMode": "screen",
+  "usage": "Play once at a player weapon emitter whenever a standard Rapid-Fire volley begins."
+}

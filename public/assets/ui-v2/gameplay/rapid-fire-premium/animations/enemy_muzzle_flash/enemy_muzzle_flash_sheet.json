@@ -1,0 +1,19 @@
+{
+  "name": "enemy_muzzle_flash",
+  "image": "enemy_muzzle_flash_sheet.png",
+  "frameWidth": 256,
+  "frameHeight": 256,
+  "frameCount": 4,
+  "columns": 4,
+  "rows": 1,
+  "fps": 30,
+  "loop": false,
+  "playback": "forward",
+  "removeOnComplete": true,
+  "anchor": {
+    "x": 0.5,
+    "y": 0.5
+  },
+  "recommendedBlendMode": "screen",
+  "usage": "Play once at an enemy weapon emitter when a hostile shot is created. Suitable for the Basic Fighter and Shooter enemy muzzle points."
+}

@@ -1,0 +1,17 @@
+{
+  "image": "rapid_fire_thruster_sheet.png",
+  "frameWidth": 256,
+  "frameHeight": 256,
+  "frameCount": 8,
+  "columns": 4,
+  "rows": 2,
+  "fps": 24,
+  "loop": true,
+  "playback": "forward",
+  "anchor": {
+    "x": 0.5,
+    "y": 0.04
+  },
+  "recommendedBlendMode": "screen",
+  "usage": "Attach behind the Rapid-Fire ship and advance by elapsed combat time."
+}

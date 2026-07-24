@@ -1,0 +1,19 @@
+{
+  "name": "enemy_explosion_medium",
+  "image": "enemy_explosion_medium_sheet.png",
+  "frameWidth": 384,
+  "frameHeight": 384,
+  "frameCount": 14,
+  "columns": 7,
+  "rows": 2,
+  "fps": 24,
+  "loop": false,
+  "playback": "forward",
+  "removeOnComplete": true,
+  "anchor": {
+    "x": 0.5,
+    "y": 0.5
+  },
+  "recommendedBlendMode": "screen",
+  "usage": "Play once when a Shooter or Power Carrier enemy is destroyed. Longer destruction sequence with debris and a shockwave ring."
+}

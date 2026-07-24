@@ -1,0 +1,19 @@
+{
+  "name": "enemy_explosion_small",
+  "image": "enemy_explosion_small_sheet.png",
+  "frameWidth": 256,
+  "frameHeight": 256,
+  "frameCount": 5,
+  "columns": 5,
+  "rows": 1,
+  "fps": 22,
+  "loop": false,
+  "playback": "forward",
+  "removeOnComplete": true,
+  "anchor": {
+    "x": 0.5,
+    "y": 0.5
+  },
+  "recommendedBlendMode": "screen",
+  "usage": "Play once when a small enemy is destroyed. Use for Basic Fighter destruction."
+}

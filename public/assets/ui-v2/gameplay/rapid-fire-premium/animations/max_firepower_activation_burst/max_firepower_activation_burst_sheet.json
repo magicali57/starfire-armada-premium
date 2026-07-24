@@ -1,0 +1,19 @@
+{
+  "name": "max_firepower_activation_burst",
+  "image": "max_firepower_activation_burst_sheet.png",
+  "frameWidth": 512,
+  "frameHeight": 512,
+  "frameCount": 14,
+  "columns": 7,
+  "rows": 2,
+  "fps": 24,
+  "loop": false,
+  "playback": "forward",
+  "removeOnComplete": true,
+  "anchor": {
+    "x": 0.5,
+    "y": 0.5
+  },
+  "recommendedBlendMode": "screen",
+  "usage": "Play once centered on the Rapid-Fire ship when Firepower reaches level 10 and MAX FIREPOWER activates. After this finishes, show the separate looping max-firepower aura."
+}

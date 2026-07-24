@@ -56,9 +56,16 @@ export function GameCanvas({
       (window as unknown as { __rapidFireEngine?: RapidFireEngine }).__rapidFireEngine = engine;
     }
     onEngineReadyRef.current?.(engine);
-    void engine.start().then(() => {
-      if (cancelled) engine.destroy();
-    });
+    void engine
+      .start()
+      .then(() => {
+        if (cancelled) engine.destroy();
+      })
+      .catch((err) => {
+        // Never fail silently: if renderer/asset startup throws, the canvas
+        // would stay blank with no explanation.
+        console.error("[RapidFire] Engine failed to start:", err);
+      });
     const onResize = () => {
       // Trigger redraw path via CSS size change; engine reads clientWidth each frame.
       canvas.style.width = "100%";

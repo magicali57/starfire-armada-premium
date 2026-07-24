@@ -15,16 +15,15 @@
  *   pre-sliced into per-frame textures once; a soft radial "glow" texture is
  *   generated once. Sprites/graphics are pooled and reused, never created per
  *   frame.
- * - Bloom/glow: a single BlurFilter (created once) over an additive glow
- *   layer gives the premium bloom Canvas2D could not. Additive blend on
- *   projectile glows, explosion cores, muzzle/impact VFX, and the under-ship
- *   glow provides the energy look.
+ * - Glow: additive blending (GPU) on projectile glow twins, explosion cores,
+ *   muzzle/impact VFX, and the under-ship glow provides the energy look. A
+ *   container-wide bloom filter was removed after it caused a black screen on
+ *   mobile (see the note in init()); additive glow needs no extra pass.
  * - Teardown: `destroy()` disposes the Application, all pooled display
  *   objects, generated textures, the filter, and the ResizeObserver.
  */
 import {
   Application,
-  BlurFilter,
   Container,
   Graphics,
   Rectangle,
@@ -87,7 +86,7 @@ export class PixiRenderer {
   private viewport = new Container(); // scaled logical→css, carries screen shake
   private layerBg = new Container();
   private layerWorld = new Container(); // enemies, pickups, projectile bases
-  private layerGlow = new Container(); // additive + bloom (BlurFilter)
+  private layerGlow = new Container(); // additive-blend glow (no filter pass)
   private layerFx = new Container(); // vector explosions (rings/debris)
   private layerPlayer = new Container();
 
@@ -97,7 +96,6 @@ export class PixiRenderer {
   private playerGlow: Sprite | null = null;
   private playerAura: Sprite | null = null;
   private fxGraphics: Graphics | null = null;
-  private blur: BlurFilter | null = null;
 
   // Pools
   private starPool: SpritePool | null = null;
@@ -170,10 +168,14 @@ export class PixiRenderer {
     this.viewport.addChild(this.layerFx);
     this.viewport.addChild(this.layerPlayer);
 
-    // Bloom: one blur over the additive glow layer (created once).
-    this.blur = new BlurFilter({ strength: 5, quality: 3 });
-    this.layerGlow.filters = [this.blur];
-
+    // NOTE (black-screen fix): a container-wide BlurFilter used to be applied
+    // to layerGlow here for bloom. A filtered container whose bounds are empty
+    // or unstable can throw during the render pass on some (mobile) GPUs —
+    // and because the engine's rAF is re-scheduled before render() runs, a
+    // throwing render leaves the simulation/audio running while nothing is
+    // ever drawn (black screen with working sound). Glow now comes purely
+    // from additive blending, which needs no render-to-texture pass. Bloom
+    // can be reintroduced later behind an explicit capability check.
     this.buildBackground();
     this.buildPlayer();
     this.buildPools();
@@ -692,10 +694,6 @@ export class PixiRenderer {
     this.pickupGlowPool?.destroy();
     this.explosionCorePool?.destroy();
     this.vfxPool?.destroy();
-
-    if (this.layerGlow) this.layerGlow.filters = [];
-    this.blur?.destroy();
-    this.blur = null;
 
     // Destroy the Application (renderer, stage, ticker). removeView:false so
     // the React-owned <canvas> stays in the DOM. We destroy our own generated

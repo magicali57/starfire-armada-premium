@@ -178,11 +178,18 @@ const rendererSrc = fs.readFileSync(path.join(root, "src/gameplay/rapidFire/pixi
   check(rendererSrc.includes("ticker.stop()"), "Pixi ticker is explicitly stopped");
   check((rendererSrc.match(/new Application\(\)/g) ?? []).length === 1, "exactly one Pixi Application is created");
 
-  // Preload / reuse: textures + pools built once; a single bloom filter.
+  // Preload / reuse: textures + pools built once.
   check(rendererSrc.includes("class SpritePool"), "sprites are pooled and reused, not created per frame");
-  check((rendererSrc.match(/new BlurFilter/g) ?? []).length === 1, "the bloom filter is created once, not per frame");
   check(rendererSrc.includes("sliceSheets"), "spritesheets are pre-sliced into per-frame textures once");
   check(rendererSrc.includes("Texture.from"), "textures are created once from the preloaded images");
+  // Black-screen fix: no container-wide filter (its render-to-texture pass
+  // could throw on mobile GPUs, blanking the scene). Glow is additive-only.
+  check(!rendererSrc.includes("new BlurFilter"), "no container-wide bloom filter is applied (additive glow only)");
+  check(!/\.filters\s*=\s*\[[^\]]+\]/.test(rendererSrc), "no layer has a filter array assigned");
+  check(rendererSrc.includes('blendMode = "add"'), "glow is achieved with additive blending");
+  // A throwing render must be surfaced, not silently swallowed by the loop.
+  check(engineSrc.includes("Renderer failed"), "engine logs a render failure instead of silently drawing nothing");
+  check(engineSrc.includes("getLastRenderError"), "engine exposes the first render error for diagnosis");
 
   // The render() hot path must not allocate GPU objects. Slice out the
   // render method body and assert no per-frame construction of sprites,
@@ -198,7 +205,6 @@ const rendererSrc = fs.readFileSync(path.join(root, "src/gameplay/rapidFire/pixi
   // Teardown: Application, pools, filter, and ResizeObserver all disposed.
   check(rendererSrc.includes("this.app?.destroy") || rendererSrc.includes("this.app.destroy"), "renderer destroys the Pixi Application");
   check(rendererSrc.includes("resizeObserver") && rendererSrc.includes("disconnect"), "renderer disconnects its ResizeObserver on teardown");
-  check(rendererSrc.includes("this.blur?.destroy") || rendererSrc.includes("blur.destroy"), "renderer destroys the bloom filter on teardown");
   check(engineSrc.includes("this.renderer?.destroy()"), "engine destroys the renderer on its own teardown/retry");
 }
 

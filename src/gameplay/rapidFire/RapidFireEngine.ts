@@ -125,6 +125,8 @@ export class RapidFireEngine {
   private images: Record<string, HTMLImageElement> = {};
   private renderer: PixiRenderer | null = null;
   private renderState: RenderState;
+  private renderErrorLogged = false;
+  private lastRenderError: Error | null = null;
   private ready = false;
   private destroyed = false;
   private paused = false;
@@ -555,7 +557,24 @@ export class RapidFireEngine {
     rs.enemies = this.enemies;
     rs.pickups = this.pickups;
     rs.explosions = this.explosions;
-    this.renderer.render(rs);
+    // A throwing render must never be silent: the rAF callback re-schedules
+    // itself before this point, so an exception here would leave the
+    // simulation (and audio) running with nothing drawn — a black screen with
+    // working sound. Catch it, surface it once, and keep the game alive.
+    try {
+      this.renderer.render(rs);
+    } catch (err) {
+      if (!this.renderErrorLogged) {
+        this.renderErrorLogged = true;
+        this.lastRenderError = err instanceof Error ? err : new Error(String(err));
+        console.error("[RapidFire] Renderer failed — gameplay is running but not drawing:", err);
+      }
+    }
+  }
+
+  /** First render error, if any (diagnostic; null when rendering is healthy). */
+  getLastRenderError(): Error | null {
+    return this.lastRenderError;
   }
 
   private update(dt: number): void {

@@ -183,11 +183,16 @@ const gameCanvasSrc = fs.readFileSync(path.join(root, "src/gameplay/rapidFire/Ga
   check(rendererSrc.includes("class SpritePool"), "sprites are pooled and reused, not created per frame");
   check(rendererSrc.includes("sliceSheets"), "spritesheets are pre-sliced into per-frame textures once");
   check(rendererSrc.includes("Texture.from"), "textures are created once from the preloaded images");
-  // Black-screen fix: no container-wide filter (its render-to-texture pass
-  // could throw on mobile GPUs, blanking the scene). Glow is additive-only.
-  check(!rendererSrc.includes("new BlurFilter"), "no container-wide bloom filter is applied (additive glow only)");
-  check(!/\.filters\s*=\s*\[[^\]]+\]/.test(rendererSrc), "no layer has a filter array assigned");
-  check(rendererSrc.includes('blendMode = "add"'), "glow is achieved with additive blending");
+  // Filters are allowed only when scoped to a single sprite with explicit
+  // bounds. A filter on a whole layer container forces a render-to-texture
+  // pass over unstable/empty bounds, which is exactly the class of failure
+  // that can blank the scene on mobile GPUs.
+  for (const layer of ["layerGlow", "layerWorld", "layerFx", "layerPlayer", "layerBg", "viewport"]) {
+    check(!new RegExp(`${layer}\\.filters`).test(rendererSrc), `no filter is applied to the ${layer} container`);
+  }
+  check(rendererSrc.includes("tiling.filters"), "backdrop filters are scoped to the background sprite only");
+  check(rendererSrc.includes("filterArea"), "the filtered backdrop sprite declares an explicit filterArea");
+  check(rendererSrc.includes('blendMode = "add"'), "gameplay glow is achieved with additive blending");
   // A throwing render must be surfaced, not silently swallowed by the loop.
   check(engineSrc.includes("Renderer failed"), "engine logs a render failure instead of silently drawing nothing");
   check(engineSrc.includes("getLastRenderError"), "engine exposes the first render error for diagnosis");
@@ -222,6 +227,30 @@ const gameCanvasSrc = fs.readFileSync(path.join(root, "src/gameplay/rapidFire/Ga
   check(rendererSrc.includes("this.app?.destroy") || rendererSrc.includes("this.app.destroy"), "renderer destroys the Pixi Application");
   check(rendererSrc.includes("resizeObserver") && rendererSrc.includes("disconnect"), "renderer disconnects its ResizeObserver on teardown");
   check(engineSrc.includes("this.renderer?.destroy()"), "engine destroys the renderer on its own teardown/retry");
+}
+
+// ---------------------------------------------------------------------
+// 13) Backdrop readability pass: the background must read as far away so
+//     bright sprites separate from it (darkened, blurred, desaturated,
+//     vignetted), and sprites carry a dark contour for separation.
+// ---------------------------------------------------------------------
+{
+  check(rendererSrc.includes("new BlurFilter"), "backdrop is softened so its detail stops competing with sprites");
+  check(rendererSrc.includes("new ColorMatrixFilter"), "backdrop is colour-graded");
+  check(/saturate\(-/.test(rendererSrc), "backdrop is desaturated so it stops clashing with cyan gameplay art");
+  check(/brightness\(0\.\d+/.test(rendererSrc), "backdrop value range is crushed downward");
+  check(/tiling\.alpha\s*=\s*0\.5/.test(rendererSrc), "backdrop alpha reduced from the previous 0.85");
+  check(rendererSrc.includes("makeVignetteTexture"), "a vignette focuses attention on the centre of play");
+  check(/alpha:\s*0\.55/.test(rendererSrc), "the mood-dim overlay was strengthened");
+
+  // Dark contour behind sprites (what keeps reference arcade art readable).
+  check(rendererSrc.includes("enemyOutlinePool"), "enemies get a dark contour sprite");
+  check(rendererSrc.includes("playerOutline"), "the player ship gets a dark contour sprite");
+  // Contours must be created before the sprites they sit behind.
+  check(
+    rendererSrc.indexOf("this.enemyOutlinePool = new SpritePool") < rendererSrc.indexOf("this.enemyPool = new SpritePool"),
+    "enemy contour pool is created before the enemy pool so it renders behind",
+  );
 }
 
 equal(SAVE_SCHEMA_VERSION, 12, "save schema unchanged at v12");

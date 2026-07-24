@@ -24,6 +24,8 @@
  */
 import {
   Application,
+  BlurFilter,
+  ColorMatrixFilter,
   Container,
   Graphics,
   Rectangle,
@@ -103,6 +105,7 @@ export class PixiRenderer {
   // Persistent display objects
   private bgFar: TilingSprite | null = null;
   private player: Sprite | null = null;
+  private playerOutline: Sprite | null = null;
   private playerGlow: Sprite | null = null;
   private playerAura: Sprite | null = null;
   private fxGraphics: Graphics | null = null;
@@ -110,6 +113,7 @@ export class PixiRenderer {
   // Pools
   private starPool: SpritePool | null = null;
   private streakPool: SpritePool | null = null;
+  private enemyOutlinePool: SpritePool | null = null;
   private enemyPool: SpritePool | null = null;
   private enemyFlashPool: SpritePool | null = null;
   private playerShotPool: SpritePool | null = null;
@@ -251,6 +255,28 @@ export class PixiRenderer {
     );
   }
 
+  /**
+   * Radial vignette: transparent in the middle, dark at the edges. Focuses
+   * attention on the centre of the playfield and pushes the backdrop further
+   * back without touching the source art.
+   */
+  private makeVignetteTexture(): Texture {
+    const size = 256;
+    const c = document.createElement("canvas");
+    c.width = size;
+    c.height = size;
+    const g = c.getContext("2d")!;
+    const grd = g.createRadialGradient(size / 2, size / 2, size * 0.22, size / 2, size / 2, size * 0.62);
+    grd.addColorStop(0, "rgba(0,0,0,0)");
+    grd.addColorStop(0.6, "rgba(0,0,0,0.35)");
+    grd.addColorStop(1, "rgba(0,0,0,0.85)");
+    g.fillStyle = grd;
+    g.fillRect(0, 0, size, size);
+    const tex = Texture.from(c);
+    this.generatedTextures.push(tex);
+    return tex;
+  }
+
   private makeGlowTexture(): Texture {
     const size = 128;
     const c = document.createElement("canvas");
@@ -291,25 +317,73 @@ export class PixiRenderer {
     }
   }
 
+  /**
+   * Backdrop readability pass. Reference arcade shooters keep the background
+   * almost black, soft, and desaturated so bright sprites separate from it.
+   * The source chapter art is high-detail, mid-luminance and purple — the same
+   * colour family as the cyan ships/bolts — so it was competing with gameplay.
+   * We therefore blur it, desaturate it, darken it and vignette it. This is
+   * all applied to the backdrop only; no gameplay art is touched.
+   *
+   * The blur is applied to a single sprite with an explicit `filterArea`
+   * (never to a whole container), and the sprite is oversized past the
+   * viewport so blurred edges stay off-screen.
+   */
   private buildBackground(): void {
     const bg = this.textures.background;
     if (bg) {
-      const tiling = new TilingSprite({ texture: bg, width: LOGICAL_W, height: LOGICAL_H });
+      const bleed = 48; // keeps blurred edges outside the visible area
+      const tiling = new TilingSprite({
+        texture: bg,
+        width: LOGICAL_W + bleed * 2,
+        height: LOGICAL_H + bleed * 2,
+      });
+      tiling.position.set(-bleed, -bleed);
       // Cover the logical width; vertical repeat gives a seamless scroll.
       const s = LOGICAL_W / bg.width;
       tiling.tileScale.set(s, s);
-      tiling.alpha = 0.85;
+      // Much dimmer than before (was 0.85): the backdrop must read as far away.
+      tiling.alpha = 0.5;
+
+      const softness = new BlurFilter({ strength: 6, quality: 2 });
+      const grade = new ColorMatrixFilter();
+      grade.saturate(-0.5, false); // pull it toward neutral so cyan sprites pop
+      grade.brightness(0.72, true); // crush the value range downward
+      tiling.filters = [softness, grade];
+      tiling.filterArea = new Rectangle(-bleed, -bleed, LOGICAL_W + bleed * 2, LOGICAL_H + bleed * 2);
+
       this.layerBg.addChild(tiling);
       this.bgFar = tiling;
     }
     // Mood dim over the far layer (a static child of layerBg; disposed with
     // the layer on teardown, so no field reference is needed to keep it).
+    // Heavier than before (was 0.35) to push the backdrop toward near-black.
     const dim = new Graphics();
-    dim.rect(0, 0, LOGICAL_W, LOGICAL_H).fill({ color: 0x040612, alpha: 0.35 });
+    dim.rect(0, 0, LOGICAL_W, LOGICAL_H).fill({ color: 0x040612, alpha: 0.55 });
     this.layerBg.addChild(dim);
+
+    // Vignette: darkens the edges so the centre of play reads clearest.
+    const vignette = new Sprite(this.makeVignetteTexture());
+    vignette.position.set(0, 0);
+    vignette.width = LOGICAL_W;
+    vignette.height = LOGICAL_H;
+    this.layerBg.addChild(vignette);
   }
 
   private buildPlayer(): void {
+    // Dark contour behind the ship: a slightly larger, black, semi-transparent
+    // copy of the sprite. Reference arcade sprites all carry a heavy dark
+    // outline — it is what keeps them readable over any backdrop. Our source
+    // art has soft edges, so we synthesize the contour at render time.
+    const shipTexEarly = this.textures.shipSprite;
+    if (shipTexEarly) {
+      const outline = new Sprite(shipTexEarly);
+      outline.anchor.set(0.5);
+      outline.tint = 0x000000;
+      outline.alpha = 0.55;
+      this.layerPlayer.addChild(outline);
+      this.playerOutline = outline;
+    }
     // Under-ship glow (additive) sits on the glow layer so it blooms.
     if (this.glowTex) {
       const glow = new Sprite(this.glowTex);
@@ -351,6 +425,15 @@ export class PixiRenderer {
       const s = new Sprite(this.textures.backgroundSpeedStreak ?? glow);
       s.anchor.set(0.5, 0);
       s.blendMode = "add";
+      return s;
+    });
+    // Created BEFORE enemyPool so every outline sprite sits behind every
+    // enemy sprite in layerWorld's child order (dark contour = separation).
+    this.enemyOutlinePool = new SpritePool(this.layerWorld, () => {
+      const s = new Sprite(Texture.EMPTY);
+      s.anchor.set(0.5);
+      s.tint = 0x000000;
+      s.alpha = 0.55;
       return s;
     });
     this.enemyPool = new SpritePool(this.layerWorld, () => {
@@ -495,8 +578,10 @@ export class PixiRenderer {
   private syncEnemies(s: RenderState): void {
     const pool = this.enemyPool!;
     const flashPool = this.enemyFlashPool!;
+    const outlinePool = this.enemyOutlinePool!;
     pool.begin();
     flashPool.begin();
+    outlinePool.begin();
     for (const e of s.enemies) {
       if (!e.alive) continue;
       if (e.dying && e.dyingMs >= ENEMY_DEATH_SPRITE_MS) continue;
@@ -511,6 +596,15 @@ export class PixiRenderer {
       // Source art is nose-up; enemies travel downward → rotate 180° so the
       // nose faces the direction of travel.
       const rot = Math.PI + bank;
+
+      // Dark contour first (renders behind), then the sprite itself.
+      const op = outlinePool.next();
+      op.texture = tex;
+      op.position.set(e.x + sway, e.y + recoil);
+      op.width = side * 1.1;
+      op.height = side * 1.1;
+      op.rotation = rot;
+      op.alpha = 0.55 * alpha;
 
       const sp = pool.next();
       sp.texture = tex;
@@ -532,6 +626,7 @@ export class PixiRenderer {
     }
     pool.end();
     flashPool.end();
+    outlinePool.end();
   }
 
   private syncPlayerShots(s: RenderState): void {
@@ -702,6 +797,14 @@ export class PixiRenderer {
     // Invulnerability flicker (hide every other 70ms window).
     const hidden = s.invulnMs > 0 && Math.floor(s.invulnMs / 70) % 2 === 0;
 
+    if (this.playerOutline) {
+      this.playerOutline.visible = !hidden;
+      this.playerOutline.position.set(px, py);
+      this.playerOutline.rotation = s.bank;
+      this.playerOutline.width = h * 1.1;
+      this.playerOutline.height = h * 1.1;
+    }
+
     if (this.player) {
       this.player.visible = !hidden;
       this.player.position.set(px, py);
@@ -750,6 +853,7 @@ export class PixiRenderer {
 
     this.starPool?.destroy();
     this.streakPool?.destroy();
+    this.enemyOutlinePool?.destroy();
     this.enemyPool?.destroy();
     this.enemyFlashPool?.destroy();
     this.playerShotPool?.destroy();

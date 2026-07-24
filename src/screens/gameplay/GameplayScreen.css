@@ -220,14 +220,29 @@
   padding: 0 0 env(safe-area-inset-bottom);
 }
 
+/*
+ * Host element for the gameplay renderer. The <canvas> inside is created and
+ * owned by PixiRenderer (not React), so it gets a fresh WebGL context per
+ * engine instance; it is stretched to fill this host.
+ */
 .gameplay-screen__canvas {
+  position: relative;
   width: 100%;
   max-width: 100%;
   height: 100%;
   display: block;
+  overflow: hidden;
   border: none;
   border-radius: 0;
   background: #050714;
+  touch-action: none;
+}
+
+.gameplay-screen__canvas > canvas,
+.gameplay-screen__pixi-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
   touch-action: none;
 }
 

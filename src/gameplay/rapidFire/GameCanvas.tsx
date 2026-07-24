@@ -29,7 +29,7 @@ export function GameCanvas({
   onOutcome,
   onEngineReady,
 }: GameCanvasProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<RapidFireEngine | null>(null);
   const onHudRef = useRef(onHud);
   const onOutcomeRef = useRef(onOutcome);
@@ -39,11 +39,11 @@ export function GameCanvas({
   onEngineReadyRef.current = onEngineReady;
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const host = hostRef.current;
+    if (!host) return;
     let cancelled = false;
     const engine = new RapidFireEngine({
-      canvas,
+      host,
       hullMax,
       defense,
       baseDamage,
@@ -66,14 +66,9 @@ export function GameCanvas({
         // would stay blank with no explanation.
         console.error("[RapidFire] Engine failed to start:", err);
       });
-    const onResize = () => {
-      // Trigger redraw path via CSS size change; engine reads clientWidth each frame.
-      canvas.style.width = "100%";
-    };
-    window.addEventListener("resize", onResize);
+    // Resizing is handled by the renderer's ResizeObserver on the host.
     return () => {
       cancelled = true;
-      window.removeEventListener("resize", onResize);
       engine.destroy();
       engineRef.current = null;
       onEngineReadyRef.current?.(null);
@@ -90,12 +85,13 @@ export function GameCanvas({
     engineRef.current?.setPaused(paused);
   }, [paused]);
 
+  // Host element only — the renderer creates and owns the <canvas> inside it,
+  // so every engine instance gets a fresh WebGL context.
   return (
-    <canvas
-      ref={canvasRef}
+    <div
+      ref={hostRef}
       className="gameplay-screen__canvas"
-      width={390}
-      height={700}
+      role="img"
       aria-label="Rapid-Fire combat playfield"
     />
   );

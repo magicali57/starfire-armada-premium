@@ -79,7 +79,17 @@ class SpritePool {
 
 export class PixiRenderer {
   private app: Application | null = null;
-  private canvas: HTMLCanvasElement;
+  /** Container we render into. Pixi's canvas is created by us and appended here. */
+  private host: HTMLElement;
+  /**
+   * The canvas Pixi draws into. Deliberately created per-renderer instead of
+   * reusing a React-owned <canvas>: a canvas can only ever return ONE WebGL
+   * context, so re-initializing Pixi on a canvas whose previous context was
+   * torn down (React StrictMode's double-effect, or a stage retry) yields a
+   * dead context that silently draws nothing. Owning the element means every
+   * renderer instance gets a genuinely fresh context.
+   */
+  private canvas: HTMLCanvasElement | null = null;
   private destroyed = false;
 
   // Scene graph
@@ -120,8 +130,8 @@ export class PixiRenderer {
   private cssW = LOGICAL_W;
   private cssH = LOGICAL_H;
 
-  constructor(canvas: HTMLCanvasElement) {
-    this.canvas = canvas;
+  constructor(host: HTMLElement) {
+    this.host = host;
   }
 
   /** Probe for WebGL support on a throwaway canvas (never the game canvas). */
@@ -152,12 +162,19 @@ export class PixiRenderer {
     }
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    this.cssW = this.canvas.clientWidth || LOGICAL_W;
-    this.cssH = this.canvas.clientHeight || Math.round((this.cssW * LOGICAL_H) / LOGICAL_W);
+    this.cssW = this.host.clientWidth || LOGICAL_W;
+    this.cssH = this.host.clientHeight || Math.round((this.cssW * LOGICAL_H) / LOGICAL_W);
+
+    // Our own canvas → guaranteed-fresh WebGL context (see field comment).
+    const canvas = document.createElement("canvas");
+    canvas.className = "gameplay-screen__pixi-canvas";
+    canvas.setAttribute("aria-hidden", "true");
+    this.host.appendChild(canvas);
+    this.canvas = canvas;
 
     const app = new Application();
     await app.init({
-      canvas: this.canvas,
+      canvas,
       width: this.cssW,
       height: this.cssH,
       resolution: dpr,
@@ -169,7 +186,7 @@ export class PixiRenderer {
       preference: "webgl",
     });
     if (this.destroyed) {
-      app.destroy(true, { children: true });
+      app.destroy({ removeView: true }, { children: true });
       return;
     }
     this.app = app;
@@ -204,8 +221,10 @@ export class PixiRenderer {
 
     this.applyViewportTransform();
 
+    // Observe the host (not our canvas): observing an element we resize would
+    // risk a feedback loop.
     this.resizeObserver = new ResizeObserver(() => this.handleResize());
-    this.resizeObserver.observe(this.canvas);
+    this.resizeObserver.observe(this.host);
 
     // Startup diagnostic: a zero-sized canvas or zero viewport scale draws
     // nothing while the simulation keeps running, so report the real numbers.
@@ -215,10 +234,10 @@ export class PixiRenderer {
         rendererType: this.app?.renderer?.type,
         cssW: this.cssW,
         cssH: this.cssH,
-        canvasW: this.canvas.width,
-        canvasH: this.canvas.height,
-        clientW: this.canvas.clientWidth,
-        clientH: this.canvas.clientHeight,
+        canvasW: this.canvas?.width,
+        canvasH: this.canvas?.height,
+        hostW: this.host.clientWidth,
+        hostH: this.host.clientHeight,
         scaleX: this.viewport.scale.x,
         scaleY: this.viewport.scale.y,
         textures: Object.keys(this.textures).length,
@@ -397,8 +416,8 @@ export class PixiRenderer {
 
   private handleResize(): void {
     if (!this.app || this.destroyed) return;
-    const w = this.canvas.clientWidth || LOGICAL_W;
-    const h = this.canvas.clientHeight || Math.round((w * LOGICAL_H) / LOGICAL_W);
+    const w = this.host.clientWidth || LOGICAL_W;
+    const h = this.host.clientHeight || Math.round((w * LOGICAL_H) / LOGICAL_W);
     if (w === this.cssW && h === this.cssH) return;
     this.cssW = w;
     this.cssH = h;
@@ -741,11 +760,15 @@ export class PixiRenderer {
     this.explosionCorePool?.destroy();
     this.vfxPool?.destroy();
 
-    // Destroy the Application (renderer, stage, ticker). removeView:false so
-    // the React-owned <canvas> stays in the DOM. We destroy our own generated
-    // textures separately below (texture:false keeps the shared image sources).
-    this.app?.destroy({ removeView: false }, { children: true, texture: false });
+    // Destroy the Application (renderer, stage, ticker) AND remove our canvas
+    // (removeView:true): the next renderer instance must create a brand-new
+    // element to obtain a brand-new WebGL context, since a canvas never yields
+    // a second one. We destroy our generated textures separately below
+    // (texture:false keeps the engine-owned image sources intact).
+    this.app?.destroy({ removeView: true }, { children: true, texture: false });
     this.app = null;
+    if (this.canvas?.parentNode) this.canvas.parentNode.removeChild(this.canvas);
+    this.canvas = null;
 
     for (const t of this.generatedTextures) t.destroy(false);
     this.generatedTextures = [];

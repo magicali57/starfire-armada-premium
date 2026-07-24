@@ -40,6 +40,7 @@ const gameplayCss = fs.readFileSync(path.join(root, "src/screens/gameplay/Gamepl
 // Since the PixiJS migration, drawing lives in pixiRenderer.ts. The behavior
 // guarantees below are asserted against whichever file now owns them.
 const rendererSrc = fs.readFileSync(path.join(root, "src/gameplay/rapidFire/pixiRenderer.ts"), "utf8");
+const gameCanvasSrc = fs.readFileSync(path.join(root, "src/gameplay/rapidFire/GameCanvas.tsx"), "utf8");
 
 // ---------------------------------------------------------------------
 // 1) Fake detached thruster removed
@@ -190,6 +191,21 @@ const rendererSrc = fs.readFileSync(path.join(root, "src/gameplay/rapidFire/pixi
   // A throwing render must be surfaced, not silently swallowed by the loop.
   check(engineSrc.includes("Renderer failed"), "engine logs a render failure instead of silently drawing nothing");
   check(engineSrc.includes("getLastRenderError"), "engine exposes the first render error for diagnosis");
+
+  // Regression guard (blank-canvas bug): a <canvas> only ever yields ONE
+  // WebGL context, so the renderer must create/own its own canvas inside a
+  // host element. Reusing a React-rendered <canvas> across engine instances
+  // (StrictMode's double-effect, or a stage retry) hands the second instance a
+  // dead context that draws nothing without throwing.
+  check(rendererSrc.includes('document.createElement("canvas")'), "renderer creates its own canvas element");
+  check(rendererSrc.includes("this.host.appendChild"), "renderer appends its canvas into the host element");
+  check(rendererSrc.includes("removeView: true"), "renderer removes its canvas on teardown so the next instance gets a fresh context");
+  check(engineSrc.includes("host: HTMLElement"), "engine takes a host element, not a canvas");
+  // Ignore prose in comments; assert on the actual JSX element that is rendered.
+  const gameCanvasCode = gameCanvasSrc.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  check(!/<canvas[\s/>]/.test(gameCanvasCode), "React renders a host element, not a <canvas>, for the gameplay renderer");
+  check(/<div\s/.test(gameCanvasCode), "React renders a <div> host for the renderer to populate");
+  check(!gameCanvasCode.includes("canvasRef"), "no React canvas ref remains");
 
   // The render() hot path must not allocate GPU objects. Slice out the
   // render method body and assert no per-frame construction of sprites,

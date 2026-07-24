@@ -51,7 +51,8 @@ export interface EngineHudSnapshot {
 }
 
 export interface RapidFireEngineOptions {
-  canvas: HTMLCanvasElement;
+  /** Element the renderer draws into (it creates/owns its own <canvas>). */
+  host: HTMLElement;
   hullMax: number;
   defense: number;
   baseDamage: number;
@@ -122,7 +123,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 export class RapidFireEngine {
-  private canvas: HTMLCanvasElement;
+  private host: HTMLElement;
   private opts: RapidFireEngineOptions;
   private images: Record<string, HTMLImageElement> = {};
   private renderer: PixiRenderer | null = null;
@@ -209,10 +210,10 @@ export class RapidFireEngine {
 
   constructor(opts: RapidFireEngineOptions) {
     this.opts = opts;
-    this.canvas = opts.canvas;
-    // The canvas is handed to the Pixi WebGL renderer in start(); the engine
-    // never acquires a 2D context on it (a canvas supports only one context
-    // type — this guarantees Canvas2D and Pixi never run simultaneously).
+    this.host = opts.host;
+    // The renderer creates and owns the <canvas> inside this host, so each
+    // engine instance gets a fresh WebGL context. The engine never acquires a
+    // 2D context anywhere, so Canvas2D and Pixi can never run simultaneously.
     this.hullMax = Math.max(1, Math.trunc(opts.hullMax));
     this.hull = this.hullMax;
     this.defense = Math.max(0, opts.defense);
@@ -288,7 +289,7 @@ export class RapidFireEngine {
     // error is recorded and surfaced through the HUD snapshot (and console)
     // rather than leaving an unexplained blank canvas.
     try {
-      const renderer = new PixiRenderer(this.canvas);
+      const renderer = new PixiRenderer(this.host);
       await renderer.init(this.images);
       if (this.destroyed) {
         renderer.destroy();
@@ -455,23 +456,23 @@ export class RapidFireEngine {
   }
 
   private bindInput(): void {
-    this.canvas.addEventListener("pointerdown", this.boundPointerDown);
-    this.canvas.addEventListener("pointermove", this.boundPointerMove);
-    this.canvas.addEventListener("pointerup", this.boundPointerUp);
-    this.canvas.addEventListener("pointercancel", this.boundPointerUp);
-    this.canvas.addEventListener("touchmove", this.boundTouchMove, { passive: false });
+    this.host.addEventListener("pointerdown", this.boundPointerDown);
+    this.host.addEventListener("pointermove", this.boundPointerMove);
+    this.host.addEventListener("pointerup", this.boundPointerUp);
+    this.host.addEventListener("pointercancel", this.boundPointerUp);
+    this.host.addEventListener("touchmove", this.boundTouchMove, { passive: false });
   }
 
   private unbindInput(): void {
-    this.canvas.removeEventListener("pointerdown", this.boundPointerDown);
-    this.canvas.removeEventListener("pointermove", this.boundPointerMove);
-    this.canvas.removeEventListener("pointerup", this.boundPointerUp);
-    this.canvas.removeEventListener("pointercancel", this.boundPointerUp);
-    this.canvas.removeEventListener("touchmove", this.boundTouchMove);
+    this.host.removeEventListener("pointerdown", this.boundPointerDown);
+    this.host.removeEventListener("pointermove", this.boundPointerMove);
+    this.host.removeEventListener("pointerup", this.boundPointerUp);
+    this.host.removeEventListener("pointercancel", this.boundPointerUp);
+    this.host.removeEventListener("touchmove", this.boundTouchMove);
   }
 
   private toLogical(clientX: number, clientY: number): Vec {
-    const rect = this.canvas.getBoundingClientRect();
+    const rect = this.host.getBoundingClientRect();
     const x = ((clientX - rect.left) / rect.width) * LOGICAL_W;
     const y = ((clientY - rect.top) / rect.height) * LOGICAL_H;
     return { x, y };
@@ -492,7 +493,7 @@ export class RapidFireEngine {
     this.pointerId = e.pointerId;
     this.pointerActive = true;
     try {
-      this.canvas.setPointerCapture(e.pointerId);
+      this.host.setPointerCapture(e.pointerId);
     } catch {
       /* ignore */
     }
@@ -517,7 +518,7 @@ export class RapidFireEngine {
     this.player.y = clamp(targetY, this.player.h * 0.5 + 40, LOGICAL_H - this.player.h * 0.45);
   }
 
-  // Canvas sizing/DPR is owned by PixiRenderer (it observes the canvas and
+  // Canvas sizing/DPR is owned by PixiRenderer (it observes the host and
   // resizes its WebGL buffer), so the engine no longer manages the backing
   // store directly.
 

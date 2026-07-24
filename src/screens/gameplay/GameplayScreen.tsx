@@ -217,6 +217,15 @@ export function GameplayScreen() {
         ) : null}
       </div>
 
+      {/* DEV-only renderer diagnostic: makes a blank-canvas failure explain
+          itself on the device instead of requiring a desktop console. */}
+      {import.meta.env.DEV && hud?.renderError ? (
+        <div className="gameplay-render-error" role="alert">
+          <strong>Renderer error</strong>
+          <span>{hud.renderError}</span>
+        </div>
+      ) : null}
+
       {/* Center-screen wave announcement — replaces a constantly-shown wave counter. */}
       {hud?.announcement ? (
         <div className="gameplay-announcement" aria-live="assertive">

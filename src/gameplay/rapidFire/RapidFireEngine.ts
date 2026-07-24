@@ -42,6 +42,8 @@ export interface EngineHudSnapshot {
   waveIndex: number;
   waveTotal: number;
   announcement: WaveAnnouncement | null;
+  /** Diagnostic: renderer startup/draw failure message, else null. */
+  renderError: string | null;
   score: number;
   stageName: string;
   paused: boolean;
@@ -282,13 +284,22 @@ export class RapidFireEngine {
     // The player ship's own art carries its engine glow; PixiRenderer adds a
     // tight additive under-ship glow tied to Firepower/Max Firepower (no
     // detached thruster VFX).
-    const renderer = new PixiRenderer(this.canvas);
-    await renderer.init(this.images);
-    if (this.destroyed) {
-      renderer.destroy();
-      return;
+    // Renderer startup must not kill the session silently: if it fails, the
+    // error is recorded and surfaced through the HUD snapshot (and console)
+    // rather than leaving an unexplained blank canvas.
+    try {
+      const renderer = new PixiRenderer(this.canvas);
+      await renderer.init(this.images);
+      if (this.destroyed) {
+        renderer.destroy();
+        return;
+      }
+      this.renderer = renderer;
+    } catch (err) {
+      this.renderErrorLogged = true;
+      this.lastRenderError = err instanceof Error ? err : new Error(String(err));
+      console.error("[RapidFire] Renderer failed to initialize:", err);
     }
-    this.renderer = renderer;
 
     this.ready = true;
     this.bindInput();
@@ -344,6 +355,7 @@ export class RapidFireEngine {
       waveIndex: this.currentPhase,
       waveTotal: WAVE_COUNT,
       announcement: this.announcement,
+      renderError: this.lastRenderError?.message ?? null,
       score: this.score,
       stageName: this.opts.stageName,
       paused: this.paused,

@@ -124,11 +124,33 @@ export class PixiRenderer {
     this.canvas = canvas;
   }
 
+  /** Probe for WebGL support on a throwaway canvas (never the game canvas). */
+  static isWebGLAvailable(): boolean {
+    try {
+      const probe = document.createElement("canvas");
+      return Boolean(
+        probe.getContext("webgl2") ||
+          probe.getContext("webgl") ||
+          probe.getContext("experimental-webgl"),
+      );
+    } catch {
+      return false;
+    }
+  }
+
   /**
    * Boot the WebGL Application and build the (static) scene graph + pools.
    * `images` are the already-loaded HTMLImageElements the engine preloaded.
    */
   async init(images: Record<string, HTMLImageElement>): Promise<void> {
+    // Fail loudly and specifically if the device/browser can't give us WebGL
+    // at all — otherwise this surfaces later as an unexplained blank canvas.
+    if (!PixiRenderer.isWebGLAvailable()) {
+      throw new Error(
+        "WebGL is unavailable in this browser/device (hardware acceleration may be disabled).",
+      );
+    }
+
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.cssW = this.canvas.clientWidth || LOGICAL_W;
     this.cssH = this.canvas.clientHeight || Math.round((this.cssW * LOGICAL_H) / LOGICAL_W);
@@ -184,6 +206,30 @@ export class PixiRenderer {
 
     this.resizeObserver = new ResizeObserver(() => this.handleResize());
     this.resizeObserver.observe(this.canvas);
+
+    // Startup diagnostic: a zero-sized canvas or zero viewport scale draws
+    // nothing while the simulation keeps running, so report the real numbers.
+    console.info(
+      "[RapidFire] Pixi ready:",
+      JSON.stringify({
+        rendererType: this.app?.renderer?.type,
+        cssW: this.cssW,
+        cssH: this.cssH,
+        canvasW: this.canvas.width,
+        canvasH: this.canvas.height,
+        clientW: this.canvas.clientWidth,
+        clientH: this.canvas.clientHeight,
+        scaleX: this.viewport.scale.x,
+        scaleY: this.viewport.scale.y,
+        textures: Object.keys(this.textures).length,
+        bgTexture: this.textures.background
+          ? `${this.textures.background.width}x${this.textures.background.height}`
+          : "MISSING",
+        shipTexture: this.textures.shipSprite
+          ? `${this.textures.shipSprite.width}x${this.textures.shipSprite.height}`
+          : "MISSING",
+      }),
+    );
   }
 
   private makeGlowTexture(): Texture {

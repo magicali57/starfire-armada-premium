@@ -253,6 +253,24 @@ const gameCanvasSrc = fs.readFileSync(path.join(root, "src/gameplay/rapidFire/Ga
   );
 }
 
+// ---------------------------------------------------------------------
+// 14) Idle animation on single-frame art: enemies "flap" by oscillating
+//     their horizontal silhouette (measured from reference sprite sheets),
+//     desynchronized per enemy, plus engine glow; the player's flame pulses.
+// ---------------------------------------------------------------------
+{
+  check(rendererSrc.includes("FLAP_PERIOD_MS"), "enemies have a wing-flap cycle");
+  check(rendererSrc.includes("flapAmplitude"), "flap amplitude varies by enemy weight class");
+  check(/flapW/.test(rendererSrc) && /flapH/.test(rendererSrc), "flap drives sprite width and height");
+  // The flap must be applied to the sprite, its contour and its hit-flash copy,
+  // otherwise the layers visibly desynchronize.
+  check((rendererSrc.match(/flapW/g) ?? []).length >= 3, "flap is applied to sprite, contour and flash copy alike");
+  // Desynchronization is what stops fake animation reading as fake.
+  check(rendererSrc.includes("e.swayPhase * 2.7"), "each enemy flaps on its own phase offset, not in unison");
+  check(rendererSrc.includes("enemyGlowPool"), "enemies carry a pulsing engine glow");
+  check(/Engine flame/i.test(rendererSrc), "the player's engine flame pulses");
+}
+
 equal(SAVE_SCHEMA_VERSION, 12, "save schema unchanged at v12");
 check(gameplayScreenSrc.includes("Win Stage (debug)"), "DEV debug buttons still exist in source, gated for local testing");
 check(gameplayScreenSrc.includes("import.meta.env.DEV"), "Win/Lose debug controls remain DEV-gated (still stripped from production)");

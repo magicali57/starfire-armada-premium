@@ -41,6 +41,24 @@ const LOGICAL_W = 390;
 const LOGICAL_H = 700;
 const ENEMY_DEATH_SPRITE_MS = 200;
 
+/**
+ * Wing-flap simulation for single-frame enemy art.
+ *
+ * Measured from reference gameplay: their enemy sprites cycle from wings
+ * fully spread (wide silhouette) to folded (narrow silhouette) and back, on
+ * roughly a 0.7s period. Our art is a single static render, so we reproduce
+ * the dominant readable feature of that animation — the horizontal silhouette
+ * change — by oscillating scaleX, with a slight opposing scaleY so the ship
+ * appears to conserve mass rather than simply squash.
+ *
+ * This is deliberately an interim stand-in for real multi-frame sheets.
+ */
+const FLAP_PERIOD_MS = 700;
+function flapAmplitude(kind: string): number {
+  // Heavier ships flap less — a Power Carrier should feel ponderous.
+  return kind === "basic" ? 0.18 : kind === "shooter" ? 0.14 : 0.1;
+}
+
 /** Simple grow-on-demand pool of Sprites parented to one container. */
 class SpritePool {
   private pool: Sprite[] = [];
@@ -115,6 +133,7 @@ export class PixiRenderer {
   private streakPool: SpritePool | null = null;
   private enemyOutlinePool: SpritePool | null = null;
   private enemyPool: SpritePool | null = null;
+  private enemyGlowPool: SpritePool | null = null;
   private enemyFlashPool: SpritePool | null = null;
   private playerShotPool: SpritePool | null = null;
   private playerShotGlowPool: SpritePool | null = null;
@@ -441,6 +460,12 @@ export class PixiRenderer {
       s.anchor.set(0.5);
       return s;
     });
+    this.enemyGlowPool = new SpritePool(this.layerGlow, () => {
+      const s = new Sprite(glow);
+      s.anchor.set(0.5);
+      s.blendMode = "add";
+      return s;
+    });
     this.enemyFlashPool = new SpritePool(this.layerGlow, () => {
       const s = new Sprite(Texture.EMPTY);
       s.anchor.set(0.5);
@@ -579,9 +604,11 @@ export class PixiRenderer {
     const pool = this.enemyPool!;
     const flashPool = this.enemyFlashPool!;
     const outlinePool = this.enemyOutlinePool!;
+    const glowPool = this.enemyGlowPool!;
     pool.begin();
     flashPool.begin();
     outlinePool.begin();
+    glowPool.begin();
     for (const e of s.enemies) {
       if (!e.alive) continue;
       if (e.dying && e.dyingMs >= ENEMY_DEATH_SPRITE_MS) continue;
@@ -592,6 +619,15 @@ export class PixiRenderer {
         clamp(e.vx * 0.006, -0.22, 0.22) + Math.sin(s.elapsedMs / 900 + e.swayPhase) * 0.05;
       const recoil = e.recoilMs > 0 ? -(e.recoilMs / 130) * 3 : 0;
       const side = e.h;
+
+      // Wing flap. swayPhase is a per-enemy random offset, so a formation
+      // never flaps in lockstep — that unison is what makes fake animation
+      // read as fake.
+      const amp = flapAmplitude(e.kind);
+      const wave = Math.sin((s.elapsedMs / FLAP_PERIOD_MS) * Math.PI * 2 + e.swayPhase * 2.7);
+      const fold = 0.5 * (1 - wave); // 0 = spread, 1 = folded
+      const flapW = side * (1 - amp * fold);
+      const flapH = side * (1 + amp * 0.25 * fold);
       const alpha = e.dying ? Math.max(0, 1 - e.dyingMs / ENEMY_DEATH_SPRITE_MS) : 1;
       // Source art is nose-up; enemies travel downward → rotate 180° so the
       // nose faces the direction of travel.
@@ -601,25 +637,35 @@ export class PixiRenderer {
       const op = outlinePool.next();
       op.texture = tex;
       op.position.set(e.x + sway, e.y + recoil);
-      op.width = side * 1.1;
-      op.height = side * 1.1;
+      op.width = flapW * 1.1;
+      op.height = flapH * 1.1;
       op.rotation = rot;
       op.alpha = 0.55 * alpha;
 
       const sp = pool.next();
       sp.texture = tex;
       sp.position.set(e.x + sway, e.y + recoil);
-      sp.width = side;
-      sp.height = side;
+      sp.width = flapW;
+      sp.height = flapH;
       sp.rotation = rot;
       sp.alpha = alpha;
+
+      // Engine glow trailing behind (art is nose-up and drawn rotated 180°,
+      // so the engines sit toward the top of the sprite on screen).
+      const gp = glowPool.next();
+      gp.position.set(e.x + sway, e.y + recoil - side * 0.3);
+      const gs = side * (0.5 + 0.12 * (1 - fold));
+      gp.width = gs;
+      gp.height = gs;
+      gp.tint = e.kind === "basic" ? 0xff6a3c : e.kind === "shooter" ? 0xff4ea8 : 0xffa63c;
+      gp.alpha = (0.32 + 0.16 * (1 - fold)) * alpha;
 
       if (e.flashMs > 0) {
         const fp = flashPool.next();
         fp.texture = tex;
         fp.position.set(e.x + sway, e.y + recoil);
-        fp.width = side;
-        fp.height = side;
+        fp.width = flapW;
+        fp.height = flapH;
         fp.rotation = rot;
         fp.alpha = Math.min(1, e.flashMs / 90) * 0.85 * alpha;
       }
@@ -627,6 +673,7 @@ export class PixiRenderer {
     pool.end();
     flashPool.end();
     outlinePool.end();
+    glowPool.end();
   }
 
   private syncPlayerShots(s: RenderState): void {
@@ -822,12 +869,16 @@ export class PixiRenderer {
     }
 
     if (this.playerGlow) {
+      // Engine flame: pulses continuously (the reference player ship's flame
+      // is the most visibly animated part of it) and flares on firing recoil.
+      const flame = 0.5 + 0.5 * Math.sin(s.elapsedMs / 70);
+      const thrust = 1 + 0.16 * flame + s.recoil * 0.22;
       this.playerGlow.visible = !hidden;
       this.playerGlow.position.set(px, py + h * 0.1);
-      const d = h * 1.5;
+      const d = h * 1.5 * thrust;
       this.playerGlow.width = d;
       this.playerGlow.height = d;
-      this.playerGlow.alpha = s.maxActive ? 0.6 : 0.32;
+      this.playerGlow.alpha = (s.maxActive ? 0.6 : 0.32) * (0.85 + 0.15 * flame);
     }
 
     if (this.playerAura) {
@@ -855,6 +906,7 @@ export class PixiRenderer {
     this.streakPool?.destroy();
     this.enemyOutlinePool?.destroy();
     this.enemyPool?.destroy();
+    this.enemyGlowPool?.destroy();
     this.enemyFlashPool?.destroy();
     this.playerShotPool?.destroy();
     this.playerShotGlowPool?.destroy();

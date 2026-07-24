@@ -93,7 +93,6 @@ export class PixiRenderer {
 
   // Persistent display objects
   private bgFar: TilingSprite | null = null;
-  private bgDim: Graphics | null = null;
   private player: Sprite | null = null;
   private playerGlow: Sprite | null = null;
   private playerAura: Sprite | null = null;
@@ -236,11 +235,11 @@ export class PixiRenderer {
       this.layerBg.addChild(tiling);
       this.bgFar = tiling;
     }
-    // Mood dim over the far layer.
+    // Mood dim over the far layer (a static child of layerBg; disposed with
+    // the layer on teardown, so no field reference is needed to keep it).
     const dim = new Graphics();
     dim.rect(0, 0, LOGICAL_W, LOGICAL_H).fill({ color: 0x040612, alpha: 0.35 });
     this.layerBg.addChild(dim);
-    this.bgDim = dim;
   }
 
   private buildPlayer(): void {

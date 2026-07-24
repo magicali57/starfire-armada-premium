@@ -84,8 +84,9 @@ const MAX_PENDING_SHOTS = 40;
 const FINGER_OFFSET_Y = 56;
 /** Post-hit invulnerability window (flicker). */
 const INVULN_MS = 800;
-/** Enemy sprite stays visible this long into the destruction sequence. */
-const ENEMY_DEATH_SPRITE_MS = 200;
+// The enemy sprite-fade cutoff during death now lives in the renderer
+// (pixiRenderer.ts) since it is a presentation concern; the engine only needs
+// the removal timer below to retire the entity from the simulation.
 const ENEMY_DEATH_REMOVE_MS = 320;
 /** Power Carrier Fire-Up appears once destruction has resolved. */
 const CARRIER_DROP_DELAY_MS = 240;

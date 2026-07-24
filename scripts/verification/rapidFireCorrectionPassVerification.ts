@@ -97,10 +97,10 @@ const gameCanvasSrc = fs.readFileSync(path.join(root, "src/gameplay/rapidFire/Ga
 }
 
 // ---------------------------------------------------------------------
-// 7) Formations: 10-15 enemies together in the densest phases
+// 7) Formations: reference-arcade density in the densest phases
 // ---------------------------------------------------------------------
 {
-  check(PEAK_PHASE_ENEMY_COUNT >= 10 && PEAK_PHASE_ENEMY_COUNT <= 15, `peak simultaneous formation population (${PEAK_PHASE_ENEMY_COUNT}) is 10-15`);
+  check(PEAK_PHASE_ENEMY_COUNT >= 20 && PEAK_PHASE_ENEMY_COUNT <= 36, `peak simultaneous formation population (${PEAK_PHASE_ENEMY_COUNT}) reaches reference density`);
 }
 
 // ---------------------------------------------------------------------

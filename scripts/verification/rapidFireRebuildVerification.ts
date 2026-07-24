@@ -58,20 +58,23 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
     "splitFormation",
     "alternatingDive",
     "denseMixedFinal",
+    "gridStreamTop",
+    "gridStreamSides",
+    "gridStreamLoop",
   ];
-  equal(types.length, 10, "all 10 required formation styles are implemented");
+  equal(types.length, 13, "all required formation styles are implemented (10 original + 3 grid-block)");
 
   for (const type of types) {
     // Every formation must eventually resolve (exit the 0..1 band) so the
     // engine's generic offscreen despawn always fires — no permanent
     // enemies.
     let resolved = false;
-    for (let t = 0; t <= 12000; t += 200) {
+    for (let t = 0; t <= 30000; t += 200) {
       const pose = computeFormationPose(type, 1, 3, t);
       check(Number.isFinite(pose.xNorm) && Number.isFinite(pose.yNorm), `${type} pose is finite at t=${t}`);
       if (pose.yNorm > 1.05 || pose.xNorm < -0.05 || pose.xNorm > 1.05) resolved = true;
     }
-    check(resolved, `${type} eventually exits the playfield within 12s`);
+    check(resolved, `${type} eventually exits the playfield within 30s`);
 
     // Early on (still entering), nothing should be allowed to fire.
     const early = computeFormationPose(type, 1, 3, 50);
@@ -88,7 +91,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 
 // ---------------------------------------------------------------------
 // Wave pacing (12 enemy-clear-gated phases, ~2:00-3:00 target range,
-// formation-tagged spawns, 10-15 enemies together in the densest phases)
+// formation-tagged spawns, 20+ enemies together in the densest phases)
 // ---------------------------------------------------------------------
 {
   equal(WAVE_PHASES.length, 12, "12 named wave phases");
@@ -99,7 +102,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
   const spawns = getAllSpawns();
   check(spawns.length >= 60, "stage has a substantial enemy population across 12 phases");
   equal(TOTAL_POWER_CARRIERS, 11, "11 Power Carriers thread the whole stage");
-  check(PEAK_PHASE_ENEMY_COUNT >= 10 && PEAK_PHASE_ENEMY_COUNT <= 15, "peak simultaneous phase population is 10-15 enemies");
+  check(PEAK_PHASE_ENEMY_COUNT >= 20 && PEAK_PHASE_ENEMY_COUNT <= 36, "peak simultaneous phase population reaches reference arcade density");
 
   // Every phase is non-empty and delay-sorted; every group has a real
   // formation type and stays within its own slotCount.
@@ -114,6 +117,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
     "splitFormation",
     "alternatingDive",
     "denseMixedFinal",
+    "gridStreamTop",
+    "gridStreamSides",
+    "gridStreamLoop",
   ]);
   for (const w of WAVE_PHASES) {
     const forPhase = getSpawnsForPhase(w.index);

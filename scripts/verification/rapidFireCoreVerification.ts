@@ -146,9 +146,9 @@ function publicPath(urlPath: string): string {
       check(forPhase[i].delayMs >= forPhase[i - 1].delayMs, `phase ${w.index} spawns sorted by delay`);
     }
   }
-  // Mobile playtest requirement: 10-15 enemies together in the densest phases.
-  check(PEAK_PHASE_ENEMY_COUNT >= 10, "at least one phase puts 10+ enemies on stage at once");
-  check(PEAK_PHASE_ENEMY_COUNT <= 15, "peak phase enemy count stays within the requested 10-15 band");
+  // Grid-block rebuild: the densest phases now carry reference-arcade density.
+  check(PEAK_PHASE_ENEMY_COUNT >= 20, "the densest phase puts 20+ enemies on stage at once");
+  check(PEAK_PHASE_ENEMY_COUNT <= 36, "peak phase enemy count stays readable (<=36)");
 
   // Stage pacing: at least 2 minutes, and the authored hint stays in a
   // reasonable range around the 2:00-3:00 target window.

@@ -23,7 +23,14 @@ export type FormationType =
   | "staggeredLane"
   | "splitFormation"
   | "alternatingDive"
-  | "denseMixedFinal";
+  | "denseMixedFinal"
+  // Grid-block formations (reference-arcade style): a large group streams in
+  // along curved paths one after another, settles into an assigned row/column
+  // slot, then the whole block drifts as a unit while individuals peel off to
+  // dive and return. See gridPose().
+  | "gridStreamTop"
+  | "gridStreamSides"
+  | "gridStreamLoop";
 
 export type FormationPhase =
   | "entering"
@@ -69,6 +76,152 @@ function lerp(a: number, b: number, t: number): number {
 
 const HOLD_SWAY = (tMs: number, phase: number) => Math.sin(tMs / 650 + phase) * 0.035;
 
+/** Cubic Bezier on one axis (used for curved entry/dive paths). */
+function cubicAt(a: number, b: number, c: number, d: number, t: number): number {
+  const mt = 1 - t;
+  return mt * mt * mt * a + 3 * mt * mt * t * b + 3 * mt * t * t * c + t * t * t * d;
+}
+
+// ---------------------------------------------------------------------------
+// Grid-block formation timing. A group streams in (one member every
+// GRID_STAGGER_MS), each taking GRID_ENTRY_MS to fly its curve into slot; the
+// block then holds together, and finally exits as a unit. Total on-stage time
+// for a 25-strong group is roughly 4.2s in + 11s hold + 1.5s out ≈ 17s — but
+// the phase ends as soon as the player clears it, so good play is faster.
+// ---------------------------------------------------------------------------
+const GRID_STAGGER_MS = 110;
+const GRID_ENTRY_MS = 1500;
+const GRID_HOLD_MS = 11000;
+const GRID_EXIT_MS = 1500;
+const GRID_DIVE_MS = 2000;
+
+/** Columns/rows for a block of `slotCount`, capped at 7 wide like the reference. */
+function gridDims(slotCount: number): { cols: number; rows: number } {
+  const cols = Math.max(1, Math.min(7, Math.ceil(slotCount / 3)));
+  const rows = Math.max(1, Math.ceil(slotCount / cols));
+  return { cols, rows };
+}
+
+/** Normalized resting position of a slot inside the block. */
+function gridSlotPos(slot: number, slotCount: number): { x: number; y: number } {
+  const { cols } = gridDims(slotCount);
+  const col = slot % cols;
+  const row = Math.floor(slot / cols);
+  const spread = 0.74;
+  const x = cols > 1 ? 0.5 + (col / (cols - 1) - 0.5) * spread : 0.5;
+  const y = 0.12 + row * 0.075;
+  return { x, y };
+}
+
+/**
+ * Grid-block choreography: streamed curved entry → held block that drifts as
+ * one unit → periodic single-ship dive-outs that return to slot → group exit.
+ * Pure function of (slot, slotCount, elapsed), so it stays deterministic and
+ * testable; dive scheduling is derived arithmetically from the slot index
+ * rather than from random state or player position.
+ */
+function gridPose(
+  slot: number,
+  slotCount: number,
+  tMs: number,
+  style: "top" | "sides" | "loop",
+): FormationPose {
+  const { cols } = gridDims(slotCount);
+  const col = slot % cols;
+  const target = gridSlotPos(slot, slotCount);
+  const fromLeft = style === "sides" ? slot % 2 === 0 : col < cols / 2;
+
+  // The whole block breathes together — this is what reads as "a formation"
+  // rather than a set of independently floating ships.
+  const driftX = Math.sin(tMs / 2600) * 0.055;
+  const driftY = Math.sin(tMs / 3700) * 0.012;
+
+  const stagger = slot * GRID_STAGGER_MS;
+  const local = tMs - stagger;
+  const allInMs = (slotCount - 1) * GRID_STAGGER_MS + GRID_ENTRY_MS;
+
+  // Waiting its turn in the stream: parked off the top edge.
+  if (local < 0) {
+    return { xNorm: 0.5, yNorm: -0.25, phase: "entering", canFire: false, bank: 0 };
+  }
+
+  // Curved entry into the assigned slot.
+  if (local < GRID_ENTRY_MS) {
+    const t = easeInOut(local / GRID_ENTRY_MS);
+    let x0: number, y0: number, x1: number, y1: number, x2: number, y2: number;
+    if (style === "sides") {
+      x0 = fromLeft ? -0.25 : 1.25;
+      y0 = 0.08;
+      x1 = fromLeft ? 0.18 : 0.82;
+      y1 = 0.44;
+      x2 = 0.5;
+      y2 = 0.3;
+    } else if (style === "loop") {
+      // Enters from a top corner, sweeps across, then curls back into slot.
+      x0 = fromLeft ? -0.2 : 1.2;
+      y0 = -0.1;
+      x1 = fromLeft ? 0.9 : 0.1;
+      y1 = 0.2;
+      x2 = fromLeft ? 0.12 : 0.88;
+      y2 = 0.42;
+    } else {
+      // Pours from the top centre and fans outward to its column.
+      x0 = 0.5;
+      y0 = -0.2;
+      x1 = target.x + (target.x - 0.5) * 1.7;
+      y1 = 0.04;
+      x2 = target.x + (target.x - 0.5) * 0.6;
+      y2 = 0.36;
+    }
+    const x = cubicAt(x0, x1, x2, target.x + driftX, t);
+    const y = cubicAt(y0, y1, y2, target.y + driftY, t);
+    return {
+      xNorm: x,
+      yNorm: y,
+      phase: "entering",
+      canFire: false,
+      bank: fromLeft ? 0.32 : -0.32,
+    };
+  }
+
+  const holdEnd = allInMs + GRID_HOLD_MS;
+  if (tMs < holdEnd) {
+    const sway = Math.sin(tMs / 700 + slot) * 0.006;
+    const baseX = target.x + driftX + sway;
+    const baseY = target.y + driftY;
+
+    // Dive-out: only part of the block ever dives, and departures are spread
+    // across the hold window, so at most a couple of ships are out of
+    // formation at any moment (the block must still read as a block).
+    // Selection and scheduling are derived from separate bits of a hash so
+    // they don't correlate and collapse into a few synchronized buckets.
+    const h = (slot * 2654435761) >>> 0;
+    const divesAtAll = h % 100 < 30;
+    const diveAt = allInMs + 1500 + ((h >>> 7) % 12) * 1100;
+    if (divesAtAll && tMs >= diveAt && tMs < diveAt + GRID_DIVE_MS) {
+      const dt = (tMs - diveAt) / GRID_DIVE_MS;
+      // Always swoop toward the centre, never outward: an outer-column ship
+      // curving away would fly off the side of the playfield mid-dive.
+      const side = baseX > 0.5 ? -1 : 1;
+      const x = cubicAt(baseX, baseX + side * 0.3, baseX + side * 0.2, baseX, dt);
+      const y = cubicAt(baseY, baseY + 0.44, baseY + 0.52, baseY, dt);
+      return { xNorm: x, yNorm: y, phase: "attacking", canFire: true, bank: side * 0.5 };
+    }
+
+    return { xNorm: baseX, yNorm: baseY, phase: "holding", canFire: true, bank: driftX * 3 };
+  }
+
+  // The block leaves together.
+  const exitT = easeInOut((tMs - holdEnd) / GRID_EXIT_MS);
+  return {
+    xNorm: target.x + driftX,
+    yNorm: lerp(target.y + driftY, 1.3, exitT),
+    phase: "exiting",
+    canFire: exitT < 0.3,
+    bank: 0,
+  };
+}
+
 /**
  * Spreads slotCount members symmetrically around 0.5 across `spread` width.
  */
@@ -85,6 +238,13 @@ export function computeFormationPose(
   tMs: number,
 ): FormationPose {
   switch (type) {
+    case "gridStreamTop":
+      return gridPose(slot, slotCount, tMs, "top");
+    case "gridStreamSides":
+      return gridPose(slot, slotCount, tMs, "sides");
+    case "gridStreamLoop":
+      return gridPose(slot, slotCount, tMs, "loop");
+
     case "vFormationTop": {
       // Enter from top center into a V, hold and fire, then dive together.
       const target = spreadX(slot, slotCount, 0.62);

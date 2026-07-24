@@ -67,91 +67,70 @@ export const WAVE_PHASES: readonly WavePhase[] = [
 
 export const WAVE_COUNT = WAVE_PHASES.length;
 
+/**
+ * Phase composition. Grid-block groups (gridStream*) carry the density the
+ * reference arcade shooters have: a large squad streams in along curved paths,
+ * settles into a row/column block, holds and attacks, then leaves. Smaller
+ * sweep/dive/escort groups are layered on top for variety and to keep Power
+ * Carriers threaded through the stage.
+ *
+ * Power Carriers total exactly 11 across the stage (10 to carry Firepower
+ * 0→10, plus 1 near the climax to exercise MAX FIREPOWER refresh).
+ */
 const GROUPS: FormationSpawnEvent[][] = [
-  // Phase 1 — Approach: short introductory V of fighters teaches movement/firing.
-  group({ phase: 1, delayMs: 0, formation: "vFormationTop", groupId: "p1-v", members: [B, B, B, B] }),
-  group({ phase: 1, delayMs: 3000, formation: "carrierEscort", groupId: "p1-carrier", members: [C] }),
+  // Phase 1 — Approach: a small grid streams in from the top and holds.
+  group({ phase: 1, delayMs: 0, formation: "gridStreamTop", groupId: "p1-grid", members: [B, B, B, B, B, B, B, B, B, B] }),
+  group({ phase: 1, delayMs: 3600, formation: "carrierEscort", groupId: "p1-carrier", members: [C] }),
 
-  // Phase 2 — Flank Sweep: opposing side sweeps cross the screen.
-  group({ phase: 2, delayMs: 0, formation: "sideSweepLeft", groupId: "p2-left", members: [B, B, B, B] }),
-  group({ phase: 2, delayMs: 1500, formation: "sideSweepRight", groupId: "p2-right", members: [B, B, B] }),
-  group({ phase: 2, delayMs: 4000, formation: "carrierEscort", groupId: "p2-carrier", members: [C] }),
+  // Phase 2 — Flank Sweep: grid pours in alternately from both sides.
+  group({ phase: 2, delayMs: 0, formation: "gridStreamSides", groupId: "p2-grid", members: [B, B, B, B, B, B, B, B, S, S, S, S] }),
+  group({ phase: 2, delayMs: 4200, formation: "carrierEscort", groupId: "p2-carrier", members: [C] }),
 
-  // Phase 3 — Shooter Line: held two-row shooter formation.
-  group({ phase: 3, delayMs: 0, formation: "twoRowShooter", groupId: "p3-rows", members: [S, S, S, S, S, S] }),
-  group({ phase: 3, delayMs: 3500, formation: "carrierEscort", groupId: "p3-carrier", members: [C] }),
+  // Phase 3 — Shooter Line: shooter-heavy block holds and volleys.
+  group({ phase: 3, delayMs: 0, formation: "gridStreamTop", groupId: "p3-grid", members: [S, S, S, S, S, S, B, B, B, B, B, B, B, B] }),
+  group({ phase: 3, delayMs: 4200, formation: "carrierEscort", groupId: "p3-carrier", members: [C] }),
 
-  // Phase 4 — Dive Runs: alternating left/right attack dives.
-  group({
-    phase: 4,
-    delayMs: 0,
-    formation: "alternatingDive",
-    groupId: "p4-dive",
-    members: [B, B, B, B, B, B, B],
-  }),
-  group({ phase: 4, delayMs: 3000, formation: "carrierEscort", groupId: "p4-carrier", members: [C] }),
+  // Phase 4 — Dive Runs: fast dive squad layered over a side-entry block.
+  group({ phase: 4, delayMs: 0, formation: "alternatingDive", groupId: "p4-dive", members: [B, B, B, B, B, B, B] }),
+  group({ phase: 4, delayMs: 1800, formation: "gridStreamSides", groupId: "p4-grid", members: [B, B, B, B, B, B, B, B] }),
+  group({ phase: 4, delayMs: 5000, formation: "carrierEscort", groupId: "p4-carrier", members: [C] }),
 
-  // Phase 5 — Escort Convoy: central Power Carrier with a full escort ring
-  // (8 together), then an arc formation overlaps while the convoy still holds.
-  group({
-    phase: 5,
-    delayMs: 0,
-    formation: "carrierEscort",
-    groupId: "p5-convoy",
-    members: [C, B, B, B, B, B, B, B],
-  }),
-  group({ phase: 5, delayMs: 2500, formation: "arcFormation", groupId: "p5-arc", members: [B, B, B, B] }),
+  // Phase 5 — Escort Convoy: carrier + escort ring, with a grid overlapping.
+  group({ phase: 5, delayMs: 0, formation: "carrierEscort", groupId: "p5-convoy", members: [C, B, B, B, B, B, B, B] }),
+  group({ phase: 5, delayMs: 2500, formation: "gridStreamTop", groupId: "p5-grid", members: [B, B, B, B, B, B, B, B, B, B] }),
 
-  // Phase 6 — Crossfire: split formation, a side sweep, and a carrier overlap
-  // for the densest early-stage pressure (up to 13 on stage at once).
-  group({
-    phase: 6,
-    delayMs: 0,
-    formation: "splitFormation",
-    groupId: "p6-split",
-    members: [B, B, B, B, B, B, S, S],
-  }),
-  group({ phase: 6, delayMs: 2000, formation: "sideSweepRight", groupId: "p6-sweep", members: [B, B, S, S] }),
-  group({ phase: 6, delayMs: 4000, formation: "carrierEscort", groupId: "p6-carrier", members: [C] }),
+  // Phase 6 — Crossfire: corner-looping grid plus a crossing sweep.
+  group({ phase: 6, delayMs: 0, formation: "gridStreamLoop", groupId: "p6-grid", members: [B, B, B, B, B, B, B, B, B, B, S, S, S, S] }),
+  group({ phase: 6, delayMs: 2600, formation: "sideSweepRight", groupId: "p6-sweep", members: [B, B, S, S] }),
+  group({ phase: 6, delayMs: 5200, formation: "carrierEscort", groupId: "p6-carrier", members: [C] }),
 
   // Phase 7 — Breather: brief pressure release, sparse arc only.
-  group({ phase: 7, delayMs: 0, formation: "arcFormation", groupId: "p7-arc", members: [B, B, B] }),
+  group({ phase: 7, delayMs: 0, formation: "arcFormation", groupId: "p7-arc", members: [B, B, B, B] }),
 
-  // Phase 8 — Carrier Wing: one large dedicated Power Carrier formation (10).
-  group({
-    phase: 8,
-    delayMs: 0,
-    formation: "carrierEscort",
-    groupId: "p8-wing",
-    members: [C, B, B, B, S, S, B, B, B, B],
-  }),
+  // Phase 8 — Carrier Wing: escort wing plus a full side-entry block.
+  group({ phase: 8, delayMs: 0, formation: "carrierEscort", groupId: "p8-wing", members: [C, B, B, B, S, S, B, B] }),
+  group({ phase: 8, delayMs: 2400, formation: "gridStreamSides", groupId: "p8-grid", members: [B, B, B, B, B, B, B, B, B, B, S, S] }),
 
-  // Phase 9 — Cross-Screen Sweep: full-width mixed sweep formations.
-  group({ phase: 9, delayMs: 0, formation: "sideSweepLeft", groupId: "p9-left", members: [B, S, B, B] }),
-  group({ phase: 9, delayMs: 1800, formation: "sideSweepRight", groupId: "p9-right", members: [B, B, S, B] }),
-  group({ phase: 9, delayMs: 3600, formation: "carrierEscort", groupId: "p9-carrier", members: [C] }),
+  // Phase 9 — Cross-Screen Sweep: sweeps crossing under a held top block.
+  group({ phase: 9, delayMs: 0, formation: "gridStreamTop", groupId: "p9-grid", members: [B, B, B, B, B, B, B, B, B, B, B, B, S, S] }),
+  group({ phase: 9, delayMs: 2200, formation: "sideSweepLeft", groupId: "p9-left", members: [B, S, B, B] }),
+  group({ phase: 9, delayMs: 3800, formation: "sideSweepRight", groupId: "p9-right", members: [B, B, S, B] }),
+  group({ phase: 9, delayMs: 5600, formation: "carrierEscort", groupId: "p9-carrier", members: [C] }),
 
-  // Phase 10 — Advanced Shooter Wall: denser two-row shooter formation (8).
-  group({
-    phase: 10,
-    delayMs: 0,
-    formation: "twoRowShooter",
-    groupId: "p10-wall",
-    members: [S, S, S, S, S, S, S, S],
-  }),
-  group({ phase: 10, delayMs: 3500, formation: "carrierEscort", groupId: "p10-carrier", members: [C] }),
+  // Phase 10 — Advanced Shooter Wall: a full block of shooters.
+  group({ phase: 10, delayMs: 0, formation: "gridStreamTop", groupId: "p10-wall", members: [S, S, S, S, S, S, S, S, S, S, S, S, B, B, B, B] }),
+  group({ phase: 10, delayMs: 4600, formation: "carrierEscort", groupId: "p10-carrier", members: [C] }),
 
-  // Phase 11 — Climax Formation: dense mixed final formation, 14 enemies at
-  // once, plus a dedicated Overdrive-test carrier once Firepower is likely
-  // already at 10.
+  // Phase 11 — Climax Formation: the densest block of the stage (24), entering
+  // as a corner-looping stream, plus an Overdrive-test carrier.
   group({
     phase: 11,
     delayMs: 0,
-    formation: "denseMixedFinal",
+    formation: "gridStreamLoop",
     groupId: "p11-climax",
-    members: [B, S, B, C, B, S, B, S, B, B, S, B, B, S],
+    members: [B, S, B, C, B, S, B, S, B, B, S, B, B, S, B, B, S, B, B, S, B, B, S, B],
   }),
-  group({ phase: 11, delayMs: 3500, formation: "carrierEscort", groupId: "p11-overdrive", members: [C] }),
+  group({ phase: 11, delayMs: 4800, formation: "carrierEscort", groupId: "p11-overdrive", members: [C] }),
 
   // Phase 12 — Cleanup: short completion wave, staggered lanes.
   group({ phase: 12, delayMs: 0, formation: "staggeredLane", groupId: "p12-cleanup", members: [B, B, B, B, B] }),

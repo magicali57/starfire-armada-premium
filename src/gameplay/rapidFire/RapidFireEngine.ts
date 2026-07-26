@@ -94,6 +94,8 @@ const ENEMY_DEATH_REMOVE_MS = 320;
 /** Power Carrier Fire-Up appears once destruction has resolved. */
 const CARRIER_DROP_DELAY_MS = 240;
 const MAX_EXPLOSIONS = 20;
+/** Final-wave empty-field grace: avoids both premature clears during entry and invisible-entity soft-locks. */
+const FINAL_CLEAR_GRACE_MS = 900;
 
 /** Wave-phase gap timing (mobile playtest requirement): after a phase's
  * enemies are fully resolved, wait, announce, wait, then begin the next
@@ -167,6 +169,7 @@ export class RapidFireEngine {
   private phaseState: "spawning" | "gap-pause" | "gap-announce" | "gap-transition" = "spawning";
   private phaseGapTimerMs = 0;
   private announcement: WaveAnnouncement | null = null;
+  private finalClearCandidateSinceMs: number | null = null;
 
   private nextEnemyId = 1;
   private score = 0;
@@ -812,7 +815,12 @@ export class RapidFireEngine {
 
       // General offscreen resolution — formations may exit downward, upward,
       // or sideways depending on type, so bound on every axis.
+      const invalidPose = !Number.isFinite(enemy.x) || !Number.isFinite(enemy.y);
+      const escapedAbove =
+        enemy.formationPhase === "exiting" && enemy.y < -enemy.h * 2;
       if (
+        invalidPose ||
+        escapedAbove ||
         enemy.y > LOGICAL_H + enemy.h ||
         enemy.x < -enemy.w * 2 ||
         enemy.x > LOGICAL_W + enemy.w * 2
@@ -1085,9 +1093,44 @@ export class RapidFireEngine {
 
   private checkVictory(): void {
     if (this.outcomeLocked !== "none") return;
-    if (this.currentPhase < WAVE_COUNT) return;
-    if (this.phaseSpawnCursor < this.phaseSpawnQueue.length) return;
-    if (this.enemies.some((e) => e.alive)) return;
+    if (this.currentPhase < WAVE_COUNT) {
+      this.finalClearCandidateSinceMs = null;
+      return;
+    }
+    if (this.phaseSpawnCursor < this.phaseSpawnQueue.length) {
+      this.finalClearCandidateSinceMs = null;
+      return;
+    }
+
+    // Victory must not be blocked forever by a malformed or fully escaped
+    // entity that can no longer be seen, targeted, or collide. Dying enemies
+    // remain blockers until their destruction sequence completes.
+    const hasCombatBlocker = this.enemies.some((enemy) => {
+      if (!enemy.alive) return false;
+      if (enemy.dying) return true;
+      if (!Number.isFinite(enemy.x) || !Number.isFinite(enemy.y)) return false;
+      return (
+        enemy.x >= -enemy.w * 1.5 &&
+        enemy.x <= LOGICAL_W + enemy.w * 1.5 &&
+        enemy.y >= -enemy.h * 1.5 &&
+        enemy.y <= LOGICAL_H + enemy.h
+      );
+    });
+
+    if (hasCombatBlocker) {
+      this.finalClearCandidateSinceMs = null;
+      return;
+    }
+
+    if (this.finalClearCandidateSinceMs === null) {
+      this.finalClearCandidateSinceMs = this.elapsedMs;
+      return;
+    }
+    if (this.elapsedMs - this.finalClearCandidateSinceMs < FINAL_CLEAR_GRACE_MS) return;
+
+    // Retire any stale invisible entries before locking the result so the final
+    // render state and HUD agree that the battlefield is clear.
+    this.enemies = [];
     this.lockOutcome("victory");
   }
 
@@ -1095,11 +1138,27 @@ export class RapidFireEngine {
     if (this.outcomeLocked !== "none") return;
     this.outcomeLocked = outcome;
     this.paused = true;
-    if (outcome === "victory") this.audio.victory();
-    else this.audio.defeat();
     const performance = this.buildPerformance();
-    this.emitHud(true);
-    this.opts.onOutcome?.(outcome, performance);
+
+    // The canonical results handoff is essential; audio/HUD are presentation.
+    // Notify React first so an audio-device exception can never strand the
+    // player on a frozen final frame.
+    try {
+      this.opts.onOutcome?.(outcome, performance);
+    } catch (error) {
+      console.error("[RapidFire] Outcome callback failed:", error);
+    }
+    try {
+      this.emitHud(true);
+    } catch (error) {
+      console.error("[RapidFire] Final HUD emission failed:", error);
+    }
+    try {
+      if (outcome === "victory") this.audio.victory();
+      else this.audio.defeat();
+    } catch (error) {
+      console.error("[RapidFire] Outcome audio failed:", error);
+    }
   }
 
   private buildPerformance(): BattlePerformance {

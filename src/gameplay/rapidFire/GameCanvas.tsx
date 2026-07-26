@@ -34,9 +34,11 @@ export function GameCanvas({
   const onHudRef = useRef(onHud);
   const onOutcomeRef = useRef(onOutcome);
   const onEngineReadyRef = useRef(onEngineReady);
+  const pausedRef = useRef(paused);
   onHudRef.current = onHud;
   onOutcomeRef.current = onOutcome;
   onEngineReadyRef.current = onEngineReady;
+  pausedRef.current = paused;
 
   useEffect(() => {
     const host = hostRef.current;
@@ -56,6 +58,20 @@ export function GameCanvas({
       (window as unknown as { __rapidFireEngine?: RapidFireEngine }).__rapidFireEngine = engine;
     }
     onEngineReadyRef.current?.(engine);
+
+    // RapidFireEngine pauses when the browser reports document.hidden. Some
+    // Android browsers briefly emit that signal for system overlays/app switches,
+    // but the engine's original visibility handler never resumed afterward.
+    // Keep React's explicit pause menu authoritative while automatically
+    // recovering only these silent browser-induced pauses.
+    const resumeSilentMobilePause = () => {
+      if (!document.hidden && !pausedRef.current && engine.isPaused()) {
+        engine.setPaused(false);
+      }
+    };
+    document.addEventListener("visibilitychange", resumeSilentMobilePause);
+    const resumeWatchdog = window.setInterval(resumeSilentMobilePause, 500);
+
     void engine
       .start()
       .then(() => {
@@ -69,6 +85,8 @@ export function GameCanvas({
     // Resizing is handled by the renderer's ResizeObserver on the host.
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", resumeSilentMobilePause);
+      window.clearInterval(resumeWatchdog);
       engine.destroy();
       engineRef.current = null;
       onEngineReadyRef.current?.(null);

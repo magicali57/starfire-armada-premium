@@ -1,0 +1,83 @@
+name: Deploy Starfire Armada Premium
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout known-good source
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rewrite public asset URLs for repository Pages path
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          roots = [Path("src"), Path("index.html")]
+          extensions = {".ts", ".tsx", ".js", ".jsx", ".css", ".json", ".html"}
+          changed = []
+
+          files = [Path("index.html")]
+          files.extend(
+              path
+              for path in Path("src").rglob("*")
+              if path.is_file() and path.suffix.lower() in extensions
+          )
+
+          for path in files:
+              text = path.read_text(encoding="utf-8")
+              updated = text.replace("/assets/", "/starfire-armada-premium/assets/")
+              if updated != text:
+                  path.write_text(updated, encoding="utf-8")
+                  changed.append(str(path))
+
+          if not changed:
+              raise SystemExit("No /assets/ references were found to rewrite")
+
+          print("Rewrote asset URLs in:")
+          print("\n".join(changed))
+          PY
+
+      - name: Build production site
+        run: npm run build
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

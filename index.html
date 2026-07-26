@@ -12,6 +12,141 @@
       rel="stylesheet"
     />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <script>
+      (() => {
+        const pageBase = new URL("./", document.baseURI);
+        const assetBase = new URL("assets/", pageBase).href;
+
+        const rewriteUrl = (value) => {
+          if (typeof value !== "string") return value;
+          return value.startsWith("/assets/")
+            ? new URL(value.slice(1), pageBase).href
+            : value;
+        };
+
+        const rewriteText = (value) =>
+          typeof value === "string" ? value.replaceAll("/assets/", assetBase) : value;
+
+        const patchProperty = (prototype, property) => {
+          const descriptor = Object.getOwnPropertyDescriptor(prototype, property);
+          if (!descriptor?.get || !descriptor?.set || descriptor.configurable === false) return;
+          Object.defineProperty(prototype, property, {
+            ...descriptor,
+            set(value) {
+              descriptor.set.call(this, rewriteUrl(value));
+            },
+          });
+        };
+
+        patchProperty(HTMLImageElement.prototype, "src");
+        patchProperty(HTMLMediaElement.prototype, "src");
+        patchProperty(HTMLSourceElement.prototype, "src");
+        patchProperty(HTMLVideoElement.prototype, "poster");
+
+        const nativeSetAttribute = Element.prototype.setAttribute;
+        Element.prototype.setAttribute = function (name, value) {
+          const lowerName = String(name).toLowerCase();
+          if (lowerName === "src" || lowerName === "href" || lowerName === "poster") {
+            value = rewriteUrl(value);
+          } else if (lowerName === "srcset" || lowerName === "style") {
+            value = rewriteText(value);
+          }
+          return nativeSetAttribute.call(this, name, value);
+        };
+
+        const nativeFetch = window.fetch.bind(window);
+        window.fetch = (input, init) => {
+          if (typeof input === "string") return nativeFetch(rewriteUrl(input), init);
+          if (input instanceof URL) return nativeFetch(new URL(rewriteUrl(input.href)), init);
+          if (input instanceof Request && input.url.includes("/assets/")) {
+            return nativeFetch(new Request(rewriteUrl(input.url), input), init);
+          }
+          return nativeFetch(input, init);
+        };
+
+        const nativeOpen = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+          return nativeOpen.call(this, method, rewriteUrl(url), ...rest);
+        };
+
+        const NativeAudio = window.Audio;
+        window.Audio = function (src) {
+          const audio = new NativeAudio();
+          if (src !== undefined) audio.src = rewriteUrl(src);
+          return audio;
+        };
+        window.Audio.prototype = NativeAudio.prototype;
+
+        const fixElement = (element) => {
+          if (!(element instanceof Element)) return;
+          for (const attribute of ["src", "href", "poster"]) {
+            const value = element.getAttribute(attribute);
+            if (value?.startsWith("/assets/")) {
+              nativeSetAttribute.call(element, attribute, rewriteUrl(value));
+            }
+          }
+          const srcset = element.getAttribute("srcset");
+          if (srcset?.includes("/assets/")) {
+            nativeSetAttribute.call(element, "srcset", rewriteText(srcset));
+          }
+          const style = element.getAttribute("style");
+          if (style?.includes("/assets/")) {
+            nativeSetAttribute.call(element, "style", rewriteText(style));
+          }
+          element.querySelectorAll?.("[src], [href], [poster], [srcset], [style]").forEach(fixElement);
+        };
+
+        const fixStyleRules = (rules) => {
+          for (const rule of rules) {
+            if (rule.cssRules) {
+              fixStyleRules(rule.cssRules);
+              continue;
+            }
+            if (!rule.style) continue;
+            for (const property of Array.from(rule.style)) {
+              const value = rule.style.getPropertyValue(property);
+              if (value.includes("/assets/")) {
+                rule.style.setProperty(
+                  property,
+                  rewriteText(value),
+                  rule.style.getPropertyPriority(property),
+                );
+              }
+            }
+          }
+        };
+
+        const fixStyleSheets = () => {
+          for (const sheet of document.styleSheets) {
+            try {
+              if (sheet.cssRules) fixStyleRules(sheet.cssRules);
+            } catch {
+              // Cross-origin stylesheets, such as Google Fonts, are intentionally skipped.
+            }
+          }
+        };
+
+        const observer = new MutationObserver((mutations) => {
+          for (const mutation of mutations) {
+            if (mutation.type === "attributes") fixElement(mutation.target);
+            for (const node of mutation.addedNodes) fixElement(node);
+          }
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+          fixElement(document.documentElement);
+          fixStyleSheets();
+          observer.observe(document.documentElement, {
+            subtree: true,
+            childList: true,
+            attributes: true,
+            attributeFilter: ["src", "href", "poster", "srcset", "style"],
+          });
+        });
+
+        window.addEventListener("load", fixStyleSheets, { once: true });
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

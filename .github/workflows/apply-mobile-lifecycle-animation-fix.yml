@@ -21,224 +21,286 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          from textwrap import dedent
+
+          def block(value: str) -> str:
+              return dedent(value).strip("\n")
 
           def replace_once(path: Path, old: str, new: str) -> None:
-              text = path.read_text(encoding='utf-8')
+              text = path.read_text(encoding="utf-8")
+              old = block(old)
+              new = block(new)
               if new in text:
                   return
               if old not in text:
-                  raise SystemExit(f'Patch target not found in {path}:\n{old[:300]}')
-              path.write_text(text.replace(old, new, 1), encoding='utf-8')
+                  raise SystemExit(f"Patch target not found in {path}:\n{old[:400]}")
+              path.write_text(text.replace(old, new, 1), encoding="utf-8")
 
-          # 1) Keep critical startup art blocking, but expose animation sheets for lazy loading.
-          manifest = Path('src/data/gameplayRapidFire.ts')
+          manifest = Path("src/data/gameplayRapidFire.ts")
           replace_once(
               manifest,
-              '''import {
-            CHAPTER_BACKGROUND_IMAGE,
-            RAPID_FIRE_PREMIUM_ASSETS,
-          } from "@/data/assetRegistry";''',
-              '''import {
-            CHAPTER_BACKGROUND_IMAGE,
-            RAPID_FIRE_PREMIUM_ASSETS,
-            RAPID_FIRE_PREMIUM_ANIMATION_SHEETS,
-          } from "@/data/assetRegistry";''',
+              '''
+              import {
+                CHAPTER_BACKGROUND_IMAGE,
+                RAPID_FIRE_PREMIUM_ASSETS,
+              } from "@/data/assetRegistry";
+              ''',
+              '''
+              import {
+                CHAPTER_BACKGROUND_IMAGE,
+                RAPID_FIRE_PREMIUM_ASSETS,
+                RAPID_FIRE_PREMIUM_ANIMATION_SHEETS,
+              } from "@/data/assetRegistry";
+              ''',
           )
-          text = manifest.read_text(encoding='utf-8')
-          marker = '''} as const;
+          replace_once(
+              manifest,
+              '''
+              } as const;
 
-          export const RAPID_FIRE_SHIP_ID'''
-          insertion = '''} as const;
+              export const RAPID_FIRE_SHIP_ID
+              ''',
+              '''
+              } as const;
 
-          /** Optional VFX sheets: loaded sequentially after gameplay is already running. */
-          export const RAPID_FIRE_OPTIONAL_ANIMATION_ASSETS = RAPID_FIRE_PREMIUM_ANIMATION_SHEETS;
+              /**
+               * Only animations still used by the corrected gameplay presentation.
+               * They load sequentially after the stage is playable and never block startup.
+               */
+              export const RAPID_FIRE_OPTIONAL_ANIMATION_ASSETS = {
+                animImpactRing: RAPID_FIRE_PREMIUM_ANIMATION_SHEETS.animImpactRing,
+                animEnemyHitSpark: RAPID_FIRE_PREMIUM_ANIMATION_SHEETS.animEnemyHitSpark,
+                animEnemyMuzzle: RAPID_FIRE_PREMIUM_ANIMATION_SHEETS.animEnemyMuzzle,
+                animPickupBurst: RAPID_FIRE_PREMIUM_ANIMATION_SHEETS.animPickupBurst,
+                animMaxFpBurst: RAPID_FIRE_PREMIUM_ANIMATION_SHEETS.animMaxFpBurst,
+              } as const;
 
-          export const RAPID_FIRE_SHIP_ID'''
-          if 'RAPID_FIRE_OPTIONAL_ANIMATION_ASSETS' not in text:
-              if marker not in text:
-                  raise SystemExit('Manifest export insertion point not found')
-              manifest.write_text(text.replace(marker, insertion, 1), encoding='utf-8')
+              export const RAPID_FIRE_SHIP_ID
+              ''',
+          )
 
-          # 2) Allow the live VFX runtime to receive images after startup.
-          vfx = Path('src/gameplay/rapidFire/spriteAnimation.ts')
+          vfx = Path("src/gameplay/rapidFire/spriteAnimation.ts")
           replace_once(
               vfx,
-              '''  get activeCount(): number {
-            return this.items.length;
-          }
+              '''
+                get activeCount(): number {
+                  return this.items.length;
+                }
 
-          spawn(''',
-              '''  get activeCount(): number {
-            return this.items.length;
-          }
+                spawn(
+              ''',
+              '''
+                get activeCount(): number {
+                  return this.items.length;
+                }
 
-          /** Merge animation images that finished loading after gameplay startup. */
-          addImages(images: Record<string, HTMLImageElement>): void {
-            Object.assign(this.images, images);
-          }
+                /** Merge animation images that finished loading after startup. */
+                addImages(images: Record<string, HTMLImageElement>): void {
+                  Object.assign(this.images, images);
+                }
 
-          spawn(''',
+                spawn(
+              ''',
           )
 
-          # 3) Register lazy-loaded images/textures and slice only newly available sheets.
-          renderer = Path('src/gameplay/rapidFire/pixiRenderer.ts')
+          renderer = Path("src/gameplay/rapidFire/pixiRenderer.ts")
           replace_once(
               renderer,
-              '''    for (const def of Object.values(ANIM)) {
-              const base = this.textures[def.imageKey];
-              if (!base) continue;''',
-              '''    for (const def of Object.values(ANIM)) {
-              if (this.frameTextures.has(def.imageKey)) continue;
-              const base = this.textures[def.imageKey];
-              if (!base) continue;''',
+              '''
+                  for (const def of Object.values(ANIM)) {
+                    const base = this.textures[def.imageKey];
+                    if (!base) continue;
+              ''',
+              '''
+                  for (const def of Object.values(ANIM)) {
+                    if (this.frameTextures.has(def.imageKey)) continue;
+                    const base = this.textures[def.imageKey];
+                    if (!base) continue;
+              ''',
           )
           replace_once(
               renderer,
-              '''  /**
-             * Radial vignette: transparent in the middle, dark at the edges. Focuses''',
-              '''  /** Register images that loaded after the initial Pixi scene was created. */
-            addImages(images: Record<string, HTMLImageElement>): void {
-              if (this.destroyed || !this.app) return;
-              for (const [key, image] of Object.entries(images)) {
-                if (this.textures[key]) continue;
-                this.textures[key] = Texture.from(image);
-              }
-              this.sliceSheets();
-            }
+              '''
+                /**
+                 * Radial vignette: transparent in the middle, dark at the edges. Focuses
+              ''',
+              '''
+                /** Register images that finished loading after the initial Pixi scene. */
+                addImages(images: Record<string, HTMLImageElement>): void {
+                  if (this.destroyed || !this.app) return;
+                  for (const [key, image] of Object.entries(images)) {
+                    if (this.textures[key]) continue;
+                    this.textures[key] = Texture.from(image);
+                  }
+                  this.sliceSheets();
+                }
 
-            /**
-             * Radial vignette: transparent in the middle, dark at the edges. Focuses''',
+                /**
+                 * Radial vignette: transparent in the middle, dark at the edges. Focuses
+              ''',
           )
 
-          # 4) Resume automatically after a browser visibility pause, lazy-load VFX,
-          #    and surface simulation errors instead of freezing silently.
-          engine = Path('src/gameplay/rapidFire/RapidFireEngine.ts')
+          engine = Path("src/gameplay/rapidFire/RapidFireEngine.ts")
           replace_once(
               engine,
               'import { RAPID_FIRE_SLICE_ASSETS } from "@/data/gameplayRapidFire";',
-              '''import {
-            RAPID_FIRE_OPTIONAL_ANIMATION_ASSETS,
-            RAPID_FIRE_SLICE_ASSETS,
-          } from "@/data/gameplayRapidFire";''',
+              '''
+              import {
+                RAPID_FIRE_OPTIONAL_ANIMATION_ASSETS,
+                RAPID_FIRE_SLICE_ASSETS,
+              } from "@/data/gameplayRapidFire";
+              ''',
           )
           replace_once(
               engine,
-              '''  private renderErrorLogged = false;
-            private lastRenderError: Error | null = null;
-            private ready = false;''',
-              '''  private renderErrorLogged = false;
-            private lastRenderError: Error | null = null;
-            private lastSimulationError: Error | null = null;
-            private ready = false;''',
+              '''
+                private renderErrorLogged = false;
+                private lastRenderError: Error | null = null;
+                private ready = false;
+              ''',
+              '''
+                private renderErrorLogged = false;
+                private lastRenderError: Error | null = null;
+                private lastSimulationError: Error | null = null;
+                private ready = false;
+              ''',
           )
           replace_once(
               engine,
-              '''  private paused = false;
-            private outcomeLocked:''',
-              '''  private paused = false;
-            private pausedByVisibility = false;
-            private outcomeLocked:''',
+              '''
+                private paused = false;
+                private outcomeLocked:
+              ''',
+              '''
+                private paused = false;
+                private pausedByVisibility = false;
+                private outcomeLocked:
+              ''',
           )
           replace_once(
               engine,
-              '''    this.visibilityHandler = () => {
-              if (document.hidden) this.setPaused(true);
-            };''',
-              '''    this.visibilityHandler = () => {
-              if (document.hidden) {
-                if (!this.paused && this.outcomeLocked === "none") {
-                  this.pausedByVisibility = true;
-                  this.paused = true;
+              '''
+                  this.visibilityHandler = () => {
+                    if (document.hidden) this.setPaused(true);
+                  };
+              ''',
+              '''
+                  this.visibilityHandler = () => {
+                    if (document.hidden) {
+                      if (!this.paused && this.outcomeLocked === "none") {
+                        this.pausedByVisibility = true;
+                        this.paused = true;
+                        this.emitHud(true);
+                      }
+                      return;
+                    }
+                    if (this.pausedByVisibility && this.outcomeLocked === "none") {
+                      this.pausedByVisibility = false;
+                      this.paused = false;
+                      this.lastTs = performance.now();
+                      this.emitHud(true);
+                    }
+                  };
+              ''',
+          )
+          replace_once(
+              engine,
+              '      renderError: this.lastRenderError?.message ?? null,',
+              '      renderError: this.lastSimulationError?.message ?? this.lastRenderError?.message ?? null,',
+          )
+          replace_once(
+              engine,
+              '''
+                  this.loop(this.lastTs);
                   this.emitHud(true);
                 }
-                return;
-              }
-              if (this.pausedByVisibility && this.outcomeLocked === "none") {
-                this.pausedByVisibility = false;
-                this.paused = false;
-                this.lastTs = performance.now();
-                this.emitHud(true);
-              }
-            };''',
-          )
-          replace_once(
-              engine,
-              '''      renderError: this.lastRenderError?.message ?? null,''',
-              '''      renderError: this.lastSimulationError?.message ?? this.lastRenderError?.message ?? null,''',
-          )
-          replace_once(
-              engine,
-              '''    this.loop(this.lastTs);
-              this.emitHud(true);
-            }
 
-            destroy(): void {''',
-              '''    this.loop(this.lastTs);
-              this.emitHud(true);
-              void this.loadOptionalAnimationAssets();
-            }
-
-            /** Load optional VFX sequentially after the stage is already playable. */
-            private async loadOptionalAnimationAssets(): Promise<void> {
-              for (const [key, src] of Object.entries(RAPID_FIRE_OPTIONAL_ANIMATION_ASSETS)) {
-                if (this.destroyed) return;
-                try {
-                  const image = await loadImage(src);
-                  if (this.destroyed) return;
-                  const loaded = { [key]: image };
-                  this.images[key] = image;
-                  this.vfx?.addImages(loaded);
-                  this.renderer?.addImages(loaded);
-                } catch (error) {
-                  console.warn(`[RapidFire] Optional animation failed to load: ${key}`, error);
+                destroy(): void {
+              ''',
+              '''
+                  this.loop(this.lastTs);
+                  this.emitHud(true);
+                  void this.loadOptionalAnimationAssets();
                 }
-              }
-            }
 
-            destroy(): void {''',
+                /** Load optional VFX sequentially after gameplay is already interactive. */
+                private async loadOptionalAnimationAssets(): Promise<void> {
+                  for (const [key, src] of Object.entries(RAPID_FIRE_OPTIONAL_ANIMATION_ASSETS)) {
+                    if (this.destroyed) return;
+                    try {
+                      const image = await loadImage(src);
+                      if (this.destroyed) return;
+                      const loaded: Record<string, HTMLImageElement> = { [key]: image };
+                      this.images[key] = image;
+                      this.vfx?.addImages(loaded);
+                      this.renderer?.addImages(loaded);
+                    } catch (error) {
+                      console.warn(`[RapidFire] Optional animation failed to load: ${key}`, error);
+                    }
+                  }
+                }
+
+                destroy(): void {
+              ''',
           )
           replace_once(
               engine,
-              '''    if (!this.paused && this.outcomeLocked === "none") {
-              this.update(dt);
-            }''',
-              '''    if (!this.paused && this.outcomeLocked === "none") {
-              try {
-                this.update(dt);
-                this.lastSimulationError = null;
-              } catch (error) {
-                this.lastSimulationError = error instanceof Error ? error : new Error(String(error));
-                console.error("[RapidFire] Simulation update failed:", error);
-                this.emitHud(true);
-              }
-            }''',
+              '''
+                  if (!this.paused && this.outcomeLocked === "none") {
+                    this.update(dt);
+                  }
+              ''',
+              '''
+                  if (!this.paused && this.outcomeLocked === "none") {
+                    try {
+                      this.update(dt);
+                      this.lastSimulationError = null;
+                    } catch (error) {
+                      const failure = error instanceof Error ? error : new Error(String(error));
+                      if (!this.lastSimulationError) {
+                        console.error("[RapidFire] Simulation update failed:", error);
+                      }
+                      this.lastSimulationError = failure;
+                      // Completion remains essential even if a presentation/audio update failed.
+                      try {
+                        this.checkVictory();
+                      } catch {
+                        // The production diagnostic below exposes the original failure.
+                      }
+                      this.emitHud(true);
+                    }
+                  }
+              ''',
           )
           replace_once(
               engine,
-              '''    // Animation time advances with (and only with) simulation time, so
-              // pausing the game freezes every effect.
-              this.vfx?.update(dt);
-              this.checkVictory();''',
-              '''    // Completion is essential and must run before optional animation work.
-              this.checkVictory();
-              // Animation time advances with (and only with) simulation time, so
-              // pausing the game freezes every effect.
-              this.vfx?.update(dt);''',
+              '''
+                  // Animation time advances with (and only with) simulation time, so
+                  // pausing the game freezes every effect.
+                  this.vfx?.update(dt);
+                  this.checkVictory();
+              ''',
+              '''
+                  // Completion is essential and runs before optional animation work.
+                  this.checkVictory();
+                  // Animation time advances with (and only with) simulation time, so
+                  // pausing the game freezes every effect.
+                  this.vfx?.update(dt);
+              ''',
           )
 
-          # 5) Show engine errors in production mobile builds rather than hiding them.
-          screen = Path('src/screens/gameplay/GameplayScreen.tsx')
+          screen = Path("src/screens/gameplay/GameplayScreen.tsx")
           replace_once(
               screen,
-              '''      {import.meta.env.DEV && hud?.renderError ? (''',
-              '''      {hud?.renderError ? (''',
+              '      {import.meta.env.DEV && hud?.renderError ? (',
+              '      {hud?.renderError ? (',
           )
           PY
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Typecheck and build
+      - name: Typecheck and production build
         run: npm run build
 
       - name: Commit verified source fix

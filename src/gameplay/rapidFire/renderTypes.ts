@@ -84,9 +84,9 @@ export interface Debris {
 }
 
 /**
- * Procedural destruction burst: a bright flash, an expanding shockwave ring,
- * and flying debris streaks, size-scaled by `scale`. Rendered by PixiRenderer
- * as additive glow (flash) + vector Graphics (ring/debris) — no image asset.
+ * Procedural destruction burst: a white-hot ignition, layered orange fireball
+ * and short ember trails, size-scaled by `scale`. Rendered by PixiRenderer as
+ * additive glow + reused vector Graphics — no per-frame display allocation.
  */
 export interface ExplosionFx {
   x: number;

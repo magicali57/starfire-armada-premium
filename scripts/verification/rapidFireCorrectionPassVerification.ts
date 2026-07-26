@@ -70,14 +70,19 @@ const gameCanvasSrc = fs.readFileSync(path.join(root, "src/gameplay/rapidFire/Ga
 }
 
 // ---------------------------------------------------------------------
-// 4) Enemy destruction is procedural (flash + shockwave + debris), not the
+// 4) Enemy destruction is procedural (ignition + fireball + embers), not the
 //    old spritesheet bursts, and is size-scaled by enemy tier.
 // ---------------------------------------------------------------------
 {
   check(!engineSrc.includes("ANIM.explosionSmall") && !engineSrc.includes("ANIM.explosionMedium"), "no spritesheet explosion VFX spawned");
   check(engineSrc.includes("spawnExplosion") && engineSrc.includes("ExplosionFx"), "procedural explosion system exists");
   check(engineSrc.includes('"small" : enemy.kind === "powerCarrier" ? "large" : "medium"'), "destruction tier scales with enemy kind (basic < shooter < carrier)");
-  check(rendererSrc.includes("syncExplosions") && rendererSrc.includes("shockwave"), "explosions are drawn each frame (flash + shockwave + debris) by the renderer");
+  check(
+    rendererSrc.includes("syncExplosions") &&
+      rendererSrc.includes("Layered filled fireball") &&
+      rendererSrc.includes("Short warm ember trails"),
+    "explosions are drawn each frame (ignition + filled fireball + embers) by the renderer",
+  );
 }
 
 // ---------------------------------------------------------------------

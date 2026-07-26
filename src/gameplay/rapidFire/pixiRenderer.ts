@@ -616,7 +616,7 @@ export class PixiRenderer {
       if (!tex) continue;
       const sway = Math.sin(s.elapsedMs / 620 + e.swayPhase) * 3;
       const bank =
-        clamp(e.vx * 0.006, -0.22, 0.22) + Math.sin(s.elapsedMs / 900 + e.swayPhase) * 0.05;
+        clamp(e.vx * 0.012, -0.28, 0.28) + Math.sin(s.elapsedMs / 900 + e.swayPhase) * 0.04;
       const recoil = e.recoilMs > 0 ? -(e.recoilMs / 130) * 3 : 0;
       const side = e.h;
 
@@ -767,43 +767,89 @@ export class PixiRenderer {
     fx.clear();
     for (const ex of s.explosions) {
       const t = clamp(ex.ageMs / ex.durationMs, 0, 1);
-      const flashT = clamp(ex.ageMs / (ex.durationMs * 0.25), 0, 1);
-      const baseR = 10 * ex.scale;
+      const flashT = clamp(ex.ageMs / Math.min(85, ex.durationMs * 0.22), 0, 1);
+      const fireT = clamp(ex.ageMs / (ex.durationMs * 0.68), 0, 1);
+      const baseR = 12 * ex.scale;
 
-      // Hot additive core (blooms via the glow layer's blur).
+      // Short white-hot ignition. The soft additive sprite supplies bloom,
+      // while eight sharp spokes reproduce the readable star flash seen at
+      // the start of each reference-video kill.
       if (flashT < 1) {
         const flashA = 1 - flashT;
-        const flashR = baseR * (0.6 + flashT * 1.4);
+        const flashR = baseR * (0.7 + flashT * 1.6);
         const core = corePool.next();
         core.position.set(ex.x, ex.y);
-        core.width = flashR * 4;
-        core.height = flashR * 4;
-        core.tint = ex.color;
-        core.alpha = flashA;
+        core.width = flashR * 4.4;
+        core.height = flashR * 4.4;
+        core.tint = 0xfff2c2;
+        core.alpha = flashA * 0.95;
+
+        for (let i = 0; i < 8; i += 1) {
+          const angle = (i / 8) * Math.PI * 2;
+          const inner = flashR * 0.25;
+          const outer = flashR * (i % 2 === 0 ? 1.75 : 1.15);
+          fx.moveTo(ex.x + Math.cos(angle) * inner, ex.y + Math.sin(angle) * inner)
+            .lineTo(ex.x + Math.cos(angle) * outer, ex.y + Math.sin(angle) * outer)
+            .stroke({
+              width: Math.max(1, 2.1 * ex.scale * flashA),
+              color: i % 2 === 0 ? 0xfff7dc : 0xffbd55,
+              alpha: flashA * 0.9,
+            });
+        }
       }
 
-      // Expanding shockwave ring (vector).
-      const ringR = baseR * (1 + t * 5);
-      const ringA = (1 - t) * 0.8;
-      if (ringA > 0.01) {
-        fx.circle(ex.x, ex.y, ringR).stroke({
-          width: Math.max(1, baseR * 0.35 * (1 - t * 0.6)),
+      // Layered filled fireball. The dominant silhouette is a compact orange
+      // bloom rather than the previous hollow ring.
+      if (fireT < 1) {
+        const grow = 1 - Math.pow(1 - fireT, 3);
+        const fade = Math.pow(1 - fireT, 1.45);
+        const outerR = baseR * (0.6 + grow * 2.55);
+        const innerR = outerR * (0.62 - fireT * 0.12);
+        const coreR = Math.max(1, outerR * (0.3 - fireT * 0.08));
+
+        fx.circle(ex.x, ex.y, outerR).fill({
           color: ex.color,
-          alpha: ringA,
+          alpha: fade * 0.72,
+        });
+        fx.circle(ex.x, ex.y, innerR).fill({
+          color: 0xffb12e,
+          alpha: fade * 0.88,
+        });
+        fx.circle(ex.x, ex.y, coreR).fill({
+          color: 0xffffcf,
+          alpha: fade * 0.95,
         });
       }
 
-      // Debris streaks.
-      const debrisA = 1 - t;
+      // The reference has a faint pressure halo, but it never dominates the
+      // fireball. Keep this thin and late instead of the old bright ring.
+      const haloT = clamp((t - 0.12) / 0.88, 0, 1);
+      const haloA = (1 - haloT) * 0.22;
+      if (t >= 0.12 && haloA > 0.01) {
+        fx.circle(ex.x, ex.y, baseR * (1.8 + haloT * 3.2)).stroke({
+          width: Math.max(1, 1.4 * ex.scale * (1 - haloT * 0.5)),
+          color: 0xffb14a,
+          alpha: haloA,
+        });
+      }
+
+      // Short warm ember trails and glowing particle heads.
+      const debrisA = Math.pow(1 - t, 1.35);
       if (debrisA > 0.01) {
-        for (const d of ex.debris) {
+        for (let i = 0; i < ex.debris.length; i += 1) {
+          const d = ex.debris[i];
           const dx = ex.x + Math.cos(d.angle) * d.dist;
           const dy = ex.y + Math.sin(d.angle) * d.dist;
           const tx = ex.x + Math.cos(d.angle) * (d.dist - d.len);
           const ty = ex.y + Math.sin(d.angle) * (d.dist - d.len);
+          const emberColor = i % 3 === 0 ? 0xffffbd : i % 2 === 0 ? 0xffd35b : 0xff7a24;
           fx.moveTo(tx, ty).lineTo(dx, dy).stroke({
-            width: Math.max(1, 1.5 * ex.scale),
-            color: 0xffebc8,
+            width: Math.max(1, 1.15 * ex.scale),
+            color: emberColor,
+            alpha: debrisA * 0.9,
+          });
+          fx.circle(dx, dy, Math.max(0.8, 1.3 * ex.scale * (1 - t))).fill({
+            color: emberColor,
             alpha: debrisA,
           });
         }

@@ -86,14 +86,14 @@ function cubicAt(a: number, b: number, c: number, d: number, t: number): number 
 // Grid-block formation timing. A group streams in (one member every
 // GRID_STAGGER_MS), each taking GRID_ENTRY_MS to fly its curve into slot; the
 // block then holds together, and finally exits as a unit. Total on-stage time
-// for a 25-strong group is roughly 4.2s in + 11s hold + 1.5s out ≈ 17s — but
+// for a 25-strong group is roughly 2.9s in + 11s hold + 1.5s out ≈ 15.4s — but
 // the phase ends as soon as the player clears it, so good play is faster.
 // ---------------------------------------------------------------------------
-const GRID_STAGGER_MS = 110;
-const GRID_ENTRY_MS = 1500;
+const GRID_STAGGER_MS = 72;
+const GRID_ENTRY_MS = 1150;
 const GRID_HOLD_MS = 11000;
 const GRID_EXIT_MS = 1500;
-const GRID_DIVE_MS = 2000;
+const GRID_DIVE_MS = 1800;
 
 /** Columns/rows for a block of `slotCount`, capped at 7 wide like the reference. */
 function gridDims(slotCount: number): { cols: number; rows: number } {
@@ -128,51 +128,80 @@ function gridPose(
 ): FormationPose {
   const { cols } = gridDims(slotCount);
   const col = slot % cols;
+  const row = Math.floor(slot / cols);
   const target = gridSlotPos(slot, slotCount);
   const fromLeft = style === "sides" ? slot % 2 === 0 : col < cols / 2;
-
-  // The whole block breathes together — this is what reads as "a formation"
-  // rather than a set of independently floating ships.
-  const driftX = Math.sin(tMs / 2600) * 0.055;
-  const driftY = Math.sin(tMs / 3700) * 0.012;
 
   const stagger = slot * GRID_STAGGER_MS;
   const local = tMs - stagger;
   const allInMs = (slotCount - 1) * GRID_STAGGER_MS + GRID_ENTRY_MS;
+  const groupT = Math.max(0, tMs - allInMs);
+
+  // Keep the rows rigid while the squadron follows one clearly readable
+  // path, with a small opposing row shift to avoid a pasted-on feel.
+  const driftX = Math.sin(groupT / 1250) * 0.055 + Math.sin(groupT / 3100) * 0.015;
+  const driftY = Math.sin(groupT / 1850) * 0.018;
+  const rowShift = Math.sin(groupT / 900 + row * Math.PI) * 0.012;
+  const driftBank = Math.cos(groupT / 1250) * 0.34;
 
   // Waiting its turn in the stream: parked off the top edge.
   if (local < 0) {
     return { xNorm: 0.5, yNorm: -0.25, phase: "entering", canFire: false, bank: 0 };
   }
 
-  // Curved entry into the assigned slot.
+  // Stream into a tight staging column/wing, then visibly unfold into the
+  // assigned grid slot. This two-beat entrance mirrors the reference better
+  // than sending every ship directly to its final coordinate.
   if (local < GRID_ENTRY_MS) {
     const t = easeInOut(local / GRID_ENTRY_MS);
-    let x0: number, y0: number, x1: number, y1: number, x2: number, y2: number;
-    if (style === "sides") {
-      x0 = fromLeft ? -0.25 : 1.25;
-      y0 = 0.08;
-      x1 = fromLeft ? 0.18 : 0.82;
-      y1 = 0.44;
-      x2 = 0.5;
-      y2 = 0.3;
-    } else if (style === "loop") {
-      // Enters from a top corner, sweeps across, then curls back into slot.
-      x0 = fromLeft ? -0.2 : 1.2;
-      y0 = -0.1;
-      x1 = fromLeft ? 0.9 : 0.1;
-      y1 = 0.2;
-      x2 = fromLeft ? 0.12 : 0.88;
-      y2 = 0.42;
-    } else {
-      // Pours from the top centre and fans outward to its column.
-      x0 = 0.5;
-      y0 = -0.2;
-      x1 = target.x + (target.x - 0.5) * 1.7;
-      y1 = 0.04;
-      x2 = target.x + (target.x - 0.5) * 0.6;
-      y2 = 0.36;
+    const split = 0.54;
+    const spineLane = (slot % 3) - 1;
+    const spineX =
+      style === "sides"
+        ? fromLeft
+          ? 0.28
+          : 0.72
+        : 0.5 + spineLane * 0.026;
+    const spineY = 0.065 + (slot % 9) * 0.033;
+
+    if (style !== "loop") {
+      if (t < split) {
+        const gatherT = easeInOut(t / split);
+        const startX = style === "sides" ? (fromLeft ? -0.2 : 1.2) : 0.5;
+        return {
+          xNorm: lerp(startX, spineX, gatherT),
+          yNorm: lerp(-0.2, spineY, gatherT),
+          phase: "entering",
+          canFire: false,
+          bank: fromLeft ? 0.5 : -0.5,
+        };
+      }
+
+      const unfoldT = easeInOut((t - split) / (1 - split));
+      const side = target.x < spineX ? -1 : 1;
+      return {
+        xNorm: cubicAt(
+          spineX,
+          spineX + side * 0.12,
+          target.x - side * 0.05,
+          target.x,
+          unfoldT,
+        ),
+        yNorm: cubicAt(spineY, spineY + 0.055, target.y - 0.025, target.y, unfoldT),
+        phase: "forming",
+        canFire: false,
+        bank: side * (1 - unfoldT) * 0.65,
+      };
     }
+
+    let x0: number, y0: number, x1: number, y1: number, x2: number, y2: number;
+    // Loop groups keep one broad arc before curling into the same rigid block.
+    x0 = fromLeft ? -0.2 : 1.2;
+    y0 = -0.1;
+    x1 = fromLeft ? 0.9 : 0.1;
+    y1 = 0.2;
+    x2 = fromLeft ? 0.12 : 0.88;
+    y2 = 0.42;
     const x = cubicAt(x0, x1, x2, target.x + driftX, t);
     const y = cubicAt(y0, y1, y2, target.y + driftY, t);
     return {
@@ -186,8 +215,11 @@ function gridPose(
 
   const holdEnd = allInMs + GRID_HOLD_MS;
   if (tMs < holdEnd) {
-    const sway = Math.sin(tMs / 700 + slot) * 0.006;
-    const baseX = target.x + driftX + sway;
+    const localSway = Math.sin(groupT / 520 + slot * 0.8) * 0.004;
+    const baseX = Math.max(
+      0.07,
+      Math.min(0.93, target.x + driftX + rowShift + localSway),
+    );
     const baseY = target.y + driftY;
 
     // Dive-out: only part of the block ever dives, and departures are spread
@@ -196,19 +228,26 @@ function gridPose(
     // Selection and scheduling are derived from separate bits of a hash so
     // they don't correlate and collapse into a few synchronized buckets.
     const h = (slot * 2654435761) >>> 0;
-    const divesAtAll = h % 100 < 30;
-    const diveAt = allInMs + 1500 + ((h >>> 7) % 12) * 1100;
+    const divesAtAll = h % 100 < 44;
+    const diveAt = allInMs + 1200 + ((h >>> 7) % 7) * 1250;
     if (divesAtAll && tMs >= diveAt && tMs < diveAt + GRID_DIVE_MS) {
       const dt = (tMs - diveAt) / GRID_DIVE_MS;
       // Always swoop toward the centre, never outward: an outer-column ship
       // curving away would fly off the side of the playfield mid-dive.
       const side = baseX > 0.5 ? -1 : 1;
-      const x = cubicAt(baseX, baseX + side * 0.3, baseX + side * 0.2, baseX, dt);
-      const y = cubicAt(baseY, baseY + 0.44, baseY + 0.52, baseY, dt);
-      return { xNorm: x, yNorm: y, phase: "attacking", canFire: true, bank: side * 0.5 };
+      const x = cubicAt(baseX, baseX + side * 0.32, baseX + side * 0.2, baseX, dt);
+      const y = cubicAt(baseY, baseY + 0.5, baseY + 0.58, baseY, dt);
+      const diveBank = side * Math.sin(dt * Math.PI) * 0.85;
+      return { xNorm: x, yNorm: y, phase: "attacking", canFire: true, bank: diveBank };
     }
 
-    return { xNorm: baseX, yNorm: baseY, phase: "holding", canFire: true, bank: driftX * 3 };
+    return {
+      xNorm: baseX,
+      yNorm: baseY,
+      phase: "holding",
+      canFire: true,
+      bank: driftBank,
+    };
   }
 
   // The block leaves together.

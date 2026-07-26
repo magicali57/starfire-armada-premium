@@ -986,22 +986,21 @@ export class RapidFireEngine {
   }
 
   /**
-   * Procedural destruction burst — replaces the old spritesheet explosion
-   * VFX (mobile playtest correction: the sprite-based bursts read as fake).
-   * A hot flash, an expanding shockwave ring, and flying debris streaks,
-   * scaled by enemy tier so Power Carriers feel like a real kill and basic
-   * fighters stay light.
+   * Compact reference-style destruction burst: a white-hot ignition, layered
+   * orange fireball and short-lived embers. It remains procedural so the
+   * effect blends with every enemy asset without reintroducing the oversized,
+   * jagged spritesheet explosions rejected during the mobile correction pass.
    */
   private spawnExplosion(x: number, y: number, tier: "small" | "medium" | "large"): void {
     const scale = tier === "small" ? 0.7 : tier === "medium" ? 1 : 1.5;
-    const durationMs = tier === "small" ? 380 : tier === "medium" ? 480 : 620;
-    const debrisCount = tier === "small" ? 6 : tier === "medium" ? 9 : 13;
-    const color = tier === "large" ? 0xff963c : tier === "medium" ? 0xffaa46 : 0xffc86e;
+    const durationMs = tier === "small" ? 360 : tier === "medium" ? 480 : 640;
+    const debrisCount = tier === "small" ? 10 : tier === "medium" ? 16 : 24;
+    const color = tier === "large" ? 0xff6b22 : tier === "medium" ? 0xff7f28 : 0xff9a32;
     const debris: Debris[] = Array.from({ length: debrisCount }, () => ({
       angle: Math.random() * Math.PI * 2,
       dist: 0,
-      speed: (0.4 + Math.random() * 0.6) * (18 + scale * 10),
-      len: 3 + Math.random() * 5 * scale,
+      speed: (0.45 + Math.random() * 0.55) * (24 + scale * 14),
+      len: 2 + Math.random() * 3.5 * scale,
     }));
     if (this.explosions.length >= MAX_EXPLOSIONS) this.explosions.shift();
     this.explosions.push({ x, y, ageMs: 0, durationMs, scale, color, debris });

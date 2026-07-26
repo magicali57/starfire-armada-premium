@@ -87,6 +87,38 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
     const pose = computeFormationPose(type, 0, 4, 0);
     check(pose.yNorm < 0.5, `${type} starts in the upper playfield`);
   }
+
+  // Reference-readable grid choreography: a wide rigid block, visible shared
+  // travel during the hold, and at least one curved breakaway attack.
+  const heldGrid = Array.from({ length: 20 }, (_, slot) =>
+    computeFormationPose("gridStreamTop", slot, 20, 3000),
+  );
+  const heldXs = heldGrid.map((pose) => pose.xNorm);
+  check(
+    Math.max(...heldXs) - Math.min(...heldXs) > 0.65,
+    "grid stream unfolds from its staging column into a wide formation",
+  );
+  check(
+    heldGrid.every((pose) => pose.phase === "holding" && pose.canFire),
+    "the completed grid holds and attacks as one readable block",
+  );
+
+  const driftStart = computeFormationPose("gridStreamTop", 1, 20, 4000);
+  const driftLater = computeFormationPose("gridStreamTop", 1, 20, 7000);
+  check(
+    Math.abs(driftStart.xNorm - driftLater.xNorm) > 0.06,
+    "the held grid has clearly visible shared lateral travel",
+  );
+
+  let breakawaySeen = false;
+  for (let slot = 0; slot < 20; slot += 1) {
+    for (let t = 3500; t <= 11000; t += 250) {
+      if (computeFormationPose("gridStreamTop", slot, 20, t).phase === "attacking") {
+        breakawaySeen = true;
+      }
+    }
+  }
+  check(breakawaySeen, "the held grid schedules visible curved breakaway attacks");
 }
 
 // ---------------------------------------------------------------------

@@ -12,6 +12,11 @@ import { usePlayerStore } from "@/store/playerStore";
 import { navigate, pathFor } from "@/app/routes";
 import "./GameplayScreen.css";
 
+interface PendingOutcome {
+  outcome: "victory" | "defeat";
+  performance: BattlePerformance;
+}
+
 /**
  * Rapid-Fire vertical-slice gameplay shell.
  * React owns session validation, HUD presentation, pause commands, and
@@ -33,6 +38,8 @@ export function GameplayScreen() {
   const [hud, setHud] = useState<EngineHudSnapshot | null>(null);
   const [pausedUi, setPausedUi] = useState(false);
   const [audioPrefs, setAudioPrefsState] = useState<AudioPrefs>(() => loadAudioPrefs());
+  const [pendingOutcome, setPendingOutcome] = useState<PendingOutcome | null>(null);
+  const [outcomeHandoffError, setOutcomeHandoffError] = useState<string | null>(null);
   const outcomeSent = useRef(false);
   const engineRef = useRef<RapidFireEngine | null>(null);
 
@@ -54,30 +61,27 @@ export function GameplayScreen() {
     outcomeSent.current = false;
     setPausedUi(false);
     setHud(null);
+    setPendingOutcome(null);
+    setOutcomeHandoffError(null);
   }, [battleSession?.sessionId]);
 
   const hasActiveSession =
     battleSession?.status === "active" || battleSession?.status === "paused";
+  const hasGameplaySession = Boolean(
+    battleSession &&
+      ["active", "paused", "victory", "defeat", "completing", "completed", "results"].includes(
+        battleSession.status,
+      ),
+  );
   const shipId = battleSession?.shipId;
   const isRapidFire = shipId === RAPID_FIRE_SHIP_ID;
 
   useEffect(() => {
-    if (hasActiveSession) return;
-    const status = battleSession?.status;
-    if (
-      status === "paused" ||
-      status === "victory" ||
-      status === "defeat" ||
-      status === "completing" ||
-      status === "completed" ||
-      status === "results"
-    ) {
-      return;
-    }
+    if (hasGameplaySession) return;
     if (battleSession) resetBattle();
     navigate("campaign");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasActiveSession, battleSession?.sessionId, battleSession?.status]);
+  }, [hasGameplaySession, battleSession?.sessionId, battleSession?.status]);
 
   // First slice supports Rapid-Fire only — do not silently remap other ships.
   // Clear the invalid session (no extra Energy charge) and return to Pre-Battle
@@ -103,24 +107,91 @@ export function GameplayScreen() {
   const stats =
     ship && progress ? calculateShipStatsWithRank(ship, progress.level, progress.stars) : null;
 
+  /**
+   * Advance the canonical battle pipeline from whichever durable status the
+   * store currently holds. This makes the handoff resumable: if one transition
+   * succeeds but a later one is interrupted, the fallback button continues
+   * from victory/defeat or completed instead of trying to declare twice.
+   */
+  const advanceOutcomeToResults = useCallback(
+    (outcome: "victory" | "defeat", performance: BattlePerformance) => {
+      let session = battleSession;
+      if (!session) throw new Error("The battle session is missing.");
+
+      if (session.status === "active" || session.status === "paused") {
+        const declared =
+          outcome === "victory"
+            ? declareBattleVictory(performance)
+            : declareBattleDefeat(performance);
+        if (!declared.ok || !declared.session) {
+          throw new Error(`Could not declare ${outcome}: ${declared.error ?? "unknown error"}.`);
+        }
+        session = declared.session;
+      }
+
+      if (session.status === "victory" || session.status === "defeat") {
+        const completed = completeBattle(session.sessionId);
+        if (!completed.ok || !completed.session) {
+          throw new Error(`Could not complete battle: ${completed.error ?? "unknown error"}.`);
+        }
+        session = completed.session;
+      }
+
+      if (session.status === "completed") {
+        const entered = enterBattleResults(session.sessionId);
+        if (!entered.ok || !entered.session) {
+          throw new Error(`Could not enter results: ${entered.error ?? "unknown error"}.`);
+        }
+        session = entered.session;
+      }
+
+      if (session.status !== "results") {
+        throw new Error(`Unexpected battle status: ${session.status}.`);
+      }
+
+      navigate("results");
+    },
+    [
+      battleSession,
+      completeBattle,
+      declareBattleDefeat,
+      declareBattleVictory,
+      enterBattleResults,
+    ],
+  );
+
   const finish = useCallback(
     (outcome: "victory" | "defeat", performance: BattlePerformance) => {
       if (outcomeSent.current) return;
       outcomeSent.current = true;
-      const declared =
-        outcome === "victory"
-          ? declareBattleVictory(performance)
-          : declareBattleDefeat(performance);
-      if (declared.ok && declared.session) {
-        const completed = completeBattle(declared.session.sessionId);
-        if (completed.ok && completed.session) {
-          enterBattleResults(completed.session.sessionId);
-        }
+      setPendingOutcome({ outcome, performance });
+      setOutcomeHandoffError(null);
+
+      try {
+        advanceOutcomeToResults(outcome, performance);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error("[RapidFire] Outcome handoff failed:", error);
+        outcomeSent.current = false;
+        setOutcomeHandoffError(message);
       }
-      navigate("results");
     },
-    [completeBattle, declareBattleDefeat, declareBattleVictory, enterBattleResults],
+    [advanceOutcomeToResults],
   );
+
+  const retryOutcomeHandoff = () => {
+    if (!pendingOutcome || outcomeSent.current) return;
+    outcomeSent.current = true;
+    setOutcomeHandoffError(null);
+    try {
+      advanceOutcomeToResults(pendingOutcome.outcome, pendingOutcome.performance);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("[RapidFire] Outcome handoff retry failed:", error);
+      outcomeSent.current = false;
+      setOutcomeHandoffError(message);
+    }
+  };
 
   const handlePause = () => {
     if (!hasActiveSession || outcomeSent.current) return;
@@ -156,7 +227,7 @@ export function GameplayScreen() {
     finish(outcome, performance);
   };
 
-  if (!hasActiveSession || !isRapidFire || !ship || !stage || !stats) return null;
+  if (!hasGameplaySession || !isRapidFire || !ship || !stage || !stats) return null;
 
   const hullPct = hud && hud.hullMax > 0 ? Math.max(0, Math.min(100, (hud.hull / hud.hullMax) * 100)) : 100;
   const fp = hud?.firepower ?? 0;
@@ -306,6 +377,35 @@ export function GameplayScreen() {
               Return to Campaign
             </button>
             <small>Abandoning grants no rewards.</small>
+          </div>
+        </div>
+      ) : null}
+
+      {outcomeHandoffError && pendingOutcome ? (
+        <div
+          className="gameplay-pause"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Battle complete"
+        >
+          <div className="gameplay-pause__panel">
+            <h2>{pendingOutcome.outcome === "victory" ? "Stage Cleared" : "Battle Ended"}</h2>
+            <p>The results transition was interrupted. Your battle result is still available.</p>
+            <button
+              type="button"
+              className="gameplay-pause__resume press-scale"
+              onClick={retryOutcomeHandoff}
+            >
+              Continue to Results
+            </button>
+            <button
+              type="button"
+              className="gameplay-pause__abandon press-scale"
+              onClick={handleAbandon}
+            >
+              Return to Campaign
+            </button>
+            <small>{outcomeHandoffError}</small>
           </div>
         </div>
       ) : null}

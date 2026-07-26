@@ -4,11 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/applyEnemyBasicIdleTest.mjs && vite",
-    "build": "node scripts/applyEnemyBasicIdleTest.mjs && tsc -b && vite build",
+    "dev": "node scripts/applyEnemyBasicIdleTest.mjs && node scripts/fixEnemyBasicIdleFrameSize.mjs && vite",
+    "build": "node scripts/applyEnemyBasicIdleTest.mjs && node scripts/fixEnemyBasicIdleFrameSize.mjs && tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "node scripts/applyEnemyBasicIdleTest.mjs && tsc -b --noEmit",
-    "lint": "node scripts/applyEnemyBasicIdleTest.mjs && tsc -b --noEmit"
+    "typecheck": "node scripts/applyEnemyBasicIdleTest.mjs && node scripts/fixEnemyBasicIdleFrameSize.mjs && tsc -b --noEmit",
+    "lint": "node scripts/applyEnemyBasicIdleTest.mjs && node scripts/fixEnemyBasicIdleFrameSize.mjs && tsc -b --noEmit"
   },
   "dependencies": {
     "pixi.js": "^8.19.0",

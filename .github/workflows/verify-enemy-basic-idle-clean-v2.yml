@@ -1,0 +1,72 @@
+name: Verify Clean Enemy Idle Frames
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out clean test branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify eight independent PNG frames
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import struct
+
+          root = Path(
+              "public/assets/ui-v2/gameplay/rapid-fire-premium/animations/"
+              "enemy_basic_idle_frames"
+          )
+          files = sorted(root.glob("enemy_basic_idle_*.png"))
+          if len(files) != 8:
+              raise SystemExit(f"Expected 8 PNG frames, found {len(files)}")
+
+          for path in files:
+              data = path.read_bytes()
+              if data[:8] != b"\x89PNG\r\n\x1a\n":
+                  raise SystemExit(f"{path.name}: invalid PNG signature")
+              width, height, bit_depth, color_type = struct.unpack(
+                  ">IIBB", data[16:26]
+              )
+              if (width, height) != (128, 128):
+                  raise SystemExit(
+                      f"{path.name}: expected 128x128, got {width}x{height}"
+                  )
+              if bit_depth != 8 or color_type not in {4, 6}:
+                  raise SystemExit(
+                      f"{path.name}: expected 8-bit alpha PNG, "
+                      f"got bit depth {bit_depth}, color type {color_type}"
+                  )
+              print(
+                  f"{path.name}: {width}x{height}, "
+                  f"bit depth {bit_depth}, color type {color_type}"
+              )
+          PY
+
+      - name: Type-check renderer integration
+        run: npm run typecheck
+
+      - name: Build test game
+        run: npm run build

@@ -4,11 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "node scripts/applyEnemyBasicIdleCleanV2.mjs && vite",
+    "build": "node scripts/applyEnemyBasicIdleCleanV2.mjs && tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit",
-    "lint": "tsc -b --noEmit"
+    "typecheck": "node scripts/applyEnemyBasicIdleCleanV2.mjs && tsc -b --noEmit",
+    "lint": "node scripts/applyEnemyBasicIdleCleanV2.mjs && tsc -b --noEmit"
   },
   "dependencies": {
     "pixi.js": "^8.19.0",

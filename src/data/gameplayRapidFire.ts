@@ -5,13 +5,20 @@ import {
 } from "@/data/assetRegistry";
 
 /**
- * Focused manifest for the Rapid-Fire combat slice.
- *
- * Critical gameplay art loads before the engine starts. Only the animation
- * sheets still used by the corrected presentation are exposed separately and
- * loaded sequentially after gameplay is already interactive, so a slow mobile
- * decode can never block the stage canvas.
+ * Only the five animation sheets still used by the corrected combat design.
+ * Unused thruster, player-damage, muzzle, and sheet-explosion assets remain
+ * outside the startup manifest so mobile loading stays much smaller than the
+ * original all-sheets preload.
  */
+export const RAPID_FIRE_OPTIONAL_ANIMATION_ASSETS = {
+  animImpactRing: RAPID_FIRE_PREMIUM_ANIMATION_SHEETS.animImpactRing,
+  animEnemyHitSpark: RAPID_FIRE_PREMIUM_ANIMATION_SHEETS.animEnemyHitSpark,
+  animEnemyMuzzle: RAPID_FIRE_PREMIUM_ANIMATION_SHEETS.animEnemyMuzzle,
+  animPickupBurst: RAPID_FIRE_PREMIUM_ANIMATION_SHEETS.animPickupBurst,
+  animMaxFpBurst: RAPID_FIRE_PREMIUM_ANIMATION_SHEETS.animMaxFpBurst,
+} as const;
+
+/** Focused manifest for the Rapid-Fire combat slice. */
 export const RAPID_FIRE_SLICE_ASSETS = {
   background: CHAPTER_BACKGROUND_IMAGE["chapter-01"],
   // Ship + presentation
@@ -31,15 +38,8 @@ export const RAPID_FIRE_SLICE_ASSETS = {
   // Pickups
   fireUpPickup: RAPID_FIRE_PREMIUM_ASSETS.fireUpPickup,
   pickupMagnetGlow: RAPID_FIRE_PREMIUM_ASSETS.pickupMagnetGlow,
-} as const;
-
-/** Animations still used by the live gameplay correction pass. */
-export const RAPID_FIRE_OPTIONAL_ANIMATION_ASSETS = {
-  animImpactRing: RAPID_FIRE_PREMIUM_ANIMATION_SHEETS.animImpactRing,
-  animEnemyHitSpark: RAPID_FIRE_PREMIUM_ANIMATION_SHEETS.animEnemyHitSpark,
-  animEnemyMuzzle: RAPID_FIRE_PREMIUM_ANIMATION_SHEETS.animEnemyMuzzle,
-  animPickupBurst: RAPID_FIRE_PREMIUM_ANIMATION_SHEETS.animPickupBurst,
-  animMaxFpBurst: RAPID_FIRE_PREMIUM_ANIMATION_SHEETS.animMaxFpBurst,
+  // Active animated effects only
+  ...RAPID_FIRE_OPTIONAL_ANIMATION_ASSETS,
 } as const;
 
 export const RAPID_FIRE_SHIP_ID = "ship-01-rapid-fire" as const;

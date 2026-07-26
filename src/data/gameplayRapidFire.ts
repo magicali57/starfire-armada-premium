@@ -1,14 +1,18 @@
 import {
   CHAPTER_BACKGROUND_IMAGE,
   RAPID_FIRE_PREMIUM_ASSETS,
-  RAPID_FIRE_PREMIUM_ANIMATION_SHEETS,
 } from "@/data/assetRegistry";
 
 /**
- * Focused manifest for the Rapid-Fire ch1-stage-1 combat slice.
- * Premium pass (2026-07-23): combat art comes from the rapid-fire-premium
- * pack; the old placeholder combat assets and the roster gameplay sprite are
- * no longer used in combat.
+ * Focused manifest for the Rapid-Fire combat slice.
+ *
+ * Mobile deployment note: only critical gameplay art is loaded before the
+ * engine starts. The large optional animation-sheet pack is intentionally not
+ * part of this blocking manifest; VfxSystem and PixiRenderer already treat
+ * absent animation sheets as optional and safely skip those effects. This
+ * prevents a slow/failed sheet decode on a fresh mobile cache from leaving the
+ * HUD visible over an empty black playfield. Animated VFX should be restored
+ * later through a non-blocking/lazy loader rather than the startup Promise.all.
  */
 export const RAPID_FIRE_SLICE_ASSETS = {
   background: CHAPTER_BACKGROUND_IMAGE["chapter-01"],
@@ -29,8 +33,6 @@ export const RAPID_FIRE_SLICE_ASSETS = {
   // Pickups
   fireUpPickup: RAPID_FIRE_PREMIUM_ASSETS.fireUpPickup,
   pickupMagnetGlow: RAPID_FIRE_PREMIUM_ASSETS.pickupMagnetGlow,
-  // Animation spritesheets (runtime PNGs; GIF previews are never loaded)
-  ...RAPID_FIRE_PREMIUM_ANIMATION_SHEETS,
 } as const;
 
 export const RAPID_FIRE_SHIP_ID = "ship-01-rapid-fire" as const;

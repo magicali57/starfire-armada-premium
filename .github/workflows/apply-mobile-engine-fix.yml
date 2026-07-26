@@ -1,0 +1,264 @@
+name: Apply mobile engine fix
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    if: github.event.head_commit.message == 'Apply mobile engine fix'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Patch engine, renderer, and VFX runtime
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from textwrap import dedent
+
+          def clean(value: str) -> str:
+              return dedent(value).strip("\n")
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text(encoding="utf-8")
+              old, new = clean(old), clean(new)
+              if new in text:
+                  return
+              if old not in text:
+                  raise SystemExit(f"Patch target not found in {path}:\n{old[:400]}")
+              file.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          replace_once(
+              "src/gameplay/rapidFire/spriteAnimation.ts",
+              '''
+                get activeCount(): number {
+                  return this.items.length;
+                }
+
+                spawn(
+              ''',
+              '''
+                get activeCount(): number {
+                  return this.items.length;
+                }
+
+                /** Merge animation images that finished loading after startup. */
+                addImages(images: Record<string, HTMLImageElement>): void {
+                  Object.assign(this.images, images);
+                }
+
+                spawn(
+              ''',
+          )
+
+          replace_once(
+              "src/gameplay/rapidFire/pixiRenderer.ts",
+              '''
+                  for (const def of Object.values(ANIM)) {
+                    const base = this.textures[def.imageKey];
+                    if (!base) continue;
+              ''',
+              '''
+                  for (const def of Object.values(ANIM)) {
+                    if (this.frameTextures.has(def.imageKey)) continue;
+                    const base = this.textures[def.imageKey];
+                    if (!base) continue;
+              ''',
+          )
+          replace_once(
+              "src/gameplay/rapidFire/pixiRenderer.ts",
+              '''
+                /**
+                 * Radial vignette: transparent in the middle, dark at the edges. Focuses
+              ''',
+              '''
+                /** Register images that finished loading after the initial Pixi scene. */
+                addImages(images: Record<string, HTMLImageElement>): void {
+                  if (this.destroyed || !this.app) return;
+                  for (const [key, image] of Object.entries(images)) {
+                    if (this.textures[key]) continue;
+                    this.textures[key] = Texture.from(image);
+                  }
+                  this.sliceSheets();
+                }
+
+                /**
+                 * Radial vignette: transparent in the middle, dark at the edges. Focuses
+              ''',
+          )
+
+          replace_once(
+              "src/gameplay/rapidFire/RapidFireEngine.ts",
+              'import { RAPID_FIRE_SLICE_ASSETS } from "@/data/gameplayRapidFire";',
+              '''
+              import {
+                RAPID_FIRE_OPTIONAL_ANIMATION_ASSETS,
+                RAPID_FIRE_SLICE_ASSETS,
+              } from "@/data/gameplayRapidFire";
+              ''',
+          )
+          replace_once(
+              "src/gameplay/rapidFire/RapidFireEngine.ts",
+              '''
+                private renderErrorLogged = false;
+                private lastRenderError: Error | null = null;
+                private ready = false;
+              ''',
+              '''
+                private renderErrorLogged = false;
+                private lastRenderError: Error | null = null;
+                private lastSimulationError: Error | null = null;
+                private ready = false;
+              ''',
+          )
+          replace_once(
+              "src/gameplay/rapidFire/RapidFireEngine.ts",
+              '''
+                private paused = false;
+                private outcomeLocked:
+              ''',
+              '''
+                private paused = false;
+                private pausedByVisibility = false;
+                private outcomeLocked:
+              ''',
+          )
+          replace_once(
+              "src/gameplay/rapidFire/RapidFireEngine.ts",
+              '''
+                  this.visibilityHandler = () => {
+                    if (document.hidden) this.setPaused(true);
+                  };
+              ''',
+              '''
+                  this.visibilityHandler = () => {
+                    if (document.hidden) {
+                      if (!this.paused && this.outcomeLocked === "none") {
+                        this.pausedByVisibility = true;
+                        this.paused = true;
+                        this.emitHud(true);
+                      }
+                      return;
+                    }
+                    if (this.pausedByVisibility && this.outcomeLocked === "none") {
+                      this.pausedByVisibility = false;
+                      this.paused = false;
+                      this.lastTs = performance.now();
+                      this.emitHud(true);
+                    }
+                  };
+              ''',
+          )
+          replace_once(
+              "src/gameplay/rapidFire/RapidFireEngine.ts",
+              '      renderError: this.lastRenderError?.message ?? null,',
+              '      renderError: this.lastSimulationError?.message ?? this.lastRenderError?.message ?? null,',
+          )
+          replace_once(
+              "src/gameplay/rapidFire/RapidFireEngine.ts",
+              '''
+                  this.loop(this.lastTs);
+                  this.emitHud(true);
+                }
+
+                destroy(): void {
+              ''',
+              '''
+                  this.loop(this.lastTs);
+                  this.emitHud(true);
+                  void this.loadOptionalAnimationAssets();
+                }
+
+                /** Load optional VFX sequentially after gameplay is already interactive. */
+                private async loadOptionalAnimationAssets(): Promise<void> {
+                  for (const [key, src] of Object.entries(RAPID_FIRE_OPTIONAL_ANIMATION_ASSETS)) {
+                    if (this.destroyed) return;
+                    try {
+                      const image = await loadImage(src);
+                      if (this.destroyed) return;
+                      const loaded: Record<string, HTMLImageElement> = { [key]: image };
+                      this.images[key] = image;
+                      this.vfx?.addImages(loaded);
+                      this.renderer?.addImages(loaded);
+                    } catch (error) {
+                      console.warn(`[RapidFire] Optional animation failed to load: ${key}`, error);
+                    }
+                  }
+                }
+
+                destroy(): void {
+              ''',
+          )
+          replace_once(
+              "src/gameplay/rapidFire/RapidFireEngine.ts",
+              '''
+                  if (!this.paused && this.outcomeLocked === "none") {
+                    this.update(dt);
+                  }
+              ''',
+              '''
+                  if (!this.paused && this.outcomeLocked === "none") {
+                    try {
+                      this.update(dt);
+                      this.lastSimulationError = null;
+                    } catch (error) {
+                      const failure = error instanceof Error ? error : new Error(String(error));
+                      if (!this.lastSimulationError) {
+                        console.error("[RapidFire] Simulation update failed:", error);
+                      }
+                      this.lastSimulationError = failure;
+                      try {
+                        this.checkVictory();
+                      } catch {
+                        // The production diagnostic exposes the original failure.
+                      }
+                      this.emitHud(true);
+                    }
+                  }
+              ''',
+          )
+          replace_once(
+              "src/gameplay/rapidFire/RapidFireEngine.ts",
+              '''
+                  // Animation time advances with (and only with) simulation time, so
+                  // pausing the game freezes every effect.
+                  this.vfx?.update(dt);
+                  this.checkVictory();
+              ''',
+              '''
+                  // Completion is essential and runs before optional animation work.
+                  this.checkVictory();
+                  // Animation time advances with (and only with) simulation time, so
+                  // pausing the game freezes every effect.
+                  this.vfx?.update(dt);
+              ''',
+          )
+
+          replace_once(
+              "src/screens/gameplay/GameplayScreen.tsx",
+              '      {import.meta.env.DEV && hud?.renderError ? (',
+              '      {hud?.renderError ? (',
+          )
+          PY
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck and production build
+        run: npm run build
+
+      - name: Commit verified fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/gameplay/rapidFire/spriteAnimation.ts src/gameplay/rapidFire/pixiRenderer.ts src/gameplay/rapidFire/RapidFireEngine.ts src/screens/gameplay/GameplayScreen.tsx
+          git commit -m "Fix mobile resume, completion, and lazy animations"
+          git push

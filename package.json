@@ -4,11 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/applyEnemyIdlePreviewEnergy.mjs && node scripts/applyEnemyBasicIdleCleanV2.mjs && node scripts/fixEnemyBasicIdleCanvasType.mjs && vite",
-    "build": "node scripts/applyEnemyIdlePreviewEnergy.mjs && node scripts/applyEnemyBasicIdleCleanV2.mjs && node scripts/fixEnemyBasicIdleCanvasType.mjs && tsc -b && vite build",
+    "dev": "node scripts/applyEnemyIdlePreviewEnergy.mjs && node scripts/runEnemyBasicIdleCleanV2.mjs && node scripts/fixEnemyBasicIdleCanvasType.mjs && vite",
+    "build": "node scripts/applyEnemyIdlePreviewEnergy.mjs && node scripts/runEnemyBasicIdleCleanV2.mjs && node scripts/fixEnemyBasicIdleCanvasType.mjs && tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "node scripts/applyEnemyIdlePreviewEnergy.mjs && node scripts/applyEnemyBasicIdleCleanV2.mjs && node scripts/fixEnemyBasicIdleCanvasType.mjs && tsc -b --noEmit",
-    "lint": "node scripts/applyEnemyIdlePreviewEnergy.mjs && node scripts/applyEnemyBasicIdleCleanV2.mjs && node scripts/fixEnemyBasicIdleCanvasType.mjs && tsc -b --noEmit"
+    "typecheck": "node scripts/applyEnemyIdlePreviewEnergy.mjs && node scripts/runEnemyBasicIdleCleanV2.mjs && node scripts/fixEnemyBasicIdleCanvasType.mjs && tsc -b --noEmit",
+    "lint": "node scripts/applyEnemyIdlePreviewEnergy.mjs && node scripts/runEnemyBasicIdleCleanV2.mjs && node scripts/fixEnemyBasicIdleCanvasType.mjs && tsc -b --noEmit"
   },
   "dependencies": {
     "pixi.js": "^8.19.0",

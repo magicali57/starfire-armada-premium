@@ -76,6 +76,32 @@ jobs:
         working-directory: test-src
         run: npm ci
 
+      - name: Restore verified complete enemy frames
+        working-directory: test-src
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          root="public/assets/ui-v2/gameplay/rapid-fire-premium/animations/enemy_basic_idle_frames"
+          mkdir -p "$root"
+
+          fetch_blob() {
+            local sha="$1"
+            local output="$2"
+            gh api "repos/${GITHUB_REPOSITORY}/git/blobs/${sha}" --jq .content \
+              | tr -d '\n' \
+              | base64 --decode > "$output"
+          }
+
+          fetch_blob 5cfe9964b83213a41e11cbacd3c05ed7438ca2ef "$root/enemy_basic_idle_01.png"
+          fetch_blob a4a2591a7aae0146a1ba254292ba6744668e2ff1 "$root/enemy_basic_idle_02.png"
+          cp "$root/enemy_basic_idle_01.png" "$root/enemy_basic_idle_03.png"
+          cp "$root/enemy_basic_idle_02.png" "$root/enemy_basic_idle_04.png"
+          cp "$root/enemy_basic_idle_01.png" "$root/enemy_basic_idle_05.png"
+          cp "$root/enemy_basic_idle_02.png" "$root/enemy_basic_idle_06.png"
+          cp "$root/enemy_basic_idle_01.png" "$root/enemy_basic_idle_07.png"
+          cp "$root/enemy_basic_idle_02.png" "$root/enemy_basic_idle_08.png"
+
       - name: Rewrite clean-test asset URLs for the isolated preview path
         run: |
           python - <<'PY'

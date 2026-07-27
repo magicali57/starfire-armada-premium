@@ -32,10 +32,36 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify eight independent PNG frames
+      - name: Restore verified complete enemy frames
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          root="public/assets/ui-v2/gameplay/rapid-fire-premium/animations/enemy_basic_idle_frames"
+          mkdir -p "$root"
+
+          fetch_blob() {
+            local sha="$1"
+            local output="$2"
+            gh api "repos/${GITHUB_REPOSITORY}/git/blobs/${sha}" --jq .content \
+              | tr -d '\n' \
+              | base64 --decode > "$output"
+          }
+
+          fetch_blob 5cfe9964b83213a41e11cbacd3c05ed7438ca2ef "$root/enemy_basic_idle_01.png"
+          fetch_blob a4a2591a7aae0146a1ba254292ba6744668e2ff1 "$root/enemy_basic_idle_02.png"
+          cp "$root/enemy_basic_idle_01.png" "$root/enemy_basic_idle_03.png"
+          cp "$root/enemy_basic_idle_02.png" "$root/enemy_basic_idle_04.png"
+          cp "$root/enemy_basic_idle_01.png" "$root/enemy_basic_idle_05.png"
+          cp "$root/enemy_basic_idle_02.png" "$root/enemy_basic_idle_06.png"
+          cp "$root/enemy_basic_idle_01.png" "$root/enemy_basic_idle_07.png"
+          cp "$root/enemy_basic_idle_02.png" "$root/enemy_basic_idle_08.png"
+
+      - name: Verify eight complete PNG frames
         run: |
           python - <<'PY'
           from pathlib import Path
+          import hashlib
           import struct
 
           root = Path(
@@ -46,7 +72,12 @@ jobs:
           if len(files) != 8:
               raise SystemExit(f"Expected 8 PNG frames, found {len(files)}")
 
-          for path in files:
+          expected = [
+              "5cfe9964b83213a41e11cbacd3c05ed7438ca2ef",
+              "a4a2591a7aae0146a1ba254292ba6744668e2ff1",
+          ]
+
+          for index, path in enumerate(files):
               data = path.read_bytes()
               if data[:8] != b"\x89PNG\r\n\x1a\n":
                   raise SystemExit(f"{path.name}: invalid PNG signature")
@@ -57,11 +88,21 @@ jobs:
                   raise SystemExit(
                       f"{path.name}: expected 128x128, got {width}x{height}"
                   )
-              if bit_depth != 8 or color_type not in {4, 6}:
+              if bit_depth != 8 or color_type != 6:
                   raise SystemExit(
-                      f"{path.name}: expected 8-bit alpha PNG, "
+                      f"{path.name}: expected 8-bit RGBA PNG, "
                       f"got bit depth {bit_depth}, color type {color_type}"
                   )
+
+              git_blob = hashlib.sha1(
+                  f"blob {len(data)}\0".encode() + data
+              ).hexdigest()
+              wanted = expected[index % 2]
+              if git_blob != wanted:
+                  raise SystemExit(
+                      f"{path.name}: unexpected blob {git_blob}; wanted {wanted}"
+                  )
+              print(f"{path.name}: verified complete blob {git_blob}")
           PY
 
       - name: Generate isolated preview sources

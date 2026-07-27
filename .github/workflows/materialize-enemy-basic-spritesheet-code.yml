@@ -32,11 +32,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify committed PNG asset
+      - name: Rebuild and verify exact PNG asset
         run: |
           set -euo pipefail
           asset="public/assets/ui-v2/gameplay/rapid-fire-premium/animations/enemy_basic_idle/enemy_basic_idle_sheet.png"
+          mkdir -p "$(dirname "$asset")"
+          cat .asset-parts/enemy_basic_idle_sheet.b64.* | base64 --decode > "$asset"
           echo "b2ffcf758c691fabc1a3b0ebf875f9ba1e43d6c898c9310edf5dd944edaacd12  $asset" | sha256sum --check --strict
+          python - <<'PY'
+          from pathlib import Path
+          import struct
+          path = Path("public/assets/ui-v2/gameplay/rapid-fire-premium/animations/enemy_basic_idle/enemy_basic_idle_sheet.png")
+          data = path.read_bytes()
+          if data[:8] != b"\x89PNG\r\n\x1a\n":
+              raise SystemExit("Invalid PNG signature")
+          width, height = struct.unpack(">II", data[16:24])
+          if (width, height) != (512, 256):
+              raise SystemExit(f"Expected 512x256, got {width}x{height}")
+          if b"tRNS" not in data and data[25] not in (4, 6):
+              raise SystemExit("PNG has no transparency")
+          print("Verified 8 transparent 128x128 frames in a 4x2 sheet")
+          PY
 
       - name: Apply real spritesheet implementation
         run: node scripts/applyEnemyBasicSpritesheetV1.mjs
@@ -47,14 +63,20 @@ jobs:
       - name: Build implementation
         run: npm run build
 
-      - name: Commit generated source changes
+      - name: Commit verified asset and generated source
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/data/assetRegistry.ts src/gameplay/rapidFire/animationDefs.ts src/gameplay/rapidFire/pixiRenderer.ts src/store/playerStore.tsx vite.config.ts
+          git add \
+            public/assets/ui-v2/gameplay/rapid-fire-premium/animations/enemy_basic_idle/enemy_basic_idle_sheet.png \
+            src/data/assetRegistry.ts \
+            src/gameplay/rapidFire/animationDefs.ts \
+            src/gameplay/rapidFire/pixiRenderer.ts \
+            src/store/playerStore.tsx \
+            vite.config.ts
           if git diff --cached --quiet; then
-            echo "Source implementation is already materialized."
+            echo "Verified implementation is already materialized."
             exit 0
           fi
           git commit -m "Implement real basic enemy spritesheet animation"

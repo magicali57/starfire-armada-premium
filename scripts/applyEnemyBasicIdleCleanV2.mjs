@@ -3,7 +3,7 @@ import fs from "node:fs";
 const enginePath = "src/gameplay/rapidFire/RapidFireEngine.ts";
 const rendererPath = "src/gameplay/rapidFire/pixiRenderer.ts";
 const gameplayScreenPath = "src/screens/gameplay/GameplayScreen.tsx";
-const marker = "[enemy-basic-idle-preloaded-v3]";
+const marker = "[enemy-basic-idle-preloaded-v4]";
 
 function replaceOnce(source, needle, replacement, label) {
   const first = source.indexOf(needle);
@@ -155,6 +155,44 @@ if (!renderer.includes(marker)) {
     "      // Existing static art is nose-up; these generated frames are nose-down.\n" +
       "      const rot = hasBasicIdleFrames ? bank : Math.PI + bank;",
     "enemy rotation",
+  );
+
+  renderer = replaceOnce(
+    renderer,
+    `      // Dark contour first (renders behind), then the sprite itself.
+      const op = outlinePool.next();
+      op.texture = tex;
+      op.position.set(e.x + sway, e.y + recoil);
+      op.width = flapW * 1.1;
+      op.height = flapH * 1.1;
+      op.rotation = rot;
+      op.alpha = 0.55 * alpha;
+
+      const sp = pool.next();`,
+    `      // ${marker} The old dark duplicate works for tightly cropped static
+      // art, but turns the padded animation frames into large black rectangles.
+      // Keep it for the untouched shooter/carrier art only.
+      if (!hasBasicIdleFrames) {
+        const op = outlinePool.next();
+        op.texture = tex;
+        op.position.set(e.x + sway, e.y + recoil);
+        op.width = flapW * 1.1;
+        op.height = flapH * 1.1;
+        op.rotation = rot;
+        op.alpha = 0.55 * alpha;
+      }
+
+      const sp = pool.next();`,
+    "animated enemy outline",
+  );
+
+  renderer = replaceOnce(
+    renderer,
+    "      sp.alpha = alpha;",
+    "      sp.alpha = alpha;\n" +
+      "      sp.tint = 0xffffff;\n" +
+      "      sp.blendMode = \"normal\";",
+    "animated enemy sprite reset",
   );
 
   fs.writeFileSync(rendererPath, renderer, "utf8");

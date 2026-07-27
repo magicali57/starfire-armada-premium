@@ -91,12 +91,13 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set +e
-          output="$(npx tsc -b --noEmit 2>&1)"
+          output="$(npx tsc -b --noEmit --pretty false 2>&1)"
           status=$?
           printf '%s\n' "$output"
           if [ "$status" -ne 0 ]; then
+            compact="$(printf '%s\n' "$output" | tail -n 30)"
             if [ -n "$PR_NUMBER" ]; then
-              printf 'Enemy preview TypeScript check failed:\n\n```text\n%s\n```\n' "$output" \
+              printf 'Enemy preview TypeScript check failed:\n\n```text\n%s\n```\n' "$compact" \
                 | gh pr comment "$PR_NUMBER" --body-file -
             fi
             exit "$status"

@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Reconstruct exact runtime PNG
+        run: node scripts/rebuildEnemyBasicSpriteSheetV2.mjs
+
       - name: Verify exact runtime PNG
         run: |
           python - <<'PY'
@@ -52,7 +55,7 @@ jobs:
           PY
 
       - name: Apply real sprite-sheet integration
-        run: node scripts/applyEnemyBasicSpriteSheetV2.mjs
+        run: node scripts/runEnemyBasicSpriteSheetV2.mjs
 
       - name: Type-check generated game
         run: npx tsc -b --noEmit

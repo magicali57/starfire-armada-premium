@@ -86,7 +86,21 @@ jobs:
           fi
 
       - name: Type-check generated renderer
-        run: npx tsc -b --noEmit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set +e
+          output="$(npx tsc -b --noEmit 2>&1)"
+          status=$?
+          printf '%s\n' "$output"
+          if [ "$status" -ne 0 ]; then
+            if [ -n "$PR_NUMBER" ]; then
+              printf 'Enemy preview TypeScript check failed:\n\n```text\n%s\n```\n' "$output" \
+                | gh pr comment "$PR_NUMBER" --body-file -
+            fi
+            exit "$status"
+          fi
 
       - name: Build generated test game
         run: npx vite build

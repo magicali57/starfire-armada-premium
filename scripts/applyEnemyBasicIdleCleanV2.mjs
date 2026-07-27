@@ -1,15 +1,11 @@
 import fs from "node:fs";
 
+const enginePath = "src/gameplay/rapidFire/RapidFireEngine.ts";
 const rendererPath = "src/gameplay/rapidFire/pixiRenderer.ts";
-const marker = "[enemy-basic-idle-clean-v2]";
-let source = fs.readFileSync(rendererPath, "utf8");
+const gameplayScreenPath = "src/screens/gameplay/GameplayScreen.tsx";
+const marker = "[enemy-basic-idle-preloaded-v3]";
 
-if (source.includes(marker)) {
-  console.info(`${marker} Renderer patch already applied.`);
-  process.exit(0);
-}
-
-function replaceOnce(needle, replacement, label) {
+function replaceOnce(source, needle, replacement, label) {
   const first = source.indexOf(needle);
   if (first < 0) {
     throw new Error(`${marker} Could not find ${label}.`);
@@ -17,74 +13,92 @@ function replaceOnce(needle, replacement, label) {
   if (source.indexOf(needle, first + needle.length) >= 0) {
     throw new Error(`${marker} Found multiple matches for ${label}.`);
   }
-  source = source.replace(needle, replacement);
+  return source.replace(needle, replacement);
 }
 
-replaceOnce(
-  'import { ANIM } from "./animationDefs";',
-  'import { ANIM } from "./animationDefs";\n' +
-    'import { ENEMY_BASIC_IDLE_FPS, ENEMY_BASIC_IDLE_FRAME_URLS } from "./enemyBasicIdleFrames";',
-  "ANIM import",
-);
+// ---------------------------------------------------------------------------
+// 1. Add the eight frame URLs to the engine's existing, proven asset preloader.
+// ---------------------------------------------------------------------------
+let engine = fs.readFileSync(enginePath, "utf8");
+if (!engine.includes(marker)) {
+  engine = replaceOnce(
+    engine,
+    'import { RAPID_FIRE_SLICE_ASSETS } from "@/data/gameplayRapidFire";',
+    'import { RAPID_FIRE_SLICE_ASSETS } from "@/data/gameplayRapidFire";\n' +
+      'import { ENEMY_BASIC_IDLE_FRAME_URLS } from "./enemyBasicIdleFrames";',
+    "engine asset import",
+  );
 
-replaceOnce(
-  "  private generatedTextures: Texture[] = [];",
-  "  private generatedTextures: Texture[] = [];\n" +
-    "  private enemyBasicIdleFrames: Texture[] = [];",
-  "generated texture field",
-);
+  engine = replaceOnce(
+    engine,
+    "    const assets = RAPID_FIRE_SLICE_ASSETS;",
+    `    // ${marker} Use the same preload path as every known-good gameplay image.
+    const assets: Record<string, string> = {
+      ...RAPID_FIRE_SLICE_ASSETS,
+      ...Object.fromEntries(
+        ENEMY_BASIC_IDLE_FRAME_URLS.map((src, index) => [
+          \`enemyBasicIdle\${index + 1}\`,
+          src,
+        ]),
+      ),
+    };`,
+    "engine asset collection",
+  );
 
-const probeComment =
-  "  /** Probe for WebGL support on a throwaway canvas (never the game canvas). */";
-const loaderMethod = `  /**
-   * Load the eight basic-enemy frames as ordinary image textures.
-   *
-   * No atlas slicing, canvas cropping, or render-loop texture allocation is
-   * used here. A failed frame load falls back to the known-good static enemy.
-   */
-  private async loadEnemyBasicIdleFrames(): Promise<void> {
-    const loadTexture = (src: string): Promise<Texture> =>
-      new Promise((resolve, reject) => {
-        const image = new Image();
-        image.decoding = "async";
-        image.onload = () => resolve(Texture.from(image));
-        image.onerror = () =>
-          reject(new Error(\`${marker} Failed to load \${src}\`));
-        image.src = src;
-      });
+  fs.writeFileSync(enginePath, engine, "utf8");
+  console.info(`${marker} Added frames to the engine preloader.`);
+} else {
+  console.info(`${marker} Engine preload patch already applied.`);
+}
 
-    try {
-      const frames = await Promise.all(
-        ENEMY_BASIC_IDLE_FRAME_URLS.map(loadTexture),
-      );
-      this.enemyBasicIdleFrames = frames;
-      this.generatedTextures.push(...frames);
-      console.info(
-        \`${marker} Loaded \${frames.length} independent frames.\`,
-      );
-    } catch (error) {
-      this.enemyBasicIdleFrames = [];
-      console.error(
-        "${marker} Falling back to the static basic enemy.",
-        error,
-      );
+// ---------------------------------------------------------------------------
+// 2. Read the already-preloaded textures in Pixi. No second Image loader,
+//    no atlas slicing, no canvas cropping, and no Promise inside renderer init.
+// ---------------------------------------------------------------------------
+let renderer = fs.readFileSync(rendererPath, "utf8");
+if (!renderer.includes(marker)) {
+  renderer = replaceOnce(
+    renderer,
+    'import { ANIM } from "./animationDefs";',
+    'import { ANIM } from "./animationDefs";\n' +
+      'import { ENEMY_BASIC_IDLE_FPS } from "./enemyBasicIdleFrames";',
+    "renderer FPS import",
+  );
+
+  renderer = replaceOnce(
+    renderer,
+    "  private generatedTextures: Texture[] = [];",
+    "  private generatedTextures: Texture[] = [];\n" +
+      "  private enemyBasicIdleFrames: Texture[] = [];",
+    "renderer frame field",
+  );
+
+  renderer = replaceOnce(
+    renderer,
+    `    for (const [key, img] of Object.entries(images)) {
+      this.textures[key] = Texture.from(img);
     }
-  }
+    this.glowTex = this.makeGlowTexture();`,
+    `    for (const [key, img] of Object.entries(images)) {
+      this.textures[key] = Texture.from(img);
+    }
+    // ${marker} Frames arrived through RapidFireEngine's normal preload path.
+    const basicFrames = Array.from({ length: 8 }, (_, index) =>
+      this.textures[\`enemyBasicIdle\${index + 1}\`],
+    ).filter((texture): texture is Texture => Boolean(texture));
+    this.enemyBasicIdleFrames = basicFrames.length === 8 ? basicFrames : [];
+    console.info(
+      "${marker}",
+      \`Ready with \${this.enemyBasicIdleFrames.length} preloaded frames.\`,
+    );
+    this.glowTex = this.makeGlowTexture();`,
+    "renderer base texture initialization",
+  );
 
-`;
-replaceOnce(probeComment, loaderMethod + probeComment, "WebGL probe insertion point");
-
-replaceOnce(
-  "    this.glowTex = this.makeGlowTexture();\n    this.sliceSheets();",
-  "    this.glowTex = this.makeGlowTexture();\n" +
-    "    this.sliceSheets();\n" +
-    "    await this.loadEnemyBasicIdleFrames();",
-  "renderer texture initialization",
-);
-
-replaceOnce(
-  "      const tex = this.textures[this.enemyTextureKey(e)];\n      if (!tex) continue;",
-  `      const staticTex = this.textures[this.enemyTextureKey(e)];
+  renderer = replaceOnce(
+    renderer,
+    "      const tex = this.textures[this.enemyTextureKey(e)];\n      if (!tex) continue;",
+    `      const staticTex = this.textures[this.enemyTextureKey(e)];
       const hasBasicIdleFrames =
         e.kind === "basic" && this.enemyBasicIdleFrames.length === 8;
       const normalizedPhase =
@@ -102,42 +116,68 @@ replaceOnce(
           ) % this.enemyBasicIdleFrames.length
         : 0;
       const tex = hasBasicIdleFrames
-        ? this.enemyBasicIdleFrames[frameIndex]
+        ? this.enemyBasicIdleFrames[frameIndex] ?? staticTex
         : staticTex;
       if (!tex) continue;`,
-  "enemy texture selection",
-);
+    "enemy texture selection",
+  );
 
-replaceOnce(
-  "      const side = e.h;",
-  "      const side = e.h;\n" +
-    "      // The generated frames contain transparent safety padding. Scale the\n" +
-    "      // visual only; simulation size and hitboxes remain untouched.\n" +
-    "      const spriteSide = hasBasicIdleFrames ? side * 1.28 : side;",
-  "enemy visual size",
-);
+  renderer = replaceOnce(
+    renderer,
+    "      const side = e.h;",
+    "      const side = e.h;\n" +
+      "      // Generated frames include transparent safety padding. This changes\n" +
+      "      // presentation size only; simulation and hitboxes are untouched.\n" +
+      "      const spriteSide = hasBasicIdleFrames ? side * 1.28 : side;",
+    "enemy visual size",
+  );
 
-replaceOnce(
-  "      const amp = flapAmplitude(e.kind);",
-  "      // The real frame loop replaces the interim squash animation for basic enemies.\n" +
-    "      const amp = hasBasicIdleFrames ? 0 : flapAmplitude(e.kind);",
-  "procedural flap amplitude",
-);
+  renderer = replaceOnce(
+    renderer,
+    "      const amp = flapAmplitude(e.kind);",
+    "      // The real frame loop replaces the interim squash animation for basic enemies.\n" +
+      "      const amp = hasBasicIdleFrames ? 0 : flapAmplitude(e.kind);",
+    "procedural flap amplitude",
+  );
 
-replaceOnce(
-  "      const flapW = side * (1 - amp * fold);\n" +
-    "      const flapH = side * (1 + amp * 0.25 * fold);",
-  "      const flapW = spriteSide * (1 - amp * fold);\n" +
-    "      const flapH = spriteSide * (1 + amp * 0.25 * fold);",
-  "enemy display dimensions",
-);
+  renderer = replaceOnce(
+    renderer,
+    "      const flapW = side * (1 - amp * fold);\n" +
+      "      const flapH = side * (1 + amp * 0.25 * fold);",
+    "      const flapW = spriteSide * (1 - amp * fold);\n" +
+      "      const flapH = spriteSide * (1 + amp * 0.25 * fold);",
+    "enemy display dimensions",
+  );
 
-replaceOnce(
-  "      const rot = Math.PI + bank;",
-  "      // Existing static art is nose-up; the new frames are already nose-down.\n" +
-    "      const rot = hasBasicIdleFrames ? bank : Math.PI + bank;",
-  "enemy rotation",
-);
+  renderer = replaceOnce(
+    renderer,
+    "      const rot = Math.PI + bank;",
+    "      // Existing static art is nose-up; these generated frames are nose-down.\n" +
+      "      const rot = hasBasicIdleFrames ? bank : Math.PI + bank;",
+    "enemy rotation",
+  );
 
-fs.writeFileSync(rendererPath, source, "utf8");
-console.info(`${marker} Applied independent-frame renderer integration.`);
+  fs.writeFileSync(rendererPath, renderer, "utf8");
+  console.info(`${marker} Applied preloaded-frame renderer integration.`);
+} else {
+  console.info(`${marker} Renderer patch already applied.`);
+}
+
+// ---------------------------------------------------------------------------
+// 3. This isolated preview must show renderer errors on the phone even though
+//    it is a production build. The normal main build is not modified.
+// ---------------------------------------------------------------------------
+let screen = fs.readFileSync(gameplayScreenPath, "utf8");
+if (!screen.includes(`${marker}-error-ui`)) {
+  screen = replaceOnce(
+    screen,
+    "      {import.meta.env.DEV && hud?.renderError ? (",
+    `      {/* ${marker}-error-ui */}
+      {hud?.renderError ? (`,
+    "production preview renderer error condition",
+  );
+  fs.writeFileSync(gameplayScreenPath, screen, "utf8");
+  console.info(`${marker} Enabled on-device renderer diagnostics.`);
+} else {
+  console.info(`${marker} Renderer diagnostic UI already applied.`);
+}

@@ -54,9 +54,13 @@ jobs:
         working-directory: test-src
         run: npm ci
 
+      - name: Reconstruct exact sprite-sheet PNG
+        working-directory: test-src
+        run: node scripts/rebuildEnemyBasicSpriteSheetV2.mjs
+
       - name: Apply sprite-sheet integration
         working-directory: test-src
-        run: node scripts/applyEnemyBasicSpriteSheetV2.mjs
+        run: node scripts/runEnemyBasicSpriteSheetV2.mjs
 
       - name: Point preview public assets at the known-good root
         working-directory: test-src

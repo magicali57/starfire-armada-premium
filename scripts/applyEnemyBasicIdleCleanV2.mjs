@@ -3,7 +3,7 @@ import fs from "node:fs";
 const enginePath = "src/gameplay/rapidFire/RapidFireEngine.ts";
 const rendererPath = "src/gameplay/rapidFire/pixiRenderer.ts";
 const gameplayScreenPath = "src/screens/gameplay/GameplayScreen.tsx";
-const marker = "[enemy-basic-idle-preloaded-v4]";
+const marker = "[enemy-basic-idle-canvas-v5]";
 
 function replaceOnce(source, needle, replacement, label) {
   const first = source.indexOf(needle);
@@ -17,7 +17,7 @@ function replaceOnce(source, needle, replacement, label) {
 }
 
 // ---------------------------------------------------------------------------
-// 1. Add the eight frame URLs to the engine's existing, proven asset preloader.
+// 1. Add the eight frame URLs to the engine's existing asset preloader.
 // ---------------------------------------------------------------------------
 let engine = fs.readFileSync(enginePath, "utf8");
 if (!engine.includes(marker)) {
@@ -32,7 +32,8 @@ if (!engine.includes(marker)) {
   engine = replaceOnce(
     engine,
     "    const assets = RAPID_FIRE_SLICE_ASSETS;",
-    `    // ${marker} Use the same preload path as every known-good gameplay image.
+    `    // ${marker} Load the eight PNGs through the same proven preloader as
+    // every other gameplay image. The renderer receives fully decoded images.
     const assets: Record<string, string> = {
       ...RAPID_FIRE_SLICE_ASSETS,
       ...Object.fromEntries(
@@ -52,8 +53,12 @@ if (!engine.includes(marker)) {
 }
 
 // ---------------------------------------------------------------------------
-// 2. Read the already-preloaded textures in Pixi. No second Image loader,
-//    no atlas slicing, no canvas cropping, and no Promise inside renderer init.
+// 2. Convert the decoded frame images into transparent Canvas-backed textures.
+//
+// The previous ImageSource route rendered transparent pixels as opaque black on
+// the target mobile WebGL renderer. Canvas-backed textures are already proven in
+// this renderer by its procedural glow texture. We verify a transparent corner
+// before creating every texture, create them once during init, and reuse them.
 // ---------------------------------------------------------------------------
 let renderer = fs.readFileSync(rendererPath, "utf8");
 if (!renderer.includes(marker)) {
@@ -75,24 +80,67 @@ if (!renderer.includes(marker)) {
 
   renderer = replaceOnce(
     renderer,
-    `    for (const [key, img] of Object.entries(images)) {
+    `    // Base textures from preloaded images.
+    for (const [key, img] of Object.entries(images)) {
       this.textures[key] = Texture.from(img);
     }
     this.glowTex = this.makeGlowTexture();`,
-    `    for (const [key, img] of Object.entries(images)) {
+    `    // Base textures from preloaded images. The eight experimental enemy
+    // frames are handled separately below so their HTMLImageElement alpha path
+    // cannot create opaque black rectangles on mobile WebGL.
+    for (const [key, img] of Object.entries(images)) {
+      if (key.startsWith("enemyBasicIdle")) continue;
       this.textures[key] = Texture.from(img);
     }
-    // ${marker} Frames arrived through RapidFireEngine's normal preload path.
-    const basicFrames = Array.from({ length: 8 }, (_, index) =>
-      this.textures[\`enemyBasicIdle\${index + 1}\`],
-    ).filter((texture): texture is Texture => Boolean(texture));
-    this.enemyBasicIdleFrames = basicFrames.length === 8 ? basicFrames : [];
+
+    // ${marker} Build eight transparent Canvas-backed textures once.
+    const frameImages = Array.from({ length: 8 }, (_, index) =>
+      images[\`enemyBasicIdle\${index + 1}\`],
+    ).filter((image): image is HTMLImageElement => Boolean(image));
+
+    if (frameImages.length === 8) {
+      this.enemyBasicIdleFrames = frameImages.map((image, index) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = image.naturalWidth || image.width;
+        canvas.height = image.naturalHeight || image.height;
+        const context = canvas.getContext("2d", {
+          alpha: true,
+          willReadFrequently: true,
+        });
+        if (!context) {
+          throw new Error(
+            \`${marker} Could not create a transparent canvas for frame \${index + 1}.\`,
+          );
+        }
+
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.globalCompositeOperation = "copy";
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        context.globalCompositeOperation = "source-over";
+
+        const cornerAlpha = context.getImageData(0, 0, 1, 1).data[3];
+        if (cornerAlpha !== 0) {
+          throw new Error(
+            \`${marker} Frame \${index + 1} failed transparency verification (corner alpha \${cornerAlpha}).\`,
+          );
+        }
+
+        const texture = Texture.from(canvas);
+        texture.source.alphaMode = "premultiply-alpha-on-upload";
+        texture.source.autoGenerateMipmaps = false;
+        this.generatedTextures.push(texture);
+        return texture;
+      });
+    } else {
+      this.enemyBasicIdleFrames = [];
+    }
+
     console.info(
       "${marker}",
-      \`Ready with \${this.enemyBasicIdleFrames.length} preloaded frames.\`,
+      \`Ready with \${this.enemyBasicIdleFrames.length} verified canvas frames.\`,
     );
     this.glowTex = this.makeGlowTexture();`,
-    "renderer base texture initialization",
+    "renderer texture initialization",
   );
 
   renderer = replaceOnce(
@@ -124,18 +172,25 @@ if (!renderer.includes(marker)) {
 
   renderer = replaceOnce(
     renderer,
-    "      const side = e.h;",
-    "      const side = e.h;\n" +
-      "      // Generated frames include transparent safety padding. This changes\n" +
-      "      // presentation size only; simulation and hitboxes are untouched.\n" +
-      "      const spriteSide = hasBasicIdleFrames ? side * 1.28 : side;",
-    "enemy visual size",
+    "      const recoil = e.recoilMs > 0 ? -(e.recoilMs / 130) * 3 : 0;\n      const side = e.h;",
+    `      const recoil = e.recoilMs > 0 ? -(e.recoilMs / 130) * 3 : 0;
+      // A clearly readable eight-step hover path confirms that frame playback
+      // is happening even on a small phone display.
+      const frameBob = hasBasicIdleFrames
+        ? [0, -2, -4, -2, 0, 2, 4, 2][frameIndex]
+        : 0;
+      const drawY = e.y + recoil + frameBob;
+      const side = e.h;
+      // Generated frames include transparent safety padding. Presentation only;
+      // hitboxes and all simulation dimensions remain unchanged.
+      const spriteSide = hasBasicIdleFrames ? side * 1.34 : side;`,
+    "enemy draw position and size",
   );
 
   renderer = replaceOnce(
     renderer,
     "      const amp = flapAmplitude(e.kind);",
-    "      // The real frame loop replaces the interim squash animation for basic enemies.\n" +
+    "      // The real frame loop replaces the old squash animation for basic enemies.\n" +
       "      const amp = hasBasicIdleFrames ? 0 : flapAmplitude(e.kind);",
     "procedural flap amplitude",
   );
@@ -152,7 +207,7 @@ if (!renderer.includes(marker)) {
   renderer = replaceOnce(
     renderer,
     "      const rot = Math.PI + bank;",
-    "      // Existing static art is nose-up; these generated frames are nose-down.\n" +
+    "      // Existing art is nose-up; generated frames are already nose-down.\n" +
       "      const rot = hasBasicIdleFrames ? bank : Math.PI + bank;",
     "enemy rotation",
   );
@@ -169,13 +224,11 @@ if (!renderer.includes(marker)) {
       op.alpha = 0.55 * alpha;
 
       const sp = pool.next();`,
-    `      // ${marker} The old dark duplicate works for tightly cropped static
-      // art, but turns the padded animation frames into large black rectangles.
-      // Keep it for the untouched shooter/carrier art only.
+    `      // Keep the known-good contour only for untouched static enemy art.
       if (!hasBasicIdleFrames) {
         const op = outlinePool.next();
         op.texture = tex;
-        op.position.set(e.x + sway, e.y + recoil);
+        op.position.set(e.x + sway, drawY);
         op.width = flapW * 1.1;
         op.height = flapH * 1.1;
         op.rotation = rot;
@@ -186,24 +239,41 @@ if (!renderer.includes(marker)) {
     "animated enemy outline",
   );
 
+  const enemyYOccurrences = renderer.split("e.y + recoil").length - 1;
+  if (enemyYOccurrences !== 3) {
+    throw new Error(
+      `${marker} Expected three remaining enemy draw Y expressions, found ${enemyYOccurrences}.`,
+    );
+  }
+  renderer = renderer.replaceAll("e.y + recoil", "drawY");
+
   renderer = replaceOnce(
     renderer,
     "      sp.alpha = alpha;",
     "      sp.alpha = alpha;\n" +
       "      sp.tint = 0xffffff;\n" +
-      "      sp.blendMode = \"normal\";",
+      '      sp.blendMode = "normal";',
     "animated enemy sprite reset",
   );
 
+  // The regular hit-flash duplicate is safe for static art, but it uses the same
+  // image-alpha path that failed for these frames. Use the main sprite only while
+  // this animation is active; hit detection and damage remain unchanged.
+  renderer = replaceOnce(
+    renderer,
+    "      if (e.flashMs > 0) {",
+    "      if (e.flashMs > 0 && !hasBasicIdleFrames) {",
+    "animated enemy flash duplicate",
+  );
+
   fs.writeFileSync(rendererPath, renderer, "utf8");
-  console.info(`${marker} Applied preloaded-frame renderer integration.`);
+  console.info(`${marker} Applied verified canvas-frame renderer integration.`);
 } else {
   console.info(`${marker} Renderer patch already applied.`);
 }
 
 // ---------------------------------------------------------------------------
-// 3. This isolated preview must show renderer errors on the phone even though
-//    it is a production build. The normal main build is not modified.
+// 3. Keep renderer failures visible in the isolated production preview.
 // ---------------------------------------------------------------------------
 let screen = fs.readFileSync(gameplayScreenPath, "utf8");
 if (!screen.includes(`${marker}-error-ui`)) {

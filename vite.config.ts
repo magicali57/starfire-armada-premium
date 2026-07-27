@@ -15,5 +15,15 @@ export default defineConfig({
   build: {
     outDir: "dist",
     assetsDir: "assets",
+    // The isolated mobile preview is hosted inside a nested GitHub Pages path.
+    // Pixi otherwise produces runtime browserAll / webworker chunks whose CDN
+    // propagation can lag behind index.html and cause a dynamic-import 404.
+    // Keep the test build self-contained so every required module arrives in
+    // the initial script. This changes preview packaging only, not gameplay.
+    rollupOptions: {
+      output: {
+        inlineDynamicImports: true,
+      },
+    },
   },
 });

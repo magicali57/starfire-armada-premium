@@ -1,0 +1,41 @@
+name: Verify Rigged Enemy Idle
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out rig test branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate isolated rig preview sources
+        run: |
+          node scripts/applyEnemyRigPreviewEnergy.mjs
+          node scripts/applyEnemyBasicRiggedIdleV1.mjs
+
+      - name: Type-check rig renderer
+        run: npx tsc -b --noEmit
+
+      - name: Build rig test game
+        run: npx vite build

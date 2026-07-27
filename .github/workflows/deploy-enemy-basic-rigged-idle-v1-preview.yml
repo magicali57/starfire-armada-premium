@@ -1,0 +1,119 @@
+name: Deploy Rigged Enemy Idle Preview
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out known-good main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main-src
+
+      - name: Check out rig test branch
+        uses: actions/checkout@v4
+        with:
+          ref: test/enemy-basic-rigged-idle-v1
+          path: test-src
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install known-good dependencies
+        working-directory: main-src
+        run: npm ci
+
+      - name: Rewrite known-good asset URLs for Pages root
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          files = [Path("main-src/index.html")]
+          files.extend(
+              p for p in Path("main-src/src").rglob("*")
+              if p.is_file() and p.suffix.lower() in {".ts", ".tsx", ".js", ".jsx", ".css", ".json", ".html"}
+          )
+          for path in files:
+              text = path.read_text(encoding="utf-8")
+              path.write_text(text.replace("/assets/", "/starfire-armada-premium/assets/"), encoding="utf-8")
+          PY
+
+      - name: Build known-good game
+        working-directory: main-src
+        run: npm run build
+
+      - name: Install rig-test dependencies
+        working-directory: test-src
+        run: npm ci
+
+      - name: Rewrite rig-test asset URLs for isolated preview
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          files = [Path("test-src/index.html")]
+          files.extend(
+              p for p in Path("test-src/src").rglob("*")
+              if p.is_file() and p.suffix.lower() in {".ts", ".tsx", ".js", ".jsx", ".css", ".json", ".html"}
+          )
+          for path in files:
+              text = path.read_text(encoding="utf-8")
+              path.write_text(
+                  text.replace(
+                      "/assets/",
+                      "/starfire-armada-premium/enemy-rigged-idle-v1/assets/",
+                  ),
+                  encoding="utf-8",
+              )
+          PY
+
+      - name: Generate and type-check rig test
+        working-directory: test-src
+        run: |
+          node scripts/applyEnemyRigPreviewEnergy.mjs
+          node scripts/applyEnemyBasicRiggedIdleV1.mjs
+          npx tsc -b --noEmit
+
+      - name: Build rig test
+        working-directory: test-src
+        run: npx vite build
+
+      - name: Assemble normal site and isolated rig preview
+        run: |
+          mkdir -p site/enemy-rigged-idle-v1
+          cp -R main-src/dist/. site/
+          cp -R test-src/dist/. site/enemy-rigged-idle-v1/
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload combined Pages site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy combined rig preview site
+        uses: actions/deploy-pages@v4

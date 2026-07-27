@@ -1,0 +1,109 @@
+name: Deploy Enemy Basic Sprite Sheet V2 Preview
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out known-good main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main-src
+
+      - name: Check out sprite-sheet branch
+        uses: actions/checkout@v4
+        with:
+          ref: test/enemy-basic-spritesheet-v2
+          path: test-src
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install and build known-good root
+        working-directory: main-src
+        run: |
+          npm ci
+          python - <<'PY'
+          from pathlib import Path
+          files = [Path("index.html")]
+          files += [p for p in Path("src").rglob("*") if p.is_file() and p.suffix.lower() in {".ts", ".tsx", ".js", ".jsx", ".css", ".json", ".html"}]
+          for path in files:
+              text = path.read_text(encoding="utf-8")
+              path.write_text(text.replace("/assets/", "/starfire-armada-premium/assets/"), encoding="utf-8")
+          PY
+          npm run build
+
+      - name: Install sprite-sheet test dependencies
+        working-directory: test-src
+        run: npm ci
+
+      - name: Apply sprite-sheet integration
+        working-directory: test-src
+        run: node scripts/applyEnemyBasicSpriteSheetV2.mjs
+
+      - name: Point preview public assets at the known-good root
+        working-directory: test-src
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          files = [Path("index.html")]
+          files += [p for p in Path("src").rglob("*") if p.is_file() and p.suffix.lower() in {".ts", ".tsx", ".js", ".jsx", ".css", ".json", ".html"}]
+          for path in files:
+              text = path.read_text(encoding="utf-8")
+              path.write_text(text.replace("/assets/", "/starfire-armada-premium/assets/"), encoding="utf-8")
+          PY
+
+      - name: Type-check and build sprite-sheet preview
+        working-directory: test-src
+        run: |
+          npx tsc -b --noEmit
+          npx vite build
+
+      - name: Remove duplicated public assets from preview build
+        run: |
+          find test-src/dist/assets -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
+
+      - name: Assemble root and isolated mobile preview
+        run: |
+          mkdir -p site/enemy-basic-spritesheet-v2
+          cp -R main-src/dist/. site/
+          cp -R test-src/dist/. site/enemy-basic-spritesheet-v2/
+          mkdir -p site/assets/ui-v2/gameplay/rapid-fire-premium/animations/enemy_basic_idle
+          cp test-src/public/assets/ui-v2/gameplay/rapid-fire-premium/animations/enemy_basic_idle/enemy_basic_idle_sheet.png \
+             site/assets/ui-v2/gameplay/rapid-fire-premium/animations/enemy_basic_idle/enemy_basic_idle_sheet.png
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload combined Pages site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy combined site
+        id: deployment
+        uses: actions/deploy-pages@v4

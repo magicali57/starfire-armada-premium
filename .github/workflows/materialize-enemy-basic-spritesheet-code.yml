@@ -1,0 +1,61 @@
+name: Materialize Enemy Basic Spritesheet Code
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out real test branch
+        uses: actions/checkout@v4
+        with:
+          ref: test/enemy-basic-spritesheet-v1
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify committed PNG asset
+        run: |
+          set -euo pipefail
+          asset="public/assets/ui-v2/gameplay/rapid-fire-premium/animations/enemy_basic_idle/enemy_basic_idle_sheet.png"
+          echo "b2ffcf758c691fabc1a3b0ebf875f9ba1e43d6c898c9310edf5dd944edaacd12  $asset" | sha256sum --check --strict
+
+      - name: Apply real spritesheet implementation
+        run: node scripts/applyEnemyBasicSpritesheetV1.mjs
+
+      - name: Type-check implementation
+        run: npm run typecheck
+
+      - name: Build implementation
+        run: npm run build
+
+      - name: Commit generated source changes
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/assetRegistry.ts src/gameplay/rapidFire/animationDefs.ts src/gameplay/rapidFire/pixiRenderer.ts src/store/playerStore.tsx vite.config.ts
+          if git diff --cached --quiet; then
+            echo "Source implementation is already materialized."
+            exit 0
+          fi
+          git commit -m "Implement real basic enemy spritesheet animation"
+          git push origin HEAD:test/enemy-basic-spritesheet-v1

@@ -1,0 +1,59 @@
+name: Materialize Enemy Basic Sprite Sheet
+
+on:
+  push:
+    branches:
+      - test/enemy-basic-spritesheet-v1
+    paths:
+      - .asset-parts/**
+      - .github/workflows/materialize-enemy-basic-sheet.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out sprite-sheet branch
+        uses: actions/checkout@v4
+        with:
+          ref: test/enemy-basic-spritesheet-v1
+          fetch-depth: 0
+
+      - name: Decode and verify normalized sprite sheet
+        run: |
+          set -euo pipefail
+          target="public/assets/ui-v2/gameplay/rapid-fire-premium/animations/enemy_basic_idle/enemy_basic_idle_sheet.png"
+          mkdir -p "$(dirname "$target")"
+          cat .asset-parts/enemy_basic_idle_sheet.b64.* | base64 --decode > "$target"
+          echo "b2ffcf758c691fabc1a3b0ebf875f9ba1e43d6c898c9310edf5dd944edaacd12  $target" | sha256sum --check --strict
+          python - <<'PY'
+          from pathlib import Path
+          import struct
+
+          path = Path("public/assets/ui-v2/gameplay/rapid-fire-premium/animations/enemy_basic_idle/enemy_basic_idle_sheet.png")
+          data = path.read_bytes()
+          if data[:8] != b"\x89PNG\r\n\x1a\n":
+              raise SystemExit("Invalid PNG signature")
+          width, height = struct.unpack(">II", data[16:24])
+          if (width, height) != (512, 256):
+              raise SystemExit(f"Expected 512x256, got {width}x{height}")
+          if b"tRNS" not in data and data[25] not in (4, 6):
+              raise SystemExit("PNG has no alpha/transparency information")
+          print("Verified 8-frame transparent sheet: 512x256, 4x2, 128x128 per frame")
+          PY
+
+      - name: Commit real PNG asset
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/assets/ui-v2/gameplay/rapid-fire-premium/animations/enemy_basic_idle/enemy_basic_idle_sheet.png
+          if git diff --cached --quiet; then
+            echo "Sprite sheet already materialized."
+            exit 0
+          fi
+          git commit -m "Add normalized basic enemy idle spritesheet"
+          git push origin HEAD:test/enemy-basic-spritesheet-v1

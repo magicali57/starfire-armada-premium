@@ -1,0 +1,99 @@
+name: Materialize Enemy Basic Spritesheet Code
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out real test branch
+        uses: actions/checkout@v4
+        with:
+          ref: test/enemy-basic-spritesheet-v1
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild and validate sprite pixels
+        run: |
+          set -euo pipefail
+          asset="public/assets/ui-v2/gameplay/rapid-fire-premium/animations/enemy_basic_idle/enemy_basic_idle_sheet.png"
+          mkdir -p "$(dirname "$asset")"
+          cat .asset-parts/enemy_basic_idle_sheet.b64.* | base64 --decode > "$asset"
+          python -m pip install --quiet pillow
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          import hashlib
+
+          path = Path("public/assets/ui-v2/gameplay/rapid-fire-premium/animations/enemy_basic_idle/enemy_basic_idle_sheet.png")
+          image = Image.open(path)
+          image.load()
+          rgba = image.convert("RGBA")
+          if rgba.size != (512, 256):
+              raise SystemExit(f"Expected 512x256, got {rgba.size}")
+          alpha = rgba.getchannel("A")
+          if alpha.getextrema() != (0, 255):
+              raise SystemExit(f"Expected real transparent and opaque pixels, got alpha {alpha.getextrema()}")
+          for index in range(8):
+              col = index % 4
+              row = index // 4
+              frame = rgba.crop((col * 128, row * 128, (col + 1) * 128, (row + 1) * 128))
+              bbox = frame.getchannel("A").getbbox()
+              if bbox is None:
+                  raise SystemExit(f"Frame {index + 1} is empty")
+              left, top, right, bottom = bbox
+              if left <= 0 or top <= 0 or right >= 128 or bottom >= 128:
+                  raise SystemExit(f"Frame {index + 1} touches a cell edge: {bbox}")
+              if right - left < 45 or bottom - top < 45:
+                  raise SystemExit(f"Frame {index + 1} is unexpectedly small: {bbox}")
+              print(f"frame {index + 1}: alpha bounds {bbox}")
+          print("sha256:", hashlib.sha256(path.read_bytes()).hexdigest())
+          print("Verified eight complete transparent 128x128 frames in a 4x2 sheet")
+          PY
+
+      - name: Apply real spritesheet implementation
+        run: node scripts/applyEnemyBasicSpritesheetV1.mjs
+
+      - name: Type-check implementation
+        run: npm run typecheck
+
+      - name: Build implementation
+        run: npm run build
+
+      - name: Commit verified asset and generated source
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            public/assets/ui-v2/gameplay/rapid-fire-premium/animations/enemy_basic_idle/enemy_basic_idle_sheet.png \
+            src/data/assetRegistry.ts \
+            src/gameplay/rapidFire/animationDefs.ts \
+            src/gameplay/rapidFire/pixiRenderer.ts \
+            src/store/playerStore.tsx \
+            vite.config.ts
+          if git diff --cached --quiet; then
+            echo "Verified implementation is already materialized."
+            exit 0
+          fi
+          git commit -m "Implement real basic enemy spritesheet animation"
+          git push origin HEAD:test/enemy-basic-spritesheet-v1

@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   inspect:
@@ -19,13 +20,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Locate asset preload and animation registry usage
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
-          echo '=== animation registry usage ==='
-          grep -RFn 'RAPID_FIRE_PREMIUM_ANIMATION_SHEETS' src || true
-          echo '=== static registry usage ==='
-          grep -RFn 'RAPID_FIRE_PREMIUM_ASSETS' src || true
-          echo '=== image preload helpers ==='
-          grep -RFnE 'preload|loadImages|HTMLImageElement|new Image' src/gameplay src/screens src/components 2>/dev/null | head -n 250 || true
-          echo '=== rapidFire files ==='
-          find src -path '*rapidFire*' -type f -print | sort
+          report="$(mktemp)"
+          {
+            echo '=== animation registry usage ==='
+            grep -RFn 'RAPID_FIRE_PREMIUM_ANIMATION_SHEETS' src || true
+            echo '=== static registry usage ==='
+            grep -RFn 'RAPID_FIRE_PREMIUM_ASSETS' src || true
+            echo '=== image preload helpers ==='
+            grep -RFnE 'preload|loadImages|HTMLImageElement|new Image' src/gameplay src/screens src/components 2>/dev/null | head -n 250 || true
+            echo '=== rapidFire files ==='
+            find src -path '*rapidFire*' -type f -print | sort
+          } | tee "$report"
+          if [ -n "${PR_NUMBER:-}" ]; then
+            {
+              echo 'Existing enemy spritesheet pipeline inspection:'
+              echo
+              echo '```text'
+              cat "$report"
+              echo '```'
+            } | gh pr comment "$PR_NUMBER" --body-file -
+          fi

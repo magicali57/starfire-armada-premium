@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Check out clean test branch
         uses: actions/checkout@v4
+        with:
+          show-progress: false
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -65,8 +67,14 @@ jobs:
               )
           PY
 
-      - name: Type-check renderer integration
-        run: npm run typecheck
+      - name: Generate isolated preview sources
+        run: |
+          node scripts/applyEnemyIdlePreviewEnergy.mjs
+          node scripts/applyEnemyBasicIdleCleanV2.mjs
+          node scripts/fixEnemyBasicIdleCanvasType.mjs
 
-      - name: Build test game
-        run: npm run build
+      - name: Type-check generated renderer
+        run: npx tsc -b --noEmit
+
+      - name: Build generated test game
+        run: npx vite build

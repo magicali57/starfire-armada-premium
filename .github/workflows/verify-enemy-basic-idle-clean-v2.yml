@@ -72,7 +72,7 @@ jobs:
           set +e
           output="$({
             node scripts/applyEnemyIdlePreviewEnergy.mjs
-            node scripts/applyEnemyBasicIdleCleanV2.mjs
+            node scripts/runEnemyBasicIdleCleanV2.mjs
             node scripts/fixEnemyBasicIdleCanvasType.mjs
           } 2>&1)"
           status=$?

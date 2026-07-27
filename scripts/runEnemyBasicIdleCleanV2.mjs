@@ -3,10 +3,13 @@ import { pathToFileURL } from "node:url";
 
 const path = "scripts/applyEnemyBasicIdleCleanV2.mjs";
 let source = fs.readFileSync(path, "utf8");
-source = source.replace("if (yCount !== 3)", "if (yCount !== 4)");
+
+// Keep the drawY declaration out of the later replaceAll("e.y + recoil", ...)
+// pass. Only the three actual sprite-position expressions should be replaced.
 source = source.replace(
-  "Expected 3 remaining draw-Y expressions",
-  "Expected 4 remaining draw-Y expressions",
+  "const drawY = e.y + recoil + frameBob;",
+  "const drawY = e.y + frameBob + recoil;",
 );
+
 fs.writeFileSync(path, source, "utf8");
 await import(`${pathToFileURL(path).href}?run=${Date.now()}`);

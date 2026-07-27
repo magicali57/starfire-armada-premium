@@ -1,0 +1,61 @@
+name: Verify Enemy Basic Sprite Sheet V2
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out sprite-sheet branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify exact runtime PNG
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib, struct
+
+          path = Path("public/assets/ui-v2/gameplay/rapid-fire-premium/animations/enemy_basic_idle/enemy_basic_idle_sheet.png")
+          data = path.read_bytes()
+          expected = "dd84345ab058df6154bf11605e2b887be40e8dd3fe10e206eb4e50641efe0736"
+          actual = hashlib.sha256(data).hexdigest()
+          if actual != expected:
+              raise SystemExit(f"PNG checksum mismatch: {actual}")
+          if data[:8] != b"\x89PNG\r\n\x1a\n":
+              raise SystemExit("Invalid PNG signature")
+          width, height, bit_depth, color_type = struct.unpack(">IIBB", data[16:26])
+          if (width, height) != (512, 256):
+              raise SystemExit(f"Expected 512x256, got {width}x{height}")
+          if bit_depth != 8:
+              raise SystemExit(f"Expected 8-bit PNG, got {bit_depth}")
+          if color_type == 3 and b"tRNS" not in data:
+              raise SystemExit("Indexed PNG has no transparency chunk")
+          if color_type not in {3, 4, 6}:
+              raise SystemExit(f"PNG has no supported alpha representation: color type {color_type}")
+          print("Verified: 8 transparent 128x128 cells in a 4x2, 512x256 sheet")
+          PY
+
+      - name: Apply real sprite-sheet integration
+        run: node scripts/applyEnemyBasicSpriteSheetV2.mjs
+
+      - name: Type-check generated game
+        run: npx tsc -b --noEmit
+
+      - name: Build generated game
+        run: npx vite build

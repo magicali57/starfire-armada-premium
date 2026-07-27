@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   verify:
@@ -61,17 +62,28 @@ jobs:
                       f"{path.name}: expected 8-bit alpha PNG, "
                       f"got bit depth {bit_depth}, color type {color_type}"
                   )
-              print(
-                  f"{path.name}: {width}x{height}, "
-                  f"bit depth {bit_depth}, color type {color_type}"
-              )
           PY
 
       - name: Generate isolated preview sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          node scripts/applyEnemyIdlePreviewEnergy.mjs
-          node scripts/applyEnemyBasicIdleCleanV2.mjs
-          node scripts/fixEnemyBasicIdleCanvasType.mjs
+          set +e
+          output="$({
+            node scripts/applyEnemyIdlePreviewEnergy.mjs
+            node scripts/applyEnemyBasicIdleCleanV2.mjs
+            node scripts/fixEnemyBasicIdleCanvasType.mjs
+          } 2>&1)"
+          status=$?
+          printf '%s\n' "$output"
+          if [ "$status" -ne 0 ]; then
+            if [ -n "$PR_NUMBER" ]; then
+              printf 'Enemy preview source generation failed:\n\n```text\n%s\n```\n' "$output" \
+                | gh pr comment "$PR_NUMBER" --body-file -
+            fi
+            exit "$status"
+          fi
 
       - name: Type-check generated renderer
         run: npx tsc -b --noEmit

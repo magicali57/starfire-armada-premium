@@ -11,5 +11,16 @@ source = source.replace(
   "const drawY = e.y + frameBob + recoil;",
 );
 
+// Make the idle loop visibly breathe while keeping every frame fully on-canvas.
+source = source.replace(
+  "const spriteSide = hasBasicIdleFrames ? side * 1.34 : side;",
+  `const frameScale = hasBasicIdleFrames
+        ? [1, 1.03, 1.06, 1.03, 1, 0.97, 0.94, 0.97][frameIndex] ?? 1
+        : 1;
+      const spriteSide = hasBasicIdleFrames
+        ? side * 1.3 * frameScale
+        : side;`,
+);
+
 fs.writeFileSync(path, source, "utf8");
 await import(`${pathToFileURL(path).href}?run=${Date.now()}`);

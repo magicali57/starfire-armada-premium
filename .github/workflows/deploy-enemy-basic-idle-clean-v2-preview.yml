@@ -100,13 +100,13 @@ jobs:
               )
           PY
 
-      - name: Type-check clean test
+      - name: Generate and type-check clean test
         working-directory: test-src
         run: npm run typecheck
 
-      - name: Build clean test
+      - name: Build already-generated clean test
         working-directory: test-src
-        run: npm run build
+        run: npx vite build
 
       - name: Assemble normal site and isolated clean preview
         run: |
